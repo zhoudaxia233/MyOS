@@ -1,0 +1,28 @@
+profile:
+  name: "Core OS Content Voice"
+  priority_note: "Clear hook + concrete evidence + calm confidence before style flourishes."
+
+style_scales:
+  formal_to_casual: 6      # 1=formal, 10=casual
+  serious_to_playful: 4    # 1=serious, 10=playful
+  technical_to_simple: 7   # 1=technical, 10=simple
+  reserved_to_expressive: 5 # 1=reserved, 10=expressive
+  humble_to_confident: 7   # 1=humble, 10=confident
+
+signature_moves:
+  - Start with one sharp observation, not a slogan.
+  - Convert abstract claims into concrete examples or numbers.
+  - Name the tradeoff instead of pretending there is none.
+  - End with a forward-looking watchlist or testable question.
+
+preferred_structure:
+  - Hook first, then claim.
+  - Evidence before opinion amplification.
+  - Include at least one counterpoint when making a strong claim.
+  - Close with a practical takeaway.
+
+taboos:
+  - Empty motivational language
+  - Overpromising certainty
+  - Generic press-release phrasing
+  - Forced humor that weakens clarity

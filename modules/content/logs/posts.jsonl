@@ -1,0 +1,3 @@
+{"_schema":{"name":"posts","version":"1.0","fields":["id","created_at","status","platform","title","url","idea_id","metrics"],"notes":"append-only"}}
+{"id":"ps_20260226_001","created_at":"2026-02-26T12:30:00Z","status":"active","platform":"x","title":"Small systems beat complex stacks","url":"https://x.com/example/status/1000000000000000001","idea_id":"ct_20260226_001","metrics":{"impressions":4200,"likes":118,"replies":9,"bookmarks":34}}
+{"id":"ps_20260226_002","created_at":"2026-02-26T13:10:00Z","status":"active","platform":"newsletter","title":"The hidden tax of vague goals","url":null,"idea_id":"ct_20260226_002","metrics":{"opens":812,"clicks":57,"replies":6}}

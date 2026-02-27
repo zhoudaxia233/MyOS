@@ -1,0 +1,20 @@
+priorities_ordering:
+  principle: "Decide priorities by long-term compounding value first, then urgency."
+  placeholders:
+    - "Protect health / sleep baseline before optimization work."
+    - "Reserve focused blocks for highest-leverage project work."
+    - "Batch low-value admin tasks."
+
+risk_rules:
+  principle: "Prevent irreversible damage before pursuing upside."
+  position_sizing_discipline:
+    - "Define max loss before entry (placeholder)."
+    - "Reduce size when conviction is low or information is incomplete."
+    - "Avoid adding risk after emotional losses."
+
+project_selection_heuristics:
+  principle: "Select projects with clear feedback loops and reusable outputs."
+  placeholders:
+    - "Prefer projects that improve a repeatable system."
+    - "Reject projects with vague success criteria."
+    - "Ask: what evidence would prove this is working in 2 weeks?"
