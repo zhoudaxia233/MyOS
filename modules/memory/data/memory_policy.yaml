@@ -1,0 +1,23 @@
+capture_rules:
+  source_types:
+    - "chat"
+    - "reflection"
+    - "decision"
+    - "external_observation"
+  minimum_fields:
+    - "event summary"
+    - "why it matters"
+    - "tags"
+
+quality_thresholds:
+  - "Prefer concrete events over abstract interpretations"
+  - "Attach source_refs when deriving insights"
+  - "Avoid duplicate events; update via new append with relation ID"
+
+tagging_guidelines:
+  examples:
+    - "focus"
+    - "scope"
+    - "risk"
+    - "alignment"
+    - "execution"

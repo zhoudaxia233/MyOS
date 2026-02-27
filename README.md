@@ -1,44 +1,29 @@
 # Personal Core OS
 
-Personal Core OS is a file-based, plugin-based personal operating system for human + AI collaboration.
+Personal Core OS is a file-based, plugin-based operating system for long-horizon human + AI collaboration.
 
-It is designed as a **stable core** for long-term consistency:
-
-- Agents execute workflows
-- The system preserves judgment, priorities, and memory
-- Future actions stay aligned with enduring goals instead of short-term noise
+It provides a stable center so agents can execute workflows while decisions, priorities, and identity remain coherent over time.
 
 ## North Star
 
-Build a durable operating center that separates **execution** from **judgment**.
+Separate **execution** from **judgment** without disconnecting them.
 
-- Execution: content, projects, research, routine workflows
-- Judgment: decisions, tradeoffs, lessons, evolving heuristics
+- Execution: content production, project workflows, memory ingestion
+- Judgment: decisions, tradeoffs, profile alignment, heuristic updates
 
-This repository is the control layer that keeps those two coherent over time.
+## What This Repo Is
 
-## What This Repo Is (and Is Not)
-
-### Is
-
-- A protocol and memory architecture for AI-assisted work
-- A file-first system with SSOT and append-only logs
-- A modular plugin structure with low coupling
-
-### Is not
-
-- A monolithic application server
-- A database-heavy stack by default
-- A tightly coupled agent framework
+- A control plane for agent behavior (routing, rules, schemas, skills)
+- A file-first memory system (Markdown/YAML/JSONL)
+- A modular architecture with low coupling and ID-based references
 
 ## Core Principles
 
 1. Small stable kernel, domain logic in modules
 2. Progressive disclosure (minimal context loading)
-3. Plugin architecture with ID-based references
-4. SSOT: canonical content is not duplicated
-5. Safety and integrity with append-only JSONL logs
-6. Human-readable, Git-versioned system
+3. SSOT in canonical data files
+4. Append-only logs for historical integrity
+5. Human-readable and Git-versioned
 
 ## Repository Structure
 
@@ -56,117 +41,114 @@ This repository is the control layer that keeps those two coherent over time.
   modules/
     content/
     decision/
+    profile/
+    memory/
     _template/
   scripts/
     append_jsonl.sh
+    context_bundle.sh
 ```
 
-## Execution Model (How It Actually Runs)
+## Execution Model
 
-This repo does not "run" itself like a web app. It is executed by an agent runtime (for example, Codex/ChatGPT workflows) that follows these steps:
+This repository is not a monolithic app server. It is executed by an agent runtime that follows this sequence:
 
 1. Load `core/ROUTER.md` (always)
-2. Route the user request to one module
+2. Route the request to one module
 3. Load `modules/<name>/MODULE.md`
-4. Load only files required for the current task
+4. Load only task-required files
 5. Produce output and/or append logs
 
-Two-hop rule:
+Two-hop loading rule:
 
 - `ROUTER -> MODULE -> DATA`
 
-Do not load unrelated modules.
-
-## Progressive Disclosure
-
-- Level 1: kernel route/index (`core/ROUTER.md`)
-- Level 2: module instruction (`modules/<name>/MODULE.md`)
-- Level 3: only relevant data/log/template files
-
-This keeps context small and task-focused.
-
 ## Modules
 
-### Content (`modules/content`)
+### `modules/content`
 
-Purpose:
+- Purpose: content pipeline from idea to post log
+- SSOT: `voice.yaml`, `anti_patterns.md`, templates
+- Logs: `ideas.jsonl`, `posts.jsonl`
+- Skill: `write_fahou_message.md`
 
-- Content workflow from idea to publishing log
+### `modules/decision`
 
-Core assets:
+- Purpose: decision memory, failure learning, weekly reviews
+- SSOT: `heuristics.yaml`, `impulse_guardrails.yaml`
+- Logs: `decisions.jsonl`, `failures.jsonl`, `experiences.jsonl`, `precommit_checks.jsonl`
+- Skills: `log_decision.md`, `precommit_check.md`, `weekly_review.md`
 
-- Voice SSOT: `modules/content/data/voice.yaml`
-- Anti-patterns: `modules/content/data/anti_patterns.md`
-- Templates: `modules/content/data/templates/`
-- Logs: `modules/content/logs/ideas.jsonl`, `modules/content/logs/posts.jsonl`
-- Skill: `modules/content/skills/write_fahou_message.md`
+### `modules/profile`
 
-### Decision (`modules/decision`)
+- Purpose: personal direction and alignment baseline
+- SSOT: `identity.yaml`, `operating_preferences.yaml`
+- Logs: `profile_changes.jsonl`, `trigger_events.jsonl`
+- Skills: `update_profile.md`, `alignment_check.md`
 
-Purpose:
+### `modules/memory`
 
-- Preserve decision quality over time through logs and reviews
+- Purpose: evolving memory ingestion and weekly distillation
+- SSOT: `memory_policy.yaml`
+- Logs: `memory_events.jsonl`, `memory_insights.jsonl`
+- Skills: `ingest_memory.md`, `distill_weekly.md`
 
-Core assets:
+### `modules/_template`
 
-- Heuristics SSOT: `modules/decision/data/heuristics.yaml`
-- Logs: `decisions.jsonl`, `failures.jsonl`, `experiences.jsonl`
-- Skills: `log_decision.md`, `weekly_review.md`
+- Purpose: starter scaffold for new modules
 
-### Template (`modules/_template`)
+## How To Use
 
-Purpose:
+### 1) Get a context bundle quickly
 
-- Starter scaffold for new modules
+```bash
+scripts/context_bundle.sh --task "write a fahou message about risk discipline"
+```
+
+This prints suggested route and minimal files to load.
+
+### 2) Run a content task
+
+- Prompt your agent with the task
+- Follow `content` module files from the bundle
+- Save outputs under `modules/content/outputs/`
+
+### 3) Run a decision task
+
+- Use precommit check for high-risk decisions
+- Log final decision into `modules/decision/logs/decisions.jsonl`
+
+### 4) Update profile or ingest memory
+
+- Profile updates: `modules/profile/skills/update_profile.md`
+- Memory ingest: `modules/memory/skills/ingest_memory.md`
 
 ## Data Integrity Rules
 
 - JSONL logs are append-only
-- Never rewrite or delete historical lines
-- Deletion uses `"status": "archived"`
-- Every JSONL file starts with a `_schema` header on line 1
+- Do not rewrite or delete historical records
+- Use `"status": "archived"` for deactivation
+- Keep `_schema` header object on line 1 of every JSONL file
 
-## How To Use (Quick Start)
+## Utility Scripts
 
-### 1) Content generation
-
-- Ask agent: "Write a fahou message about <topic>"
-- Agent should route to `modules/content`
-- Output is written under `modules/content/outputs/`
-
-### 2) Log a decision
-
-- Ask agent: "Log this decision: ..."
-- Agent routes to `modules/decision`
-- Append a record in `modules/decision/logs/decisions.jsonl`
-
-### 3) Weekly review
-
-- Ask agent: "Run weekly decision review"
-- Agent reads last 7 days from decision logs
-- Output saved to `modules/decision/outputs/weekly_review_<YYYYMMDD>.md`
-
-## Safe Log Appending Script
-
-Use:
+### Safe append
 
 ```bash
 scripts/append_jsonl.sh <jsonl_file> '<json_object>'
 ```
 
-Example:
+### Route + minimal context planner
 
 ```bash
-scripts/append_jsonl.sh modules/decision/logs/decisions.jsonl '{"id":"dc_20260227_003","created_at":"2026-02-27T09:00:00Z","status":"active","domain":"project","decision":"Ship v1","options":["ship","delay"],"reasoning":"Scope complete","risks":["minor bugs"],"expected_outcome":"faster feedback","time_horizon":"1 week","confidence":7}'
+scripts/context_bundle.sh --task "<your request>"
 ```
 
 ## Validation
 
-Before commits, review:
+- Use `CHECKLIST.md` before commit
 
-- `CHECKLIST.md`
+## Version
 
-## Current Version
-
-- v0.1: Stable kernel + content + decision modules + append-only log discipline
-- Planned v0.2: deeper personal profile, memory distillation, decision guardrails
+- v0.1: kernel + content + decision base
+- v0.2: profile + memory modules, decision impulse guardrails, context bundle runner

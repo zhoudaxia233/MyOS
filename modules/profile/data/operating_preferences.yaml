@@ -1,0 +1,20 @@
+working_style:
+  planning_horizon: "weekly + quarterly"
+  preferred_output_style: "concise, structured, actionable"
+  decision_mode: "tradeoff-first, evidence-aware"
+
+collaboration_preferences:
+  with_agents:
+    - "Route first, then load minimal context"
+    - "Show assumptions explicitly"
+    - "Separate facts from inferences for critical decisions"
+
+safety_boundaries:
+  high_risk_decisions_require:
+    - "written downside"
+    - "explicit invalidation condition"
+    - "cooldown when emotionally elevated"
+
+anti_patterns:
+  - "Deciding under urgency without a written baseline"
+  - "Switching goals mid-sprint"

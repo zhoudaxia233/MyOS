@@ -2,6 +2,13 @@
 
 This repository is a plugin-based Personal Core OS: a small stable kernel (`core/`) plus pluggable domain modules (`modules/`). The kernel routes requests and enforces loading discipline. Business logic lives inside modules.
 
+## System Intent
+
+- Separate execution from judgment while keeping both aligned over time.
+- Execution-heavy tasks route to domain modules (`content`, `memory` ingest workflows).
+- Judgment and direction tasks route to `decision` and `profile`.
+- Personal direction is anchored in profile SSOT; operational learning is accumulated in memory logs.
+
 ## Progressive Disclosure Rules (Required)
 
 - Level 1 (always load): `core/ROUTER.md`
@@ -27,6 +34,8 @@ Do not go beyond two hops unless the module explicitly instructs a necessary fil
 | decisions, prioritization, planning tradeoffs, review patterns | `modules/decision` | Decision logs + heuristics |
 | post-mortem, failure analysis, lessons learned | `modules/decision` | Use failures / experiences logs |
 | weekly review of choices and patterns | `modules/decision` | Use weekly review workflow |
+| profile updates, values, goals, personal alignment checks | `modules/profile` | Identity and operating preference SSOT |
+| memory ingest, reflection capture, weekly distillation | `modules/memory` | Append raw memory, distill reusable insights |
 
 ## Exact Routing Instructions (Required)
 

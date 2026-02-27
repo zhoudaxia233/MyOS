@@ -1,0 +1,19 @@
+high_risk_domains:
+  - "invest"
+  - "project"
+
+required_precommit_checks:
+  - "State the downside in one sentence"
+  - "Define invalidation condition"
+  - "Set max acceptable loss or cost"
+  - "Name one disconfirming signal to watch"
+
+cooldown_rules:
+  when_emotional_weight_gte: 7
+  action: "Require 12-hour cooldown before final commitment unless emergency"
+
+override_policy:
+  allowed: true
+  required_fields:
+    - "override_reason"
+    - "owner_confirmation"

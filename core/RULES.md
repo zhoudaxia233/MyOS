@@ -22,4 +22,6 @@ These rules apply across all modules and tasks.
 
 - When generating content, obey the voice and anti-pattern rules from `modules/content/data/`.
 - When logging decisions or reviews, use the schemas and fields defined by the decision module and `core/SCHEMAS.md`.
+- For high-risk decisions, run decision precommit guardrails before commitment when the decision module provides that workflow.
+- For personal alignment-sensitive tasks, consult profile SSOT before final output.
 - If a required file is missing, stop and state the missing dependency instead of inventing it.

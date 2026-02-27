@@ -1,0 +1,3 @@
+{"_schema":{"name":"memory_events","version":"1.0","fields":["id","created_at","status","source_type","event","why_it_matters","tags","source_refs"],"notes":"append-only"}}
+{"id":"me_20260227_001","created_at":"2026-02-27T19:40:00Z","status":"active","source_type":"chat","event":"Clarified that the system should separate execution from judgment.","why_it_matters":"This changes module boundaries and review priorities.","tags":["alignment","architecture"],"source_refs":[]}
+{"id":"me_20260227_002","created_at":"2026-02-27T20:25:00Z","status":"active","source_type":"reflection","event":"Noted confusion risk when project docs are abstract rather than operational.","why_it_matters":"Documentation must map to concrete usage steps.","tags":["docs","execution"],"source_refs":[]}

@@ -1,0 +1,20 @@
+profile:
+  owner: "zdx"
+  north_star: "Build a stable personal operating center that separates execution from judgment."
+  long_term_goals:
+    - "Act consistently with enduring priorities, not short-term noise."
+    - "Compound high-quality decisions across projects and life domains."
+    - "Scale execution through agents without losing strategic coherence."
+
+values:
+  - "Truth over convenience"
+  - "Compounding over immediacy"
+  - "Systems over heroics"
+
+strengths:
+  - "Deep technical execution"
+  - "High agency under ambiguity"
+
+blind_spots_to_watch:
+  - "Scope expansion during implementation"
+  - "Short-term emotional reactions in high-pressure decisions"

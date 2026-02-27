@@ -1,0 +1,2 @@
+{"_schema":{"name":"memory_insights","version":"1.0","fields":["id","created_at","status","insight","evidence","source_refs","confidence","tags"],"notes":"append-only"}}
+{"id":"mi_20260227_001","created_at":"2026-02-27T21:30:00Z","status":"active","insight":"Operational clarity improves when each task is mapped to one module and one output path.","evidence":["Repeated request for concrete usage flow","Need for explicit route and file roles"],"source_refs":["me_20260227_001","me_20260227_002"],"confidence":8,"tags":["operations","clarity"]}

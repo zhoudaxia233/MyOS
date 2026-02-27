@@ -20,6 +20,7 @@ Optional but useful:
 - `expected_outcome`
 - `time_horizon`
 - `follow_up_date` (ISO date)
+- `guardrail_check_id` (from `precommit_checks.jsonl`, recommended for high-risk decisions)
 
 ## Procedure
 
@@ -32,5 +33,6 @@ Optional but useful:
 ## Notes
 
 - If `follow_up_date` exists, include it in the new record.
+- For high-risk decisions (especially `invest`), run `precommit_check.md` first and reference the check ID.
 - Do not schedule tasks or reminders here; logging only.
 - If any required field remains unknown, mark the gap explicitly and confirm before appending.

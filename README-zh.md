@@ -1,149 +1,158 @@
 # Personal Core OS（中文说明）
 
-这是一个给你和 AI agent 协作使用的“个人核心操作系统”。
+Personal Core OS 是一个给你和 AI agent 协作使用的“个人核心操作系统”。
 
-它不是传统 App（没有必须先跑起来的后端服务），而是一套 **可执行的工作协议 + 记忆结构**：
+它不是传统后端应用，而是一套可执行的协议层：
 
-- 你提任务
-- Agent 按路由和模块规则加载最少上下文
-- 产出结果并把关键记录追加到日志
+- 用 `core/` 做路由和全局规则
+- 用 `modules/` 做插件化能力
+- 用 `JSONL` 做可追溯、可追加的历史记忆
 
-## 为什么是文件项目
+## 北极星
 
-本仓库用 Markdown/YAML/JSONL 做控制面：
+把“执行”与“判断”分离，但长期保持一致。
 
-- Markdown：流程、规则、技能说明
-- YAML：稳定配置（如 voice、heuristics）
-- JSONL：时间序列日志（append-only）
+- 执行：写作、项目推进、记忆摄入
+- 判断：决策、取舍、对齐长期目标、迭代启发式
 
-它的目标是：
+## 这个项目到底怎么运行
 
-- 把执行和判断分离
-- 让日常动作和长期方向保持一致
-- 保留完整可审计历史
+当前运行方式是：你触发任务，Agent 按仓库协议执行。
 
-## 核心设计思想
-
-1. 内核小而稳定（`core/`）
-2. 业务能力插件化（`modules/`）
-3. 渐进加载（只读当前任务必需文件）
-4. SSOT（单一事实源）
-5. 日志只追加，不改历史
-
-## 仓库结构概览
-
-```text
-/
-  README.md            # 英文主文档
-  README-zh.md         # 中文文档
-  ROADMAP.md           # 当前讨论总结与演进路线
-  CHECKLIST.md         # 验收清单
-  core/                # 内核：路由、规则、schema、术语
-  modules/             # 插件模块
-  scripts/             # 辅助脚本
-```
-
-## core 内核怎么用
-
-### `core/ROUTER.md`
-
-永远先读。决定任务属于哪个模块。
-
-### `core/RULES.md`
-
-全局约束：不编造、事实/推断分离、日志 append-only。
-
-### `core/SCHEMAS.md`
-
-统一 ID、时间戳、JSONL schema 规范。
-
-### `core/GLOSSARY.md`
-
-跨模块通用术语定义。
-
-## modules 模块怎么用
-
-### 内容模块 `modules/content/`
-
-用途：从选题到发布记录的内容流水线。
-
-关键文件：
-
-- `MODULE.md`：模块总规则与流程
-- `data/voice.yaml`：语气和风格 SSOT
-- `data/anti_patterns.md`：禁用表达和结构陷阱
-- `data/templates/`：内容模板
-- `logs/ideas.jsonl`：创意池
-- `logs/posts.jsonl`：发布日志
-- `skills/write_fahou_message.md`：写作任务说明
-
-### 决策模块 `modules/decision/`
-
-用途：记录决策、失败复盘、经验信号，并做每周回顾。
-
-关键文件：
-
-- `MODULE.md`：模块总规则与流程
-- `data/heuristics.yaml`：启发式规则 SSOT
-- `logs/decisions.jsonl`：决策日志
-- `logs/failures.jsonl`：失败日志
-- `logs/experiences.jsonl`：经验日志
-- `skills/log_decision.md`：决策记录技能
-- `skills/weekly_review.md`：周回顾技能
-
-### 模板模块 `modules/_template/`
-
-用于新建插件模块时复制。
-
-## 这个系统“怎么执行”
-
-当前是“人触发 + Agent 执行”：
-
-1. 你提出任务
-2. Agent 读 `ROUTER.md` 路由
-3. 只读对应 `MODULE.md`
-4. 再读任务需要的数据文件
-5. 生成输出或追加日志
+1. 永远先读 `core/ROUTER.md`
+2. 路由到一个模块
+3. 读该模块 `MODULE.md`
+4. 只加载任务所需的数据/日志/模板
+5. 产出文件或追加日志
 
 两跳原则：
 
 - `ROUTER -> MODULE -> DATA`
 
-## 你个人特征如何进入系统
+## 仓库结构
 
-v0.1 目前是稳定骨架，个性化还在下一阶段。
+```text
+/
+  README.md
+  README-zh.md
+  ROADMAP.md
+  CHECKLIST.md
+  core/
+    ROUTER.md
+    RULES.md
+    SCHEMAS.md
+    GLOSSARY.md
+  modules/
+    content/
+    decision/
+    profile/
+    memory/
+    _template/
+  scripts/
+    append_jsonl.sh
+    context_bundle.sh
+```
 
-现阶段已经可沉淀你的变化：
+## 各模块作用
 
-- 决策过程进 `decisions.jsonl`
-- 失败复盘进 `failures.jsonl`
-- 关键体验进 `experiences.jsonl`
-- 每周复盘将这些变化转为可执行启发式
+### `modules/content`
 
-因此它不是“规则写死”，而是“内核稳定 + 数据进化”。
+内容生产模块：选题、草稿、编辑、发布记录。
 
-## 日志安全写入
+- SSOT：`voice.yaml`、`anti_patterns.md`、模板
+- 日志：`ideas.jsonl`、`posts.jsonl`
 
-使用脚本（只追加，不改历史）：
+### `modules/decision`
+
+决策模块：记录决策、失败和经验，并做周复盘。
+
+- SSOT：`heuristics.yaml`、`impulse_guardrails.yaml`
+- 日志：`decisions/failures/experiences/precommit_checks.jsonl`
+- 新增：高风险决策前置防冲动检查（precommit）
+
+### `modules/profile`
+
+个人画像与长期方向模块：
+
+- SSOT：`identity.yaml`、`operating_preferences.yaml`
+- 日志：`profile_changes.jsonl`、`trigger_events.jsonl`
+- 用途：把“你是谁、长期目标、偏好和边界”显式化
+
+### `modules/memory`
+
+进化记忆模块：
+
+- SSOT：`memory_policy.yaml`
+- 日志：`memory_events.jsonl`、`memory_insights.jsonl`
+- 用途：每天摄入事件，按周蒸馏可复用模式
+
+### `modules/_template`
+
+新模块脚手架模板。
+
+## 你最关心的三个问题
+
+### 1) 这是不是 context engineering？
+
+是。核心就是：
+
+- 路由控制（读哪个模块）
+- 上下文最小化（只读必要文件）
+- 行为约束（规则、schema、skills）
+
+### 2) 谁来“发上下文”？
+
+当前是你在对话里触发，Agent按仓库协议加载。
+
+现在新增了 `scripts/context_bundle.sh`，可先给出建议路由和最小文件集合。
+
+### 3) 这个系统能体现“我在变化”吗？
+
+能，且这是 v0.2 的重点：
+
+- `profile` 记录长期方向和偏好变化
+- `memory` 记录日常事件并蒸馏洞察
+- `decision` 通过 precommit guardrail 限制冲动决策
+
+## 快速使用
+
+### 1. 先拿最小上下文建议
+
+```bash
+scripts/context_bundle.sh --task "log this high-risk investment decision"
+```
+
+### 2. 需要写作
+
+走 `content` 模块，产出写到 `modules/content/outputs/`。
+
+### 3. 需要决策记录
+
+先跑 precommit，再写 `decisions.jsonl`。
+
+### 4. 需要更新你自己的方向
+
+用 `modules/profile/skills/update_profile.md`。
+
+### 5. 需要沉淀日常对话洞察
+
+用 `modules/memory/skills/ingest_memory.md`，每周再 `distill_weekly.md`。
+
+## 脚本
+
+### 安全追加 JSONL
 
 ```bash
 scripts/append_jsonl.sh <jsonl_file> '<json_object>'
 ```
 
-示例：
+### 路由与上下文规划
 
 ```bash
-scripts/append_jsonl.sh modules/decision/logs/decisions.jsonl '{"id":"dc_20260227_003","created_at":"2026-02-27T09:00:00Z","status":"active","domain":"project","decision":"Ship v1","options":["ship","delay"],"reasoning":"Scope complete","risks":["minor bugs"],"expected_outcome":"faster feedback","time_horizon":"1 week","confidence":7}'
+scripts/context_bundle.sh --task "<你的任务>"
 ```
 
-## 使用建议（你的第一周）
+## 版本
 
-1. 每做一个重要决定就记录到 `decisions.jsonl`
-2. 每出现一次明显失误就记录到 `failures.jsonl`
-3. 每周固定做一次 `weekly_review`
-4. 内容生产统一走 `content` 模块，避免临场风格漂移
-
-## 版本状态
-
-- 当前：v0.1（内核 + content + decision + 日志纪律）
-- 下一步：v0.2（个人画像、记忆蒸馏、冲动防护规则）
+- v0.1：内核 + content + decision 基础
+- v0.2：新增 profile + memory、decision 防冲动机制、context bundle runner
