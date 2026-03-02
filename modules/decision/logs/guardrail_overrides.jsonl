@@ -1,0 +1,1 @@
+{"_schema":{"name":"guardrail_overrides","version":"1.0","fields":["id","created_at","status","domain","decision_ref","violations","override_reason","owner_confirmation","provider","notes"],"notes":"append-only"}}

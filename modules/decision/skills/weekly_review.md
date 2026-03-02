@@ -12,6 +12,7 @@ Review the last 7 days of decisions, failures, experiences, and precommit checks
 4. `modules/decision/logs/failures.jsonl` (last 7 days by `created_at`)
 5. `modules/decision/logs/experiences.jsonl` (last 7 days by `created_at`)
 6. `modules/decision/logs/precommit_checks.jsonl` (last 7 days by `created_at`)
+7. `modules/decision/logs/guardrail_overrides.jsonl` (last 7 days by `created_at`)
 
 ## Output Format (Required)
 
@@ -25,7 +26,7 @@ Review the last 7 days of decisions, failures, experiences, and precommit checks
 
 1. Filter each log to records in the last 7 days using `created_at`.
 2. Separate observed facts from inferred patterns.
-3. Include at least one observation about guardrail quality (coverage, cooldowns, overrides).
+3. Include at least one observation about guardrail quality (coverage, cooldowns, override frequency).
 4. Produce the required sections with concise bullets.
 5. Draft one small, specific `heuristics.yaml` patch suggestion as a YAML diff snippet.
 6. Save the review to:

@@ -157,7 +157,17 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py metrics --window 7
 python3 /Users/closears/MyOS/orchestrator/src/main.py metrics --window 30
 ```
 
-### 6) 检索索引（长历史查询）
+### 6) Guardrail 硬化（按域策略 + override 审计）
+
+执行域策略检查：
+
+```bash
+python3 /Users/closears/MyOS/orchestrator/src/main.py guardrail-check --domain invest --decision-ref dc_20260303_001 --guardrail-check-id pc_20260303_001 --downside "Could violate weekly risk budget" --invalidation-condition "Price closes above invalidation level" --max-loss "0.5R" --disconfirming-signal "Falling volume confirmation"
+```
+
+如需 override，必须带理由和 owner 确认，并写入 `modules/decision/logs/guardrail_overrides.jsonl`。
+
+### 7) 检索索引（长历史查询）
 
 建立索引：
 
@@ -177,13 +187,13 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py search --query "momentum" 
 python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "run weekly decision review" --provider manual --with-retrieval --retrieval-top-k 6
 ```
 
-### 7) 高风险决策流程
+### 8) 高风险决策流程
 
 1. `precommit_check.md`
 2. `log_decision.md`（带 `guardrail_check_id`）
 3. 周复盘 + 审计报告
 
-### 8) 你的“第二大脑”流程
+### 9) 你的“第二大脑”流程
 
 1. 每天记录 memory event
 2. 每周抽取 chat patterns
@@ -206,3 +216,4 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "run weekly dec
 - v0.4-retrieval：新增可选检索索引、搜索命令、带检索上下文的执行
 - v0.4-scheduling：新增 cadence 自动调度执行（`schedule-run`）与调度日志
 - v0.5-drift：新增偏航仪表盘（`metrics` 命令）与指标快照日志
+- v0.5-guardrails：新增按域 guardrail 硬化与 override 审计链

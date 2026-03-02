@@ -6,6 +6,7 @@ from pathlib import Path
 import uuid
 
 from config import load_runtime_config
+from guardrails import evaluate_guardrail, load_domain_guardrails
 from loader import load_context_bundle
 from metrics import compute_drift_metrics, render_metrics_report
 from planner import plan_task
@@ -15,7 +16,14 @@ from runner import run_with_provider
 from scheduling import task_from_routine
 from schedulers.cron import cron_hint
 from schedulers.manual import get_cycle
-from writer import log_metrics_snapshot, log_retrieval_query, log_run, log_schedule_run, write_output
+from writer import (
+    log_guardrail_override,
+    log_metrics_snapshot,
+    log_retrieval_query,
+    log_run,
+    log_schedule_run,
+    write_output,
+)
 
 
 def repo_root() -> Path:
@@ -175,6 +183,47 @@ def cmd_search(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_guardrail_check(args: argparse.Namespace) -> int:
+    root = repo_root()
+    policy = load_domain_guardrails(root)
+    payload = {
+        "guardrail_check_id": args.guardrail_check_id,
+        "downside": args.downside,
+        "invalidation_condition": args.invalidation_condition,
+        "max_loss": args.max_loss,
+        "disconfirming_signal": args.disconfirming_signal,
+        "emotional_weight": args.emotional_weight,
+        "cooldown_applied": args.cooldown_applied,
+        "override_requested": args.override_requested,
+        "override_reason": args.override_reason,
+        "owner_confirmation": args.owner_confirmation,
+    }
+
+    result = evaluate_guardrail(policy, args.domain, payload)
+
+    if result["status"] == "override_accepted":
+        record = {
+            "id": _id("go"),
+            "created_at": _utc_now(),
+            "status": "active",
+            "domain": args.domain.lower(),
+            "decision_ref": args.decision_ref,
+            "violations": result["violations"],
+            "override_reason": args.override_reason,
+            "owner_confirmation": args.owner_confirmation,
+            "provider": args.provider,
+            "notes": args.notes,
+        }
+        log_guardrail_override(root, record)
+
+    print(f"Status: {result['status']}")
+    print(f"Violations: {result['violations']}")
+    print(f"Cooldown required: {result['cooldown_required']}")
+    if result["missing_override_fields"]:
+        print(f"Missing override fields: {result['missing_override_fields']}")
+    return 0
+
+
 def cmd_metrics(args: argparse.Namespace) -> int:
     root = repo_root()
     snapshot = compute_drift_metrics(root, args.window)
@@ -287,6 +336,23 @@ def build_parser() -> argparse.ArgumentParser:
     sp_search.add_argument("--module", default=None)
     sp_search.add_argument("--top-k", type=int, default=8)
     sp_search.set_defaults(func=cmd_search)
+
+    sp_guardrail = sub.add_parser("guardrail-check")
+    sp_guardrail.add_argument("--domain", required=True, choices=["invest", "project", "content"])
+    sp_guardrail.add_argument("--decision-ref", default=None)
+    sp_guardrail.add_argument("--guardrail-check-id", default=None)
+    sp_guardrail.add_argument("--downside", default=None)
+    sp_guardrail.add_argument("--invalidation-condition", default=None)
+    sp_guardrail.add_argument("--max-loss", default=None)
+    sp_guardrail.add_argument("--disconfirming-signal", default=None)
+    sp_guardrail.add_argument("--emotional-weight", type=int, default=0)
+    sp_guardrail.add_argument("--cooldown-applied", action="store_true")
+    sp_guardrail.add_argument("--override-requested", action="store_true")
+    sp_guardrail.add_argument("--override-reason", default=None)
+    sp_guardrail.add_argument("--owner-confirmation", default=None)
+    sp_guardrail.add_argument("--provider", default="manual")
+    sp_guardrail.add_argument("--notes", default=None)
+    sp_guardrail.set_defaults(func=cmd_guardrail_check)
 
     sp_metrics = sub.add_parser("metrics")
     sp_metrics.add_argument("--window", type=int, default=7)

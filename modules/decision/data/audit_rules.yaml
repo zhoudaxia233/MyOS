@@ -12,6 +12,9 @@ metrics:
   - name: "repeat_failure_rate"
     definition: "failures with repeated root cause / total failures"
     warning_above: 0.3
+  - name: "override_rate"
+    definition: "guardrail overrides / high-risk decisions"
+    warning_above: 0.2
 
 audit_output_rules:
   prioritize:

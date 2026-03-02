@@ -20,8 +20,9 @@ It reads kernel/module protocols, builds minimal context bundles, optionally ret
 - `retrieval.py`: build/search lexical index for JSONL histories
 - `scheduling.py`: load cadence routines and build cycle tasks
 - `metrics.py`: compute drift dashboard metrics from logs
+- `guardrails.py`: evaluate domain-specific hardening policies and override requirements
 - `runner.py`: invoke provider
-- `writer.py`: write outputs and append run/query/schedule logs
+- `writer.py`: write outputs and append run/query/schedule/metrics/override logs
 - `validators.py`: guardrails for JSONL and append-only behavior
 - `providers/`: provider adapters (`manual`, `openai`)
 
@@ -91,6 +92,39 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py metrics --window 30 --outp
 
 Metrics snapshot records are logged in `orchestrator/logs/metrics_snapshots.jsonl`.
 
+## Guardrail Hardening
+
+Run domain policy check:
+
+```bash
+python3 /Users/closears/MyOS/orchestrator/src/main.py guardrail-check \
+  --domain invest \
+  --decision-ref dc_20260303_001 \
+  --guardrail-check-id pc_20260303_001 \
+  --downside "Could violate weekly risk budget" \
+  --invalidation-condition "Price closes above invalidation level" \
+  --max-loss "0.5R" \
+  --disconfirming-signal "Falling volume confirmation"
+```
+
+Override example:
+
+```bash
+python3 /Users/closears/MyOS/orchestrator/src/main.py guardrail-check \
+  --domain invest \
+  --decision-ref dc_20260303_001 \
+  --downside "Could violate weekly risk budget" \
+  --invalidation-condition "Price closes above invalidation level" \
+  --max-loss "0.5R" \
+  --disconfirming-signal "Falling volume confirmation" \
+  --emotional-weight 8 \
+  --override-requested \
+  --override-reason "Time-sensitive hedge" \
+  --owner-confirmation "approved"
+```
+
+Accepted overrides are logged to `modules/decision/logs/guardrail_overrides.jsonl`.
+
 ## Quick Start
 
 ### 1) Manual mode (no API)
@@ -125,4 +159,5 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py schedule-run --cycle <dail
 python3 /Users/closears/MyOS/orchestrator/src/main.py index [--source-glob "modules/decision/logs/*.jsonl"]
 python3 /Users/closears/MyOS/orchestrator/src/main.py search --query "..." [--module <name>] [--top-k 8]
 python3 /Users/closears/MyOS/orchestrator/src/main.py metrics [--window 7|30] [--output <path>]
+python3 /Users/closears/MyOS/orchestrator/src/main.py guardrail-check --domain <invest|project|content> [policy fields...]
 ```

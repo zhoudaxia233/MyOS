@@ -75,10 +75,20 @@ Build a stable personal operating center for AI agents, where execution scales b
    - Added snapshot logs (`orchestrator/logs/metrics_snapshots.jsonl`)
    - Metrics include precommit coverage, cooldown compliance, repeat failure rate, and profile drift rate
 
-## v0.5-next (In Progress)
+## v0.5-guardrails (Completed)
 
 1. Guardrail hardening
-   - Domain-specific policies with override audit trails
+   - Added domain policy file (`modules/decision/data/domain_guardrails.yaml`)
+   - Added guardrail override audit log (`modules/decision/logs/guardrail_overrides.jsonl`)
+   - Added orchestrator command (`guardrail-check`) for policy evaluation
+   - Added override logging path with owner confirmation requirements
+
+## v0.6-next (In Progress)
+
+1. Guardrail policy depth
+   - Add richer per-domain constraints and escalation paths
+2. Dashboard integration
+   - Surface drift + guardrail metrics into one consolidated owner report
 
 ## Success Signals
 

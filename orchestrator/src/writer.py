@@ -50,6 +50,26 @@ METRICS_SNAPSHOT_SCHEMA = {
     }
 }
 
+GUARDRAIL_OVERRIDE_SCHEMA = {
+    "_schema": {
+        "name": "guardrail_overrides",
+        "version": "1.0",
+        "fields": [
+            "id",
+            "created_at",
+            "status",
+            "domain",
+            "decision_ref",
+            "violations",
+            "override_reason",
+            "owner_confirmation",
+            "provider",
+            "notes",
+        ],
+        "notes": "append-only",
+    }
+}
+
 
 def write_output(repo_root: Path, output_rel: str, content: str) -> Path:
     p = repo_root / output_rel
@@ -76,3 +96,8 @@ def log_schedule_run(repo_root: Path, record: dict) -> None:
 def log_metrics_snapshot(repo_root: Path, record: dict) -> None:
     path = repo_root / "orchestrator" / "logs" / "metrics_snapshots.jsonl"
     append_jsonl(path, record, schema_header=METRICS_SNAPSHOT_SCHEMA)
+
+
+def log_guardrail_override(repo_root: Path, record: dict) -> None:
+    path = repo_root / "modules" / "decision" / "logs" / "guardrail_overrides.jsonl"
+    append_jsonl(path, record, schema_header=GUARDRAIL_OVERRIDE_SCHEMA)

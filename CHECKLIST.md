@@ -65,6 +65,12 @@ Use this checklist before merging changes.
 - [ ] `orchestrator/src/main.py metrics --window 30` generates dashboard output
 - [ ] `orchestrator/logs/metrics_snapshots.jsonl` preserves `_schema` header and append-only records
 
+## Guardrail Layer
+
+- [ ] `modules/decision/data/domain_guardrails.yaml` defines domain-specific policy rules
+- [ ] `orchestrator/src/main.py guardrail-check --domain invest` evaluates policy without errors
+- [ ] `modules/decision/logs/guardrail_overrides.jsonl` preserves `_schema` header and append-only records
+
 ## Operational Readiness
 
 - [ ] `scripts/append_jsonl.sh` is executable

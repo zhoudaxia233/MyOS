@@ -32,3 +32,4 @@ Run a lightweight guardrail check before high-risk decisions and append the resu
 
 - Do not make the final decision here.
 - Do not rewrite existing records.
+- For domain-level hardening, run `guardrail_override.md` / orchestrator `guardrail-check` before committing blocked decisions.

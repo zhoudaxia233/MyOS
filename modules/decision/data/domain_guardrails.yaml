@@ -1,0 +1,38 @@
+domains:
+  invest:
+    require_precommit: true
+    require_guardrail_check_id: true
+    max_emotional_without_cooldown: 6
+    required_fields:
+      - downside
+      - invalidation_condition
+      - max_loss
+      - disconfirming_signal
+    allow_override: true
+    override_required_fields:
+      - override_reason
+      - owner_confirmation
+
+  project:
+    require_precommit: true
+    require_guardrail_check_id: false
+    max_emotional_without_cooldown: 7
+    required_fields:
+      - downside
+      - invalidation_condition
+    allow_override: true
+    override_required_fields:
+      - override_reason
+      - owner_confirmation
+
+  content:
+    require_precommit: false
+    require_guardrail_check_id: false
+    max_emotional_without_cooldown: 8
+    required_fields: []
+    allow_override: false
+    override_required_fields: []
+
+global:
+  block_when_missing_required_fields: true
+  block_when_high_emotion_without_cooldown: true
