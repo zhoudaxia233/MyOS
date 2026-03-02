@@ -1,0 +1,1 @@
+{"_schema":{"name":"retrieval_queries","version":"1.0","fields":["id","created_at","status","query","module","top_k","result_count"],"notes":"append-only"}}

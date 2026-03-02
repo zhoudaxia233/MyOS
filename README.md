@@ -48,6 +48,8 @@ Separate execution from judgment while keeping them aligned over time.
   orchestrator/
     README.md
     config/
+      retrieval.json
+    retrieval/
     src/
     logs/
   scripts/
@@ -134,19 +136,39 @@ Optional API mode:
 OPENAI_API_KEY=... python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "run weekly decision review" --provider openai
 ```
 
-### 4) High-risk decision flow
+### 4) Retrieval scaling (long-history lookup)
+
+Build index:
+
+```bash
+python3 /Users/closears/MyOS/orchestrator/src/main.py index
+```
+
+Search:
+
+```bash
+python3 /Users/closears/MyOS/orchestrator/src/main.py search --query "momentum" --top-k 5
+```
+
+Run with retrieval context:
+
+```bash
+python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "run weekly decision review" --provider manual --with-retrieval --retrieval-top-k 6
+```
+
+### 5) High-risk decision flow
 
 1. Run precommit check (`modules/decision/skills/precommit_check.md`)
 2. Log decision with `guardrail_check_id`
 3. Include in weekly review and audit report
 
-### 5) Pattern extraction flow
+### 6) Pattern extraction flow
 
 1. Ingest chat/reflection events (`ingest_memory.md`)
 2. Extract paradigms (`extract_chat_patterns.md`)
 3. Distill weekly memory (`distill_weekly.md`)
 
-### 6) Profile adaptation flow
+### 7) Profile adaptation flow
 
 1. Log trigger events and psych observations
 2. Run monthly profile snapshot
@@ -165,3 +187,4 @@ OPENAI_API_KEY=... python3 /Users/closears/MyOS/orchestrator/src/main.py run --t
 - v0.2: Profile + memory modules + guardrails
 - v0.3-first: Chat paradigm extraction, psych profiling, audit-first decision view, cadence runbook
 - v0.3-orchestrator: Added `orchestrator/` execution engine abstraction (manual + optional OpenAI provider)
+- v0.4-retrieval: Added optional retrieval index + search + retrieval-augmented runs

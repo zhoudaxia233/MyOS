@@ -1,0 +1,11 @@
+{
+  "source_globs": [
+    "modules/decision/logs/*.jsonl",
+    "modules/memory/logs/*.jsonl",
+    "modules/profile/logs/*.jsonl",
+    "modules/content/logs/*.jsonl"
+  ],
+  "index_path": "orchestrator/retrieval/index.json",
+  "query_log_path": "orchestrator/logs/retrieval_queries.jsonl",
+  "max_text_chars": 600
+}

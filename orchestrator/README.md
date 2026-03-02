@@ -2,7 +2,7 @@
 
 The orchestrator is the execution engine layer for Personal Core OS.
 
-It reads kernel/module protocols, builds minimal context bundles, runs a provider, and writes outputs/logs safely.
+It reads kernel/module protocols, builds minimal context bundles, optionally retrieves relevant historical records, runs a provider, and writes outputs/logs safely.
 
 ## Design Goals
 
@@ -10,16 +10,48 @@ It reads kernel/module protocols, builds minimal context bundles, runs a provide
 - Keep execution logic in `orchestrator/`
 - Preserve append-only integrity for JSONL logs
 - Support both no-API manual mode and optional API mode
+- Add scalable retrieval for long-history memory and audit logs
 
 ## Architecture
 
 - `router.py`: map task intent to module
 - `loader.py`: load two-hop context bundle (`ROUTER -> MODULE -> DATA`)
 - `planner.py`: pick skill + output target
+- `retrieval.py`: build/search lexical index for JSONL histories
 - `runner.py`: invoke provider
-- `writer.py`: write outputs and append run logs
+- `writer.py`: write outputs and append run/query logs
 - `validators.py`: guardrails for JSONL and append-only behavior
 - `providers/`: provider adapters (`manual`, `openai`)
+
+## Retrieval Scaling
+
+### Index build
+
+```bash
+python3 /Users/closears/MyOS/orchestrator/src/main.py index
+```
+
+Builds derived index file at `orchestrator/retrieval/index.json` from configured JSONL sources.
+
+### Search
+
+```bash
+python3 /Users/closears/MyOS/orchestrator/src/main.py search --query "cooldown compliance trend" --module decision --top-k 8
+```
+
+Search records are logged in `orchestrator/logs/retrieval_queries.jsonl`.
+
+### Run with retrieval
+
+```bash
+python3 /Users/closears/MyOS/orchestrator/src/main.py run \
+  --task "run weekly decision review" \
+  --provider manual \
+  --with-retrieval \
+  --retrieval-top-k 6
+```
+
+This adds top retrieval hits into the execution context bundle.
 
 ## Quick Start
 
@@ -30,8 +62,6 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py run \
   --task "run weekly decision review" \
   --provider manual
 ```
-
-This creates an execution packet file for an agent to execute.
 
 ### 2) Optional OpenAI mode
 
@@ -51,6 +81,8 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py run \
 ## CLI
 
 ```bash
-python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "..." [--provider manual|openai] [--module <name>]
-python3 /Users/closears/MyOS/orchestrator/src/main.py inspect --task "..."
+python3 /Users/closears/MyOS/orchestrator/src/main.py inspect --task "..." [--module <name>] [--with-retrieval]
+python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "..." [--provider manual|openai] [--module <name>] [--with-retrieval]
+python3 /Users/closears/MyOS/orchestrator/src/main.py index [--source-glob "modules/decision/logs/*.jsonl"]
+python3 /Users/closears/MyOS/orchestrator/src/main.py search --query "..." [--module <name>] [--top-k 8]
 ```

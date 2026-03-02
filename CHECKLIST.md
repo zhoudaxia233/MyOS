@@ -50,6 +50,13 @@ Use this checklist before merging changes.
 - [ ] `orchestrator/src/main.py run --provider manual` writes execution output
 - [ ] `orchestrator/logs/runs.jsonl` preserves `_schema` header and append-only records
 
+## Retrieval Layer
+
+- [ ] `orchestrator/src/main.py index` builds retrieval index successfully
+- [ ] `orchestrator/src/main.py search --query \"...\"` returns expected matches
+- [ ] `orchestrator/config/retrieval.json` source globs match intended logs
+- [ ] `orchestrator/logs/retrieval_queries.jsonl` preserves `_schema` header and append-only records
+
 ## Operational Readiness
 
 - [ ] `scripts/append_jsonl.sh` is executable

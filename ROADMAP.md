@@ -51,15 +51,21 @@ Build a stable personal operating center for AI agents, where execution scales b
   - `inspect` for route/plan visibility
   - `run` for execution packet (manual) or provider-based generation
 
-## v0.4-next (In Progress)
+## v0.4-retrieval (Completed)
 
 1. Retrieval scaling
-   - Optional retrieval index for long-history memory and audits
-2. Automation scheduling
+   - Added index builder and lexical search in orchestrator CLI
+   - Added retrieval config and derived index path
+   - Added retrieval query logs (`orchestrator/logs/retrieval_queries.jsonl`)
+   - Added retrieval-augmented run mode (`--with-retrieval`)
+
+## v0.4-next (In Progress)
+
+1. Automation scheduling
    - Optional orchestrator to run daily/weekly/monthly routines automatically
-3. Drift dashboards
+2. Drift dashboards
    - Quantified trend view for profile drift, precommit coverage, and pattern quality
-4. Guardrail hardening
+3. Guardrail hardening
    - Domain-specific policies with override audit trails
 
 ## Success Signals

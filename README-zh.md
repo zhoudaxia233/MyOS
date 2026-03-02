@@ -44,6 +44,8 @@
   orchestrator/
     README.md
     config/
+      retrieval.json
+    retrieval/
     src/
     logs/
   scripts/
@@ -127,13 +129,33 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "run weekly dec
 OPENAI_API_KEY=... python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "run weekly decision review" --provider openai
 ```
 
-### 4) 高风险决策流程
+### 4) 检索索引（长历史查询）
+
+建立索引：
+
+```bash
+python3 /Users/closears/MyOS/orchestrator/src/main.py index
+```
+
+查询：
+
+```bash
+python3 /Users/closears/MyOS/orchestrator/src/main.py search --query "momentum" --top-k 5
+```
+
+带检索上下文执行：
+
+```bash
+python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "run weekly decision review" --provider manual --with-retrieval --retrieval-top-k 6
+```
+
+### 5) 高风险决策流程
 
 1. `precommit_check.md`
 2. `log_decision.md`（带 `guardrail_check_id`）
 3. 周复盘 + 审计报告
 
-### 5) 你的“第二大脑”流程
+### 6) 你的“第二大脑”流程
 
 1. 每天记录 memory event
 2. 每周抽取 chat patterns
@@ -153,3 +175,4 @@ OPENAI_API_KEY=... python3 /Users/closears/MyOS/orchestrator/src/main.py run --t
 - v0.2：profile + memory + precommit guardrails
 - v0.3-first：心理侧写、chat 范式提取、决策审计视图、周期 runbook
 - v0.3-orchestrator：新增独立 `orchestrator/` 执行层抽象（manual + 可选 openai provider）
+- v0.4-retrieval：新增可选检索索引、搜索命令、带检索上下文的执行
