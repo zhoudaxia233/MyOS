@@ -18,8 +18,9 @@ It reads kernel/module protocols, builds minimal context bundles, optionally ret
 - `loader.py`: load two-hop context bundle (`ROUTER -> MODULE -> DATA`)
 - `planner.py`: pick skill + output target
 - `retrieval.py`: build/search lexical index for JSONL histories
+- `scheduling.py`: load cadence routines and build cycle tasks
 - `runner.py`: invoke provider
-- `writer.py`: write outputs and append run/query logs
+- `writer.py`: write outputs and append run/query/schedule logs
 - `validators.py`: guardrails for JSONL and append-only behavior
 - `providers/`: provider adapters (`manual`, `openai`)
 
@@ -53,6 +54,26 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py run \
 
 This adds top retrieval hits into the execution context bundle.
 
+## Automation Scheduling
+
+### Run configured cadence cycle
+
+```bash
+python3 /Users/closears/MyOS/orchestrator/src/main.py schedule-run --cycle weekly --provider manual
+```
+
+Uses `routines/cadence.yaml` as SSOT and executes each routine item in order.
+
+Schedule execution records are logged in `orchestrator/logs/schedule_runs.jsonl`.
+
+### Cron hint mode
+
+```bash
+python3 /Users/closears/MyOS/orchestrator/src/main.py schedule-run --cycle weekly --scheduler cron
+```
+
+Prints cycle-level cron hint without executing tasks.
+
 ## Quick Start
 
 ### 1) Manual mode (no API)
@@ -83,6 +104,7 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py run \
 ```bash
 python3 /Users/closears/MyOS/orchestrator/src/main.py inspect --task "..." [--module <name>] [--with-retrieval]
 python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "..." [--provider manual|openai] [--module <name>] [--with-retrieval]
+python3 /Users/closears/MyOS/orchestrator/src/main.py schedule-run --cycle <daily|weekly|monthly> [--scheduler manual|cron] [--provider manual|openai]
 python3 /Users/closears/MyOS/orchestrator/src/main.py index [--source-glob "modules/decision/logs/*.jsonl"]
 python3 /Users/closears/MyOS/orchestrator/src/main.py search --query "..." [--module <name>] [--top-k 8]
 ```

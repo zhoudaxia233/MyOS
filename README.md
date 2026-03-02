@@ -136,7 +136,21 @@ Optional API mode:
 OPENAI_API_KEY=... python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "run weekly decision review" --provider openai
 ```
 
-### 4) Retrieval scaling (long-history lookup)
+### 4) Automation scheduling (cadence execution)
+
+Run a full cadence cycle from `routines/cadence.yaml`:
+
+```bash
+python3 /Users/closears/MyOS/orchestrator/src/main.py schedule-run --cycle weekly --provider manual
+```
+
+Cron hint mode (no execution):
+
+```bash
+python3 /Users/closears/MyOS/orchestrator/src/main.py schedule-run --cycle weekly --scheduler cron
+```
+
+### 5) Retrieval scaling (long-history lookup)
 
 Build index:
 
@@ -156,19 +170,19 @@ Run with retrieval context:
 python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "run weekly decision review" --provider manual --with-retrieval --retrieval-top-k 6
 ```
 
-### 5) High-risk decision flow
+### 6) High-risk decision flow
 
 1. Run precommit check (`modules/decision/skills/precommit_check.md`)
 2. Log decision with `guardrail_check_id`
 3. Include in weekly review and audit report
 
-### 6) Pattern extraction flow
+### 7) Pattern extraction flow
 
 1. Ingest chat/reflection events (`ingest_memory.md`)
 2. Extract paradigms (`extract_chat_patterns.md`)
 3. Distill weekly memory (`distill_weekly.md`)
 
-### 7) Profile adaptation flow
+### 8) Profile adaptation flow
 
 1. Log trigger events and psych observations
 2. Run monthly profile snapshot
@@ -188,3 +202,4 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "run weekly dec
 - v0.3-first: Chat paradigm extraction, psych profiling, audit-first decision view, cadence runbook
 - v0.3-orchestrator: Added `orchestrator/` execution engine abstraction (manual + optional OpenAI provider)
 - v0.4-retrieval: Added optional retrieval index + search + retrieval-augmented runs
+- v0.4-scheduling: Added cadence-driven `schedule-run` with schedule execution logs

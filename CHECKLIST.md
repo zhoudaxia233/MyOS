@@ -49,6 +49,8 @@ Use this checklist before merging changes.
 - [ ] `orchestrator/src/main.py inspect` prints route + file plan
 - [ ] `orchestrator/src/main.py run --provider manual` writes execution output
 - [ ] `orchestrator/logs/runs.jsonl` preserves `_schema` header and append-only records
+- [ ] `orchestrator/src/main.py schedule-run --cycle weekly` executes cadence routines
+- [ ] `orchestrator/logs/schedule_runs.jsonl` preserves `_schema` header and append-only records
 
 ## Retrieval Layer
 

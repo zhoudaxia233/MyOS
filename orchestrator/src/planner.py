@@ -7,9 +7,16 @@ def _today() -> str:
     return datetime.now(timezone.utc).strftime("%Y%m%d")
 
 
-def plan_task(task: str, module: str) -> dict:
+def plan_task(task: str, module: str, skill_hint: str | None = None, routine_id: str | None = None) -> dict:
     t = task.lower()
     date = _today()
+    routine_suffix = f"_{routine_id}" if routine_id else ""
+
+    if skill_hint:
+        return {
+            "skill": f"modules/{module}/skills/{skill_hint}.md",
+            "output_path": f"modules/{module}/outputs/{skill_hint}_{date}{routine_suffix}.md",
+        }
 
     if module == "decision" and "weekly" in t:
         return {

@@ -11,11 +11,22 @@ from planner import plan_task
 from retrieval import build_index, format_hits, load_retrieval_config, search_index
 from router import route_task
 from runner import run_with_provider
-from writer import log_retrieval_query, log_run, write_output
+from scheduling import task_from_routine
+from schedulers.cron import cron_hint
+from schedulers.manual import get_cycle
+from writer import log_retrieval_query, log_run, log_schedule_run, write_output
 
 
 def repo_root() -> Path:
     return Path(__file__).resolve().parents[2]
+
+
+def _utc_now() -> str:
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def _id(prefix: str) -> str:
+    return f"{prefix}_{datetime.now(timezone.utc).strftime('%Y%m%d')}_{str(uuid.uuid4())[:8]}"
 
 
 def _retrieval_hits(root: Path, query: str, module: str | None, top_k: int) -> list[dict]:
@@ -42,8 +53,8 @@ def _bundle_with_hits(bundle: dict, hits: list[dict]) -> dict:
 def _log_retrieval(root: Path, query: str, module: str | None, top_k: int, result_count: int) -> None:
     cfg = load_retrieval_config(root)
     rec = {
-        "id": f"rq_{datetime.now(timezone.utc).strftime('%Y%m%d')}_{str(uuid.uuid4())[:8]}",
-        "created_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        "id": _id("rq"),
+        "created_at": _utc_now(),
         "status": "active",
         "query": query,
         "module": module,
@@ -51,6 +62,53 @@ def _log_retrieval(root: Path, query: str, module: str | None, top_k: int, resul
         "result_count": result_count,
     }
     log_retrieval_query(root, rec, cfg["query_log_path"])
+
+
+def execute_task(
+    *,
+    root: Path,
+    task: str,
+    forced_module: str | None,
+    provider: str,
+    model: str,
+    with_retrieval: bool,
+    retrieval_top_k: int,
+    skill_hint: str | None = None,
+    routine_id: str | None = None,
+) -> dict:
+    cfg = load_runtime_config(root)
+    module = route_task(task, forced_module)
+    bundle = load_context_bundle(root, module, cfg["max_context_chars"])
+    plan = plan_task(task, module, skill_hint=skill_hint, routine_id=routine_id)
+
+    hits: list[dict] = []
+    if with_retrieval:
+        hits = _retrieval_hits(root, task, module, retrieval_top_k)
+        bundle = _bundle_with_hits(bundle, hits)
+
+    content = run_with_provider(provider, task, module, plan, bundle, model)
+    out = write_output(root, plan["output_path"], content)
+
+    run_record = {
+        "id": _id("run"),
+        "created_at": _utc_now(),
+        "status": "active",
+        "task": task,
+        "module": module,
+        "provider": provider,
+        "result_path": str(out.relative_to(root)),
+    }
+    log_run(root, run_record)
+
+    if with_retrieval:
+        _log_retrieval(root, task, module, retrieval_top_k, len(hits))
+
+    return {
+        "module": module,
+        "plan": plan,
+        "output_path": str(out.relative_to(root)),
+        "retrieval_hits": len(hits),
+    }
 
 
 def cmd_inspect(args: argparse.Namespace) -> int:
@@ -76,37 +134,20 @@ def cmd_inspect(args: argparse.Namespace) -> int:
 def cmd_run(args: argparse.Namespace) -> int:
     root = repo_root()
     cfg = load_runtime_config(root)
-
     provider = args.provider or cfg["default_provider"]
     model = args.model or cfg["default_openai_model"]
 
-    module = route_task(args.task, args.module)
-    bundle = load_context_bundle(root, module, cfg["max_context_chars"])
-    plan = plan_task(args.task, module)
+    result = execute_task(
+        root=root,
+        task=args.task,
+        forced_module=args.module,
+        provider=provider,
+        model=model,
+        with_retrieval=args.with_retrieval,
+        retrieval_top_k=args.retrieval_top_k,
+    )
 
-    hits: list[dict] = []
-    if args.with_retrieval:
-        hits = _retrieval_hits(root, args.task, module, args.retrieval_top_k)
-        bundle = _bundle_with_hits(bundle, hits)
-
-    content = run_with_provider(provider, args.task, module, plan, bundle, model)
-    out = write_output(root, plan["output_path"], content)
-
-    record = {
-        "id": f"run_{datetime.now(timezone.utc).strftime('%Y%m%d')}_{str(uuid.uuid4())[:8]}",
-        "created_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
-        "status": "active",
-        "task": args.task,
-        "module": module,
-        "provider": provider,
-        "result_path": str(out.relative_to(root)),
-    }
-    log_run(root, record)
-
-    if args.with_retrieval:
-        _log_retrieval(root, args.task, module, args.retrieval_top_k, len(hits))
-
-    print(f"Wrote: {out}")
+    print(f"Wrote: {root / result['output_path']}")
     return 0
 
 
@@ -130,6 +171,58 @@ def cmd_search(args: argparse.Namespace) -> int:
         return 0
 
     print(format_hits(hits))
+    return 0
+
+
+def cmd_schedule_run(args: argparse.Namespace) -> int:
+    root = repo_root()
+    cfg = load_runtime_config(root)
+    provider = args.provider or cfg["default_provider"]
+    model = args.model or cfg["default_openai_model"]
+
+    if args.scheduler == "cron":
+        print(cron_hint(root, args.cycle))
+        return 0
+
+    routines = get_cycle(root, args.cycle)
+    if args.limit is not None:
+        routines = routines[: args.limit]
+
+    if not routines:
+        print(f"No routines for cycle: {args.cycle}")
+        return 0
+
+    print(f"Running cycle: {args.cycle} ({len(routines)} routines)")
+
+    for routine in routines:
+        task = task_from_routine(args.cycle, routine)
+        result = execute_task(
+            root=root,
+            task=task,
+            forced_module=routine["module"],
+            provider=provider,
+            model=model,
+            with_retrieval=args.with_retrieval,
+            retrieval_top_k=args.retrieval_top_k,
+            skill_hint=routine["skill"],
+            routine_id=routine["id"],
+        )
+
+        schedule_record = {
+            "id": _id("sr"),
+            "created_at": _utc_now(),
+            "status": "active",
+            "cycle": args.cycle,
+            "routine_id": routine["id"],
+            "module": routine["module"],
+            "skill": routine["skill"],
+            "provider": provider,
+            "result_path": result["output_path"],
+        }
+        log_schedule_run(root, schedule_record)
+
+        print(f"- {routine['id']} -> {result['output_path']}")
+
     return 0
 
 
@@ -160,6 +253,16 @@ def build_parser() -> argparse.ArgumentParser:
     sp_search.add_argument("--module", default=None)
     sp_search.add_argument("--top-k", type=int, default=8)
     sp_search.set_defaults(func=cmd_search)
+
+    sp_schedule = sub.add_parser("schedule-run")
+    sp_schedule.add_argument("--cycle", required=True, choices=["daily", "weekly", "monthly"])
+    sp_schedule.add_argument("--scheduler", default="manual", choices=["manual", "cron"])
+    sp_schedule.add_argument("--provider", default=None, choices=["manual", "openai"])
+    sp_schedule.add_argument("--model", default=None)
+    sp_schedule.add_argument("--with-retrieval", action="store_true")
+    sp_schedule.add_argument("--retrieval-top-k", type=int, default=6)
+    sp_schedule.add_argument("--limit", type=int, default=None)
+    sp_schedule.set_defaults(func=cmd_schedule_run)
 
     return p
 

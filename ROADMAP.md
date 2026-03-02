@@ -59,13 +59,19 @@ Build a stable personal operating center for AI agents, where execution scales b
    - Added retrieval query logs (`orchestrator/logs/retrieval_queries.jsonl`)
    - Added retrieval-augmented run mode (`--with-retrieval`)
 
-## v0.4-next (In Progress)
+## v0.4-scheduling (Completed)
 
 1. Automation scheduling
-   - Optional orchestrator to run daily/weekly/monthly routines automatically
-2. Drift dashboards
+   - Added cadence loader and cycle execution command (`schedule-run`)
+   - Reads `routines/cadence.yaml` as scheduling SSOT
+   - Added schedule execution logs (`orchestrator/logs/schedule_runs.jsonl`)
+   - Added cron hint mode for non-executing scheduling integration
+
+## v0.5-next (In Progress)
+
+1. Drift dashboards
    - Quantified trend view for profile drift, precommit coverage, and pattern quality
-3. Guardrail hardening
+2. Guardrail hardening
    - Domain-specific policies with override audit trails
 
 ## Success Signals
