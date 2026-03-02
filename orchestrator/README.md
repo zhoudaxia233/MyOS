@@ -19,6 +19,7 @@ It reads kernel/module protocols, builds minimal context bundles, optionally ret
 - `planner.py`: pick skill + output target
 - `retrieval.py`: build/search lexical index for JSONL histories
 - `scheduling.py`: load cadence routines and build cycle tasks
+- `metrics.py`: compute drift dashboard metrics from logs
 - `runner.py`: invoke provider
 - `writer.py`: write outputs and append run/query/schedule logs
 - `validators.py`: guardrails for JSONL and append-only behavior
@@ -74,6 +75,22 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py schedule-run --cycle weekl
 
 Prints cycle-level cron hint without executing tasks.
 
+## Drift Dashboard
+
+Generate quantitative drift metrics report:
+
+```bash
+python3 /Users/closears/MyOS/orchestrator/src/main.py metrics --window 7
+```
+
+Custom output path:
+
+```bash
+python3 /Users/closears/MyOS/orchestrator/src/main.py metrics --window 30 --output modules/decision/outputs/metrics_30d.md
+```
+
+Metrics snapshot records are logged in `orchestrator/logs/metrics_snapshots.jsonl`.
+
 ## Quick Start
 
 ### 1) Manual mode (no API)
@@ -107,4 +124,5 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "..." [--provid
 python3 /Users/closears/MyOS/orchestrator/src/main.py schedule-run --cycle <daily|weekly|monthly> [--scheduler manual|cron] [--provider manual|openai]
 python3 /Users/closears/MyOS/orchestrator/src/main.py index [--source-glob "modules/decision/logs/*.jsonl"]
 python3 /Users/closears/MyOS/orchestrator/src/main.py search --query "..." [--module <name>] [--top-k 8]
+python3 /Users/closears/MyOS/orchestrator/src/main.py metrics [--window 7|30] [--output <path>]
 ```

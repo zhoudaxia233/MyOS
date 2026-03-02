@@ -41,6 +41,15 @@ SCHEDULE_RUN_SCHEMA = {
     }
 }
 
+METRICS_SNAPSHOT_SCHEMA = {
+    "_schema": {
+        "name": "metrics_snapshots",
+        "version": "1.0",
+        "fields": ["id", "created_at", "status", "window_days", "summary", "report_path"],
+        "notes": "append-only",
+    }
+}
+
 
 def write_output(repo_root: Path, output_rel: str, content: str) -> Path:
     p = repo_root / output_rel
@@ -62,3 +71,8 @@ def log_retrieval_query(repo_root: Path, record: dict, rel_log_path: str) -> Non
 def log_schedule_run(repo_root: Path, record: dict) -> None:
     path = repo_root / "orchestrator" / "logs" / "schedule_runs.jsonl"
     append_jsonl(path, record, schema_header=SCHEDULE_RUN_SCHEMA)
+
+
+def log_metrics_snapshot(repo_root: Path, record: dict) -> None:
+    path = repo_root / "orchestrator" / "logs" / "metrics_snapshots.jsonl"
+    append_jsonl(path, record, schema_header=METRICS_SNAPSHOT_SCHEMA)

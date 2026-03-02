@@ -59,6 +59,12 @@ Use this checklist before merging changes.
 - [ ] `orchestrator/config/retrieval.json` source globs match intended logs
 - [ ] `orchestrator/logs/retrieval_queries.jsonl` preserves `_schema` header and append-only records
 
+## Metrics Layer
+
+- [ ] `orchestrator/src/main.py metrics --window 7` generates dashboard output
+- [ ] `orchestrator/src/main.py metrics --window 30` generates dashboard output
+- [ ] `orchestrator/logs/metrics_snapshots.jsonl` preserves `_schema` header and append-only records
+
 ## Operational Readiness
 
 - [ ] `scripts/append_jsonl.sh` is executable

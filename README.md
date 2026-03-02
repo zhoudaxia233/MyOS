@@ -150,7 +150,21 @@ Cron hint mode (no execution):
 python3 /Users/closears/MyOS/orchestrator/src/main.py schedule-run --cycle weekly --scheduler cron
 ```
 
-### 5) Retrieval scaling (long-history lookup)
+### 5) Drift dashboard (quantified trend view)
+
+Generate 7-day dashboard:
+
+```bash
+python3 /Users/closears/MyOS/orchestrator/src/main.py metrics --window 7
+```
+
+Generate 30-day dashboard:
+
+```bash
+python3 /Users/closears/MyOS/orchestrator/src/main.py metrics --window 30
+```
+
+### 6) Retrieval scaling (long-history lookup)
 
 Build index:
 
@@ -170,19 +184,19 @@ Run with retrieval context:
 python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "run weekly decision review" --provider manual --with-retrieval --retrieval-top-k 6
 ```
 
-### 6) High-risk decision flow
+### 7) High-risk decision flow
 
 1. Run precommit check (`modules/decision/skills/precommit_check.md`)
 2. Log decision with `guardrail_check_id`
 3. Include in weekly review and audit report
 
-### 7) Pattern extraction flow
+### 8) Pattern extraction flow
 
 1. Ingest chat/reflection events (`ingest_memory.md`)
 2. Extract paradigms (`extract_chat_patterns.md`)
 3. Distill weekly memory (`distill_weekly.md`)
 
-### 8) Profile adaptation flow
+### 9) Profile adaptation flow
 
 1. Log trigger events and psych observations
 2. Run monthly profile snapshot
@@ -203,3 +217,4 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "run weekly dec
 - v0.3-orchestrator: Added `orchestrator/` execution engine abstraction (manual + optional OpenAI provider)
 - v0.4-retrieval: Added optional retrieval index + search + retrieval-augmented runs
 - v0.4-scheduling: Added cadence-driven `schedule-run` with schedule execution logs
+- v0.5-drift: Added drift dashboard metrics command and snapshot logging

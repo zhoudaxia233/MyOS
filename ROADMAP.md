@@ -67,11 +67,17 @@ Build a stable personal operating center for AI agents, where execution scales b
    - Added schedule execution logs (`orchestrator/logs/schedule_runs.jsonl`)
    - Added cron hint mode for non-executing scheduling integration
 
-## v0.5-next (In Progress)
+## v0.5-drift (Completed)
 
 1. Drift dashboards
-   - Quantified trend view for profile drift, precommit coverage, and pattern quality
-2. Guardrail hardening
+   - Added quantitative metrics command (`orchestrator src/main.py metrics`)
+   - Added dashboard report generation for 7/30-day windows
+   - Added snapshot logs (`orchestrator/logs/metrics_snapshots.jsonl`)
+   - Metrics include precommit coverage, cooldown compliance, repeat failure rate, and profile drift rate
+
+## v0.5-next (In Progress)
+
+1. Guardrail hardening
    - Domain-specific policies with override audit trails
 
 ## Success Signals

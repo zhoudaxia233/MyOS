@@ -143,7 +143,21 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py schedule-run --cycle weekl
 python3 /Users/closears/MyOS/orchestrator/src/main.py schedule-run --cycle weekly --scheduler cron
 ```
 
-### 5) 检索索引（长历史查询）
+### 5) 偏航仪表盘（量化趋势）
+
+生成 7 天指标：
+
+```bash
+python3 /Users/closears/MyOS/orchestrator/src/main.py metrics --window 7
+```
+
+生成 30 天指标：
+
+```bash
+python3 /Users/closears/MyOS/orchestrator/src/main.py metrics --window 30
+```
+
+### 6) 检索索引（长历史查询）
 
 建立索引：
 
@@ -163,13 +177,13 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py search --query "momentum" 
 python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "run weekly decision review" --provider manual --with-retrieval --retrieval-top-k 6
 ```
 
-### 6) 高风险决策流程
+### 7) 高风险决策流程
 
 1. `precommit_check.md`
 2. `log_decision.md`（带 `guardrail_check_id`）
 3. 周复盘 + 审计报告
 
-### 7) 你的“第二大脑”流程
+### 8) 你的“第二大脑”流程
 
 1. 每天记录 memory event
 2. 每周抽取 chat patterns
@@ -191,3 +205,4 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "run weekly dec
 - v0.3-orchestrator：新增独立 `orchestrator/` 执行层抽象（manual + 可选 openai provider）
 - v0.4-retrieval：新增可选检索索引、搜索命令、带检索上下文的执行
 - v0.4-scheduling：新增 cadence 自动调度执行（`schedule-run`）与调度日志
+- v0.5-drift：新增偏航仪表盘（`metrics` 命令）与指标快照日志

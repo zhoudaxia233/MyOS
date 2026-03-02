@@ -7,6 +7,7 @@ import uuid
 
 from config import load_runtime_config
 from loader import load_context_bundle
+from metrics import compute_drift_metrics, render_metrics_report
 from planner import plan_task
 from retrieval import build_index, format_hits, load_retrieval_config, search_index
 from router import route_task
@@ -14,7 +15,7 @@ from runner import run_with_provider
 from scheduling import task_from_routine
 from schedulers.cron import cron_hint
 from schedulers.manual import get_cycle
-from writer import log_retrieval_query, log_run, log_schedule_run, write_output
+from writer import log_metrics_snapshot, log_retrieval_query, log_run, log_schedule_run, write_output
 
 
 def repo_root() -> Path:
@@ -174,6 +175,39 @@ def cmd_search(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_metrics(args: argparse.Namespace) -> int:
+    root = repo_root()
+    snapshot = compute_drift_metrics(root, args.window)
+    report = render_metrics_report(snapshot)
+
+    if args.output:
+        output_rel = args.output
+    else:
+        date = datetime.now(timezone.utc).strftime("%Y%m%d")
+        output_rel = f"modules/decision/outputs/metrics_{date}.md"
+
+    out = write_output(root, output_rel, report)
+    try:
+        report_path = str(out.relative_to(root))
+    except ValueError:
+        report_path = str(out)
+
+    summary = {k: v["status"] for k, v in snapshot["metrics"].items()}
+    record = {
+        "id": _id("mt"),
+        "created_at": _utc_now(),
+        "status": "active",
+        "window_days": args.window,
+        "summary": summary,
+        "report_path": report_path,
+    }
+    log_metrics_snapshot(root, record)
+
+    print(f"Wrote: {out}")
+    print(f"Summary: {summary}")
+    return 0
+
+
 def cmd_schedule_run(args: argparse.Namespace) -> int:
     root = repo_root()
     cfg = load_runtime_config(root)
@@ -253,6 +287,11 @@ def build_parser() -> argparse.ArgumentParser:
     sp_search.add_argument("--module", default=None)
     sp_search.add_argument("--top-k", type=int, default=8)
     sp_search.set_defaults(func=cmd_search)
+
+    sp_metrics = sub.add_parser("metrics")
+    sp_metrics.add_argument("--window", type=int, default=7)
+    sp_metrics.add_argument("--output", default=None)
+    sp_metrics.set_defaults(func=cmd_metrics)
 
     sp_schedule = sub.add_parser("schedule-run")
     sp_schedule.add_argument("--cycle", required=True, choices=["daily", "weekly", "monthly"])
