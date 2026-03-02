@@ -4,43 +4,48 @@ Use this checklist before merging changes.
 
 ## Kernel and Routing
 
-- [ ] `core/ROUTER.md` exists and defines two-hop loading: `ROUTER -> MODULE -> DATA`
-- [ ] `core/ROUTER.md` includes explicit routing for `content`, `decision`, `profile`, and `memory`
+- [ ] `core/ROUTER.md` defines two-hop loading: `ROUTER -> MODULE -> DATA`
+- [ ] Routing table covers `content`, `decision`, `profile`, and `memory`
 - [ ] `core/RULES.md` includes no-fabrication and append-only integrity rules
-- [ ] `core/SCHEMAS.md` defines ID format, timestamp format, and JSONL schema header rule
+- [ ] `core/SCHEMAS.md` defines ID and timestamp conventions
 
 ## Progressive Disclosure
 
-- [ ] Agent workflow always starts from `core/ROUTER.md`
+- [ ] Agent flow starts from `core/ROUTER.md`
 - [ ] Task loading stays inside one target module unless explicitly requested
-- [ ] Only files needed for the active task are loaded
+- [ ] Only task-required files are loaded
 - [ ] Unrelated module files are not preloaded
 
 ## SSOT and Coupling
 
 - [ ] Canonical domain knowledge lives in `modules/*/data/`
-- [ ] `modules/*/skills/` reference SSOT files instead of duplicating canonical content
-- [ ] Cross-module references use IDs only (no copied content)
+- [ ] Skills reference SSOT paths instead of duplicating canonical content
+- [ ] Cross-module references use IDs only
 
 ## Logs and Integrity
 
-- [ ] Every `*.jsonl` file starts with a `_schema` header on line 1
-- [ ] Existing JSONL records were not edited or removed
-- [ ] New log records were appended as new lines only
-- [ ] Deletions are represented as `"status": "archived"`
+- [ ] Every `*.jsonl` starts with `_schema` on line 1
+- [ ] Existing historical records were not deleted
+- [ ] New records are appended as new lines only
+- [ ] Deactivation uses `"status": "archived"`
 
 ## Module Quality
 
-- [ ] Each module has `MODULE.md` with purpose, inventory, workflows, and `<instructions>`
-- [ ] `modules/content/MODULE.md` includes quality gates and template-based workflow
-- [ ] `modules/decision/MODULE.md` includes immediate logging + precommit + weekly review workflow
-- [ ] `modules/profile/` defines identity SSOT and alignment workflow
-- [ ] `modules/memory/` defines ingest and distillation workflow
-- [ ] `modules/_template/` is usable as a starter for new modules
+- [ ] Every module has `MODULE.md` with purpose, inventory, workflows, and `<instructions>`
+- [ ] `modules/decision/` includes precommit + weekly review + audit workflow
+- [ ] `modules/profile/` includes psych profile and snapshot workflow
+- [ ] `modules/memory/` includes chat pattern extraction workflow
+- [ ] `modules/_template/` remains usable as starter scaffold
+
+## Cadence and Operations
+
+- [ ] `routines/cadence.yaml` and `routines/CADENCE.md` are consistent
+- [ ] `scripts/run_cycle.sh` reflects daily/weekly/monthly routines
+- [ ] `scripts/context_bundle.sh` includes new v0.3-first routes
 
 ## Operational Readiness
 
-- [ ] `scripts/append_jsonl.sh` exists and is executable
-- [ ] `scripts/context_bundle.sh` exists and is executable
+- [ ] `scripts/append_jsonl.sh` is executable
+- [ ] `scripts/context_bundle.sh` is executable
+- [ ] `scripts/run_cycle.sh` is executable
 - [ ] Outputs are written under `modules/*/outputs/`
-- [ ] Repository remains human-readable and Git-friendly

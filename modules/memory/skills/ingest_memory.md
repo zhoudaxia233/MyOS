@@ -12,6 +12,7 @@ Capture one memory event from a conversation, reflection, or observation.
 
 ## Minimal Inputs
 
+- Source type (`chat` / `reflection` / `decision` / `external_observation`)
 - Event summary
 - Why it matters
 - Tags (1-4)

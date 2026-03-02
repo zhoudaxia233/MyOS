@@ -1,0 +1,28 @@
+routines:
+  daily:
+    - id: "rt_daily_memory_ingest"
+      module: "memory"
+      skill: "ingest_memory"
+      objective: "Capture 1-3 meaningful events from chats/work"
+    - id: "rt_daily_trigger_log"
+      module: "profile"
+      skill: "log_trigger_event"
+      objective: "If a trigger event occurred, append it"
+  weekly:
+    - id: "rt_weekly_decision_review"
+      module: "decision"
+      skill: "weekly_review"
+      objective: "Summarize patterns and propose heuristic patch"
+    - id: "rt_weekly_memory_distill"
+      module: "memory"
+      skill: "distill_weekly"
+      objective: "Extract patterns and experiments from the week"
+    - id: "rt_weekly_decision_audit"
+      module: "decision"
+      skill: "audit_decision_system"
+      objective: "Generate owner audit report"
+  monthly:
+    - id: "rt_monthly_profile_snapshot"
+      module: "profile"
+      skill: "profile_snapshot"
+      objective: "Review drift and update stabilizers"

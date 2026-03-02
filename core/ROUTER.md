@@ -34,8 +34,11 @@ Do not go beyond two hops unless the module explicitly instructs a necessary fil
 | decisions, prioritization, planning tradeoffs, review patterns | `modules/decision` | Decision logs + heuristics |
 | post-mortem, failure analysis, lessons learned | `modules/decision` | Use failures / experiences logs |
 | weekly review of choices and patterns | `modules/decision` | Use weekly review workflow |
+| decision audit, risk governance, exception reports | `modules/decision` | Audit-first owner review outputs |
 | profile updates, values, goals, personal alignment checks | `modules/profile` | Identity and operating preference SSOT |
+| psychological patterning, trigger analysis, drift snapshot | `modules/profile` | Non-clinical psych profiling and stabilizers |
 | memory ingest, reflection capture, weekly distillation | `modules/memory` | Append raw memory, distill reusable insights |
+| chat pattern extraction, paradigm mining | `modules/memory` | Extract recurring patterns from chat events |
 
 ## Exact Routing Instructions (Required)
 

@@ -58,15 +58,15 @@ route_from_task() {
     echo "content"
     return
   fi
-  if [[ "$t" =~ decision|priority|plan|review|failure|post-mortem|risk|tradeoff ]]; then
+  if [[ "$t" =~ decision|priority|plan|review|failure|post-mortem|risk|tradeoff|audit|governance|exception ]]; then
     echo "decision"
     return
   fi
-  if [[ "$t" =~ profile|goal|value|identity|alignment|temperament|trigger ]]; then
+  if [[ "$t" =~ profile|goal|value|identity|alignment|temperament|trigger|psych|drift ]]; then
     echo "profile"
     return
   fi
-  if [[ "$t" =~ memory|journal|reflect|reflection|insight|distill|summary ]]; then
+  if [[ "$t" =~ memory|journal|reflect|reflection|insight|distill|summary|paradigm|pattern|extract ]]; then
     echo "memory"
     return
   fi
@@ -101,7 +101,8 @@ LIST
     cat <<'LIST'
 - modules/decision/data/heuristics.yaml
 - modules/decision/data/impulse_guardrails.yaml (for high-risk decisions)
-- modules/decision/skills/log_decision.md or weekly_review.md or precommit_check.md
+- modules/decision/data/audit_rules.yaml (for audit tasks)
+- modules/decision/skills/log_decision.md or weekly_review.md or precommit_check.md or audit_decision_system.md
 - modules/decision/logs/decisions.jsonl (plus failures/experiences/precommit_checks when needed)
 LIST
     ;;
@@ -109,15 +110,17 @@ LIST
     cat <<'LIST'
 - modules/profile/data/identity.yaml
 - modules/profile/data/operating_preferences.yaml
-- modules/profile/skills/update_profile.md or alignment_check.md
+- modules/profile/data/psych_profile.yaml
+- modules/profile/skills/update_profile.md or alignment_check.md or profile_snapshot.md or log_trigger_event.md or log_psych_observation.md
 - modules/profile/logs/profile_changes.jsonl (if updating profile)
 LIST
     ;;
   memory)
     cat <<'LIST'
 - modules/memory/data/memory_policy.yaml
-- modules/memory/skills/ingest_memory.md or distill_weekly.md
-- modules/memory/logs/memory_events.jsonl (plus memory_insights.jsonl for distillation)
+- modules/memory/data/pattern_taxonomy.yaml (for pattern extraction)
+- modules/memory/skills/ingest_memory.md or extract_chat_patterns.md or distill_weekly.md
+- modules/memory/logs/memory_events.jsonl (plus memory_insights.jsonl / chat_patterns.jsonl when needed)
 LIST
     ;;
   *)

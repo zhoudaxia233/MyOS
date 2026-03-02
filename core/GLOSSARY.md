@@ -25,3 +25,8 @@ Use short entries with a stable definition and optional examples.
 
 - **Memory Distillation**: Converting raw weekly events into reusable insights with source references.
   - Example: Link insight records to `memory_events` IDs in `modules/memory/logs/memory_insights.jsonl`.
+
+### Example Entry
+
+- **Chat Paradigm**: A recurring pattern extracted from multiple chat events and formalized as an actionable rule.
+  - Example: Store in `modules/memory/logs/chat_patterns.jsonl` with confidence and source IDs.

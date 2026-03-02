@@ -13,6 +13,7 @@ Evaluate whether a proposed action aligns with long-term direction and boundarie
 
 - `modules/profile/data/identity.yaml`
 - `modules/profile/data/operating_preferences.yaml`
+- `modules/profile/data/psych_profile.yaml`
 
 ## Output Format
 
@@ -25,3 +26,4 @@ Evaluate whether a proposed action aligns with long-term direction and boundarie
 
 - Reference profile SSOT statements directly.
 - Do not moralize; focus on fit and tradeoffs.
+- Include at least one note on trigger/stabilizer fit from `psych_profile.yaml`.

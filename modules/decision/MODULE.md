@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This module stores judgment memory for decisions, failures, and meaningful experiences. Its goal is decision stability over time: capture choices as they happen, preserve reasoning, and review patterns weekly to improve heuristics.
+This module stores judgment memory for decisions, failures, meaningful experiences, and audit outputs. Its goal is decision stability over time: capture choices as they happen, preserve reasoning, enforce guardrails, and continuously audit drift from operating principles.
 
 ## Scope
 
@@ -11,6 +11,7 @@ This module stores judgment memory for decisions, failures, and meaningful exper
 - Record notable experiences/signals
 - Run precommit guardrail checks for high-risk decisions
 - Run weekly pattern reviews
+- Produce audit-first views for owner oversight
 - Propose heuristic updates without rewriting history
 
 ## File Inventory
@@ -21,11 +22,13 @@ This module stores judgment memory for decisions, failures, and meaningful exper
 - `modules/decision/skills/log_decision.md`: Minimal workflow for appending a decision record
 - `modules/decision/skills/precommit_check.md`: Guardrail check before committing high-risk decisions
 - `modules/decision/skills/weekly_review.md`: Weekly review workflow and output format
+- `modules/decision/skills/audit_decision_system.md`: Generate concise audit report for owner review
 
 ### Canonical data (SSOT)
 
-- `modules/decision/data/heuristics.yaml`: Current heuristics, priorities, and risk rules (editable SSOT)
+- `modules/decision/data/heuristics.yaml`: Current heuristics, priorities, and risk rules
 - `modules/decision/data/impulse_guardrails.yaml`: Precommit check rules and cooldown policy
+- `modules/decision/data/audit_rules.yaml`: Thresholds and scoring rules for audit outputs
 
 ### Logs (append-only JSONL)
 
@@ -36,35 +39,39 @@ This module stores judgment memory for decisions, failures, and meaningful exper
 
 ### Outputs
 
-- `modules/decision/outputs/`: Weekly reviews and analysis artifacts
+- `modules/decision/outputs/`: Weekly reviews and audit artifacts
+- `modules/decision/outputs/templates/decision_audit_report.md`: Report structure template
 
 ## Workflows
 
 1. Log decision immediately after it happens
-   - Append to `decisions.jsonl` while reasoning is still fresh.
+   - Append to `decisions.jsonl` while reasoning is fresh.
 2. Log failure post-mortem
    - Append to `failures.jsonl` with root cause and prevention.
 3. Run precommit check for high-risk decisions
    - Use `impulse_guardrails.yaml` and append one record to `precommit_checks.jsonl`.
    - If emotional load is high, enforce cooldown before final commitment.
 4. Weekly review
-   - Read the last 7 days of decision/failure/experience logs.
+   - Read the last 7 days of logs.
    - Include precommit checks to spot impulse patterns and override frequency.
    - Summarize patterns and propose heuristic updates.
-   - Save review output to `outputs/`.
+5. Decision audit
+   - Score recent behavior against `audit_rules.yaml`.
+   - Produce owner-facing exception report with actions.
 
 ## Progressive Loading Rules (Required)
 
-- For decision logging: load only `modules/decision/skills/log_decision.md` and `decisions.jsonl` schema/records as needed.
+- For decision logging: load `log_decision.md` and `decisions.jsonl` schema/records as needed.
 - For precommit checks: load `precommit_check.md`, `impulse_guardrails.yaml`, and `precommit_checks.jsonl`.
-- For weekly review: load `weekly_review.md`, relevant log slices (last 7 days), `heuristics.yaml`, and `precommit_checks.jsonl`.
-- Do not load content module files unless the user explicitly requests a cross-module analysis.
+- For weekly review: load `weekly_review.md`, recent log slices, `heuristics.yaml`, and `precommit_checks.jsonl`.
+- For audits: load `audit_decision_system.md`, `audit_rules.yaml`, recent logs, and report template.
+- Do not load unrelated modules unless explicit cross-module analysis is requested.
 
 <instructions>
 - Never moralize; focus on tradeoffs, decision quality, and pattern extraction.
-- Always separate "decision-time reasoning" from "post-hoc review" when both appear.
+- Always separate decision-time reasoning from post-hoc review.
 - For high-risk calls, require explicit downside, invalidation condition, and disconfirming signal.
-- Preserve append-only log integrity; never rewrite or delete history.
-- Use explicit uncertainty language when memory or evidence is incomplete.
-- Prefer short, concrete descriptions over abstract self-judgment.
+- Keep outputs audit-friendly: concise exceptions, metrics, and actions.
+- Preserve append-only integrity; never rewrite or delete history.
+- Use explicit uncertainty language when evidence is incomplete.
 </instructions>

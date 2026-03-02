@@ -1,0 +1,29 @@
+profile_type: "operational_non_clinical"
+intent: "Improve self-regulation quality in high-impact decisions and execution cycles."
+
+behavioral_tendencies:
+  strengths:
+    - "High drive to execute quickly under ambiguity"
+    - "Strong systems thinking and structure preference"
+  risks:
+    - "Scope expansion when momentum is high"
+    - "Overreaction risk after sharp losses or setbacks"
+
+trigger_map:
+  common_triggers:
+    - trigger: "time pressure + public commitment"
+      default_response: "compresses validation"
+      stabilizer: "force downside + invalidation check"
+    - trigger: "recent win streak"
+      default_response: "risk-size drift"
+      stabilizer: "re-anchor to max loss rule"
+
+stabilizers:
+  - "Written precommit checklist for high-risk decisions"
+  - "Cooldown window when emotional weight >= threshold"
+  - "Weekly review with pattern count, not anecdotes"
+
+metrics_to_track:
+  - "precommit coverage ratio"
+  - "override frequency"
+  - "trigger-to-mitigation success rate"

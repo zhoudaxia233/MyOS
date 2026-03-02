@@ -1,0 +1,21 @@
+window_defaults:
+  weekly_days: 7
+  monthly_days: 30
+
+metrics:
+  - name: "precommit_coverage"
+    definition: "high-risk decisions with precommit_check_id / total high-risk decisions"
+    warning_below: 0.8
+  - name: "cooldown_compliance"
+    definition: "cooldown-required checks respected / cooldown-required checks"
+    warning_below: 0.9
+  - name: "repeat_failure_rate"
+    definition: "failures with repeated root cause / total failures"
+    warning_above: 0.3
+
+audit_output_rules:
+  prioritize:
+    - "safety violations"
+    - "coverage gaps"
+    - "drift from heuristics"
+  max_findings: 7

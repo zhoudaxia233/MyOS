@@ -2,72 +2,57 @@
 
 ## Project Intent
 
-Build a stable personal operating center for AI agents, where execution scales through automation but long-term judgment remains coherent.
-
-Core direction:
-
-- Separate execution from judgment
-- Preserve personal alignment over time
-- Keep architecture modular and low-coupled
-- Reduce short-term noise with structured memory and guardrails
+Build a stable personal operating center for AI agents, where execution scales but judgment remains coherent, auditable, and aligned with long-term direction.
 
 ## Version Timeline
 
 ## v0.1 (Completed)
 
-- Kernel in `core/`:
-  - Routing, rules, schemas, glossary
-- Modules:
-  - `content` (voice, anti-patterns, templates, logs)
-  - `decision` (decisions, failures, experiences, weekly review)
-- Safety foundations:
-  - Append-only JSONL discipline
-  - Schema header rule
-  - `append_jsonl.sh`
-- Documentation:
-  - `README.md`, `README-zh.md`, `CHECKLIST.md`
+- Kernel in `core/` (routing, rules, schemas, glossary)
+- Modules: `content`, `decision`, `_template`
+- Append-only JSONL discipline and schema header rule
+- Base docs and safe append script
 
 ## v0.2 (Completed)
 
-- Added `profile` module:
-  - Personal north star, values, preferences, boundaries
-  - Profile changes and trigger event logs
-  - Alignment check workflow
-- Added `memory` module:
-  - Daily memory event ingestion
-  - Insight extraction and weekly distillation workflow
-- Extended `decision` module:
-  - Impulse guardrails (`impulse_guardrails.yaml`)
-  - Precommit checks log and skill
-- Added context planner utility:
-  - `scripts/context_bundle.sh` for route + minimal file bundle
+- Added `profile` module (identity + preferences)
+- Added `memory` module (ingest + weekly distill)
+- Added decision impulse guardrails and precommit workflow
+- Added `context_bundle.sh` for route + minimal file planning
 
-## v0.3 (Next)
+## v0.3-first (Completed)
 
-1. Orchestration layer
-   - Optional API runner to execute route/module workflows automatically
-   - Configurable task entry points
-2. Retrieval and scale
-   - Optional index/retrieval layer for large history
-   - Chunking and reference policies for long logs
-3. Personal adaptation loop
-   - Scheduled profile/memory calibration prompts
-   - Drift detection between daily actions and north-star goals
-4. Safety hardening
-   - Domain-specific guardrails (invest/project/content)
-   - Escalation thresholds and override audits
+- Profile cyberization layer:
+  - `psych_profile.yaml`
+  - `psych_observations.jsonl`
+  - `profile_snapshot.md`
+- Memory paradigm layer:
+  - `pattern_taxonomy.yaml`
+  - `chat_patterns.jsonl`
+  - `extract_chat_patterns.md`
+- Decision audit layer:
+  - `audit_rules.yaml`
+  - `audit_decision_system.md`
+  - `decision_audit_report.md` template
+- Cadence runbook:
+  - `routines/cadence.yaml`
+  - `routines/CADENCE.md`
+  - `scripts/run_cycle.sh`
 
-## Operating Principles for Future Versions
+## v0.3-next (In Progress)
 
-- Keep kernel small and stable
-- Keep modules independent and replaceable
-- Preserve append-only historical integrity
-- Prefer explicit IDs and references over duplicated content
-- Optimize for progressive disclosure and low context cost
+1. Retrieval scaling
+   - Optional retrieval index for long-history memory and audits
+2. Automation scheduling
+   - Optional orchestrator to run daily/weekly/monthly routines automatically
+3. Drift dashboards
+   - Quantified trend view for profile drift, precommit coverage, and pattern quality
+4. Guardrail hardening
+   - Domain-specific policies with override audit trails
 
 ## Success Signals
 
-- Faster execution with less context confusion
-- Fewer repeated mistakes in high-risk decisions
-- Better alignment between weekly actions and long-term direction
-- Clear audit trail of what changed, why it changed, and what improved
+- Better action alignment with long-term priorities
+- Lower repeated failure rate in high-risk domains
+- Higher precommit coverage and cooldown compliance
+- Faster owner audit with clearer exception reports

@@ -1,0 +1,15 @@
+pattern_classes:
+  - name: "decision_pattern"
+    definition: "Recurring choice behavior linked to outcomes"
+    minimum_evidence_count: 2
+  - name: "execution_pattern"
+    definition: "Recurring workflow behavior affecting throughput or quality"
+    minimum_evidence_count: 2
+  - name: "emotional_pattern"
+    definition: "Recurring emotional trigger-response loop affecting decisions"
+    minimum_evidence_count: 2
+
+quality_rules:
+  - "A pattern claim must cite source event IDs"
+  - "Confidence <= 6 requires explicit uncertainty note"
+  - "Avoid single-event generalization"
