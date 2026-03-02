@@ -39,7 +39,19 @@ Build a stable personal operating center for AI agents, where execution scales b
   - `routines/CADENCE.md`
   - `scripts/run_cycle.sh`
 
-## v0.3-next (In Progress)
+## v0.3-orchestrator (Completed)
+
+- Added dedicated `orchestrator/` subsystem as high-level execution engine
+- Layered architecture in `orchestrator/src/`:
+  - router, loader, planner, runner, writer, validators
+  - providers: manual + optional openai
+- Added orchestrator runtime logs:
+  - `orchestrator/logs/runs.jsonl`
+- Added CLI:
+  - `inspect` for route/plan visibility
+  - `run` for execution packet (manual) or provider-based generation
+
+## v0.4-next (In Progress)
 
 1. Retrieval scaling
    - Optional retrieval index for long-history memory and audits

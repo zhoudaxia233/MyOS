@@ -43,6 +43,13 @@ Use this checklist before merging changes.
 - [ ] `scripts/run_cycle.sh` reflects daily/weekly/monthly routines
 - [ ] `scripts/context_bundle.sh` includes new v0.3-first routes
 
+## Orchestrator Layer
+
+- [ ] `orchestrator/` exists as a separate execution subsystem
+- [ ] `orchestrator/src/main.py inspect` prints route + file plan
+- [ ] `orchestrator/src/main.py run --provider manual` writes execution output
+- [ ] `orchestrator/logs/runs.jsonl` preserves `_schema` header and append-only records
+
 ## Operational Readiness
 
 - [ ] `scripts/append_jsonl.sh` is executable

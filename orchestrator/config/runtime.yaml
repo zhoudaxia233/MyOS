@@ -1,0 +1,4 @@
+default_provider: "manual"
+default_openai_model: "gpt-4.1-mini"
+max_context_chars: 24000
+output_dir: "orchestrator/logs"

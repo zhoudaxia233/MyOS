@@ -41,6 +41,11 @@
   routines/
     cadence.yaml
     CADENCE.md
+  orchestrator/
+    README.md
+    config/
+    src/
+    logs/
   scripts/
     append_jsonl.sh
     context_bundle.sh
@@ -82,6 +87,10 @@
 4. 只读当前任务必要文件
 5. 生成输出或追加日志
 
+另外你现在有独立执行引擎层：
+
+- `orchestrator/`（可手动模式、可选 API 模式）
+
 ## 快速使用
 
 ### 1) 先拿最小上下文
@@ -98,13 +107,33 @@ scripts/run_cycle.sh weekly
 scripts/run_cycle.sh monthly
 ```
 
-### 3) 高风险决策流程
+### 3) 用 orchestrator 作为高层执行器
+
+先检查路由和计划：
+
+```bash
+python3 /Users/closears/MyOS/orchestrator/src/main.py inspect --task "run weekly decision review"
+```
+
+无 API 运行（生成 execution packet）：
+
+```bash
+python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "run weekly decision review" --provider manual
+```
+
+可选 API 运行：
+
+```bash
+OPENAI_API_KEY=... python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "run weekly decision review" --provider openai
+```
+
+### 4) 高风险决策流程
 
 1. `precommit_check.md`
 2. `log_decision.md`（带 `guardrail_check_id`）
 3. 周复盘 + 审计报告
 
-### 4) 你的“第二大脑”流程
+### 5) 你的“第二大脑”流程
 
 1. 每天记录 memory event
 2. 每周抽取 chat patterns
@@ -123,3 +152,4 @@ scripts/run_cycle.sh monthly
 - v0.1：内核 + content + decision 基础
 - v0.2：profile + memory + precommit guardrails
 - v0.3-first：心理侧写、chat 范式提取、决策审计视图、周期 runbook
+- v0.3-orchestrator：新增独立 `orchestrator/` 执行层抽象（manual + 可选 openai provider）

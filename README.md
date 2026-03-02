@@ -45,6 +45,11 @@ Separate execution from judgment while keeping them aligned over time.
   routines/
     cadence.yaml
     CADENCE.md
+  orchestrator/
+    README.md
+    config/
+    src/
+    logs/
   scripts/
     append_jsonl.sh
     context_bundle.sh
@@ -88,6 +93,11 @@ This repository is executed by an agent runtime (not by a monolithic app server)
 4. Load only task-required files
 5. Produce output and/or append one log line per record
 
+Execution engines can be:
+
+- Human-triggered agent runs (chat-driven)
+- `orchestrator/` CLI (manual or API provider mode)
+
 ## Fast Usage
 
 ### 1) Get a route and minimal context bundle
@@ -104,19 +114,39 @@ scripts/run_cycle.sh weekly
 scripts/run_cycle.sh monthly
 ```
 
-### 3) High-risk decision flow
+### 3) Run orchestrator (high-level execution engine)
+
+Inspect route + plan:
+
+```bash
+python3 /Users/closears/MyOS/orchestrator/src/main.py inspect --task "run weekly decision review"
+```
+
+Run with no API (manual packet generation):
+
+```bash
+python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "run weekly decision review" --provider manual
+```
+
+Optional API mode:
+
+```bash
+OPENAI_API_KEY=... python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "run weekly decision review" --provider openai
+```
+
+### 4) High-risk decision flow
 
 1. Run precommit check (`modules/decision/skills/precommit_check.md`)
 2. Log decision with `guardrail_check_id`
 3. Include in weekly review and audit report
 
-### 4) Pattern extraction flow
+### 5) Pattern extraction flow
 
 1. Ingest chat/reflection events (`ingest_memory.md`)
 2. Extract paradigms (`extract_chat_patterns.md`)
 3. Distill weekly memory (`distill_weekly.md`)
 
-### 5) Profile adaptation flow
+### 6) Profile adaptation flow
 
 1. Log trigger events and psych observations
 2. Run monthly profile snapshot
@@ -134,3 +164,4 @@ scripts/run_cycle.sh monthly
 - v0.1: Kernel + content + decision base
 - v0.2: Profile + memory modules + guardrails
 - v0.3-first: Chat paradigm extraction, psych profiling, audit-first decision view, cadence runbook
+- v0.3-orchestrator: Added `orchestrator/` execution engine abstraction (manual + optional OpenAI provider)

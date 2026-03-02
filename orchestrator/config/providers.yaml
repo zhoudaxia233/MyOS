@@ -1,0 +1,6 @@
+providers:
+  manual:
+    enabled: true
+  openai:
+    enabled: true
+    endpoint: "https://api.openai.com/v1/chat/completions"
