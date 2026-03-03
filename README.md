@@ -266,6 +266,7 @@ Includes integration chain coverage for `validate`, `inspect`, `run`, `metrics`,
 - Archive by `"status": "archived"`
 - Cross-module references are ID-only
 - Orchestrator output files use UTC timestamp suffixes (`YYYYMMDD_HHMMSS`) to avoid same-day overwrite
+- Runtime run logs include route/load audit fields (`route_reason`, `matched_keywords`, `loaded_files`, `skill`, `output_hash`)
 
 ## Current Version
 

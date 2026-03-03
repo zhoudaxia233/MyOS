@@ -7,8 +7,21 @@ from validators import append_jsonl, ensure_parent
 RUNS_SCHEMA = {
     "_schema": {
         "name": "runs",
-        "version": "1.0",
-        "fields": ["id", "created_at", "status", "task", "module", "provider", "result_path"],
+        "version": "1.1",
+        "fields": [
+            "id",
+            "created_at",
+            "status",
+            "task",
+            "module",
+            "provider",
+            "skill",
+            "route_reason",
+            "matched_keywords",
+            "loaded_files",
+            "result_path",
+            "output_hash",
+        ],
         "notes": "append-only",
     }
 }

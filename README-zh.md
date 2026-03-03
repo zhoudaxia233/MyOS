@@ -254,6 +254,7 @@ poetry run pytest -q /Users/closears/MyOS/orchestrator/tests
 - 删除用 `status: archived`
 - 跨模块只用 ID 引用，不复制内容
 - orchestrator 生成输出默认使用 UTC 时间戳后缀（`YYYYMMDD_HHMMSS`），避免同日覆盖
+- run 运行日志包含路由/加载审计字段（`route_reason`、`matched_keywords`、`loaded_files`、`skill`、`output_hash`）
 
 ## 当前版本
 

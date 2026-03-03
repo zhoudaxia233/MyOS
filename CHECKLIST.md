@@ -56,6 +56,7 @@ Use this checklist before merging changes.
 - [ ] `orchestrator/src/main.py run` shows route reason + loaded files for audit visibility
 - [ ] `orchestrator/src/main.py validate --strict` passes on current repository state
 - [ ] `orchestrator/logs/runs.jsonl` preserves `_schema` header and append-only records
+- [ ] `orchestrator/logs/runs.jsonl` records runtime audit fields (`route_reason`, `matched_keywords`, `loaded_files`, `skill`, `output_hash`)
 - [ ] `orchestrator/src/main.py schedule-run --cycle weekly` executes cadence routines
 - [ ] `orchestrator/logs/schedule_runs.jsonl` preserves `_schema` header and append-only records
 

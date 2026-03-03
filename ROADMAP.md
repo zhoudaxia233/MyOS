@@ -109,6 +109,9 @@ Build a stable personal operating center for AI agents, where execution scales b
 5. End-to-end reliability
    - Added integration command-chain test covering `validate/inspect/run/metrics/owner-report/schedule-run`
    - Fixed path canonicalization in runtime logs for `/var` vs `/private/var` compatibility
+6. Runtime audit logging
+   - Added run-log fields for route/load traceability (`route_reason`, `matched_keywords`, `loaded_files`, `skill`, `output_hash`)
+   - Integrated coverage in end-to-end test assertions
 
 ## v0.7-plugin-contract (Planned)
 

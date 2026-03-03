@@ -228,3 +228,13 @@ It checks:
   - `metrics`
   - `owner-report`
   - `schedule-run`
+
+## Runtime Audit Log
+
+Each `run` appends a record to `orchestrator/logs/runs.jsonl` including:
+
+- `route_reason`
+- `matched_keywords`
+- `loaded_files`
+- `skill`
+- `output_hash` (SHA-256 of generated output content)

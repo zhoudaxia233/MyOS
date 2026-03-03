@@ -272,6 +272,15 @@ def test_e2e_cli_command_chain(monkeypatch, capsys) -> None:
         out = capsys.readouterr().out
         assert "Wrote:" in out
         assert len(list((root / "modules/decision/outputs").glob("weekly_review_*.md"))) >= 1
+        runs_path = root / "orchestrator/logs/runs.jsonl"
+        lines = runs_path.read_text(encoding="utf-8").splitlines()
+        assert len(lines) >= 2
+        record = json.loads(lines[-1])
+        assert record["route_reason"] in {"manifest_keyword_match", "routes_keyword_match", "forced_module", "fallback_default"}
+        assert record["skill"] == "modules/decision/skills/weekly_review.md"
+        assert isinstance(record["matched_keywords"], list)
+        assert isinstance(record["loaded_files"], list)
+        assert len(record["output_hash"]) == 64
 
         rc = main.cmd_metrics(Namespace(window=7, output=None))
         assert rc == 0

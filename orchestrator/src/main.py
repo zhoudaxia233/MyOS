@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from datetime import datetime, timezone
 from pathlib import Path
@@ -135,6 +136,7 @@ def execute_task(
 
     content = run_with_provider(provider, task, module, plan, bundle, model)
     out = write_output(root, plan["output_path"], content)
+    output_hash = hashlib.sha256(content.encode("utf-8")).hexdigest()
 
     run_record = {
         "id": _next_id(root, "run", "orchestrator/logs/runs.jsonl"),
@@ -143,7 +145,12 @@ def execute_task(
         "task": task,
         "module": module,
         "provider": provider,
+        "skill": plan["skill"],
+        "route_reason": route["reason"],
+        "matched_keywords": route["matched_keywords"],
+        "loaded_files": [f["path"] for f in bundle["files"]],
         "result_path": _root_relative(out, root),
+        "output_hash": output_hash,
     }
     log_run(root, run_record)
 
@@ -155,6 +162,7 @@ def execute_task(
         "route": route,
         "plan": plan,
         "output_path": _root_relative(out, root),
+        "output_hash": output_hash,
         "retrieval_hits": len(hits),
         "loaded_files": [f["path"] for f in bundle["files"]],
     }
