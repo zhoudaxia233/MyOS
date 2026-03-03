@@ -196,6 +196,7 @@ def cmd_guardrail_check(args: argparse.Namespace) -> int:
         "disconfirming_signal": args.disconfirming_signal,
         "emotional_weight": args.emotional_weight,
         "cooldown_applied": args.cooldown_applied,
+        "cooldown_hours": args.cooldown_hours,
         "override_requested": args.override_requested,
         "override_reason": args.override_reason,
         "owner_confirmation": args.owner_confirmation,
@@ -221,6 +222,8 @@ def cmd_guardrail_check(args: argparse.Namespace) -> int:
     print(f"Status: {result['status']}")
     print(f"Violations: {result['violations']}")
     print(f"Cooldown required: {result['cooldown_required']}")
+    if result["cooldown_required"]:
+        print(f"Required cooldown hours: {result['required_cooldown_hours']}")
     if result["missing_override_fields"]:
         print(f"Missing override fields: {result['missing_override_fields']}")
     return 0
@@ -416,6 +419,7 @@ def build_parser() -> argparse.ArgumentParser:
     sp_guardrail.add_argument("--disconfirming-signal", default=None)
     sp_guardrail.add_argument("--emotional-weight", type=int, default=0)
     sp_guardrail.add_argument("--cooldown-applied", action="store_true")
+    sp_guardrail.add_argument("--cooldown-hours", type=int, default=0)
     sp_guardrail.add_argument("--override-requested", action="store_true")
     sp_guardrail.add_argument("--override-reason", default=None)
     sp_guardrail.add_argument("--owner-confirmation", default=None)

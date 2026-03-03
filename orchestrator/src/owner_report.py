@@ -55,6 +55,38 @@ def _latest_file(repo_root: Path, pattern: str) -> str | None:
     return str(files[0].relative_to(repo_root))
 
 
+def _read_text(repo_root: Path, rel_path: str | None) -> str:
+    if not rel_path:
+        return ""
+    path = repo_root / rel_path
+    if not path.exists() or not path.is_file():
+        return ""
+    return path.read_text(encoding="utf-8")
+
+
+def _parse_metrics_status_from_report(text: str) -> dict[str, str]:
+    mapping = {
+        "precommit coverage": "precommit_coverage",
+        "cooldown compliance": "cooldown_compliance",
+        "repeat failure rate": "repeat_failure_rate",
+        "profile drift rate": "profile_drift_rate",
+    }
+    out: dict[str, str] = {}
+    for raw in text.splitlines():
+        line = raw.strip()
+        if not line.startswith("|") or line.count("|") < 5:
+            continue
+        cols = [c.strip().lower() for c in line.strip("|").split("|")]
+        if len(cols) < 4:
+            continue
+        metric_label = cols[0]
+        status = cols[3]
+        key = mapping.get(metric_label)
+        if key and status in {"pass", "warn", "fail"}:
+            out[key] = status
+    return out
+
+
 def build_owner_snapshot(repo_root: Path, window_days: int, now: datetime | None = None) -> dict:
     now = now or datetime.now(timezone.utc)
     metrics = compute_drift_metrics(repo_root, window_days=window_days, now=now)
@@ -103,6 +135,29 @@ def build_owner_snapshot(repo_root: Path, window_days: int, now: datetime | None
     weekly_review = _latest_file(repo_root, "modules/decision/outputs/weekly_review_*.md")
     metrics_report = _latest_file(repo_root, "modules/decision/outputs/metrics_*.md")
 
+    consistency_alerts: list[str] = []
+
+    metrics_report_text = _read_text(repo_root, metrics_report)
+    if metrics_report_text:
+        reported_status = _parse_metrics_status_from_report(metrics_report_text)
+        for key, current in metrics["metrics"].items():
+            reported = reported_status.get(key)
+            if reported and reported != current["status"]:
+                consistency_alerts.append(
+                    f"metrics_mismatch:{key}:latest_report={reported},owner_snapshot={current['status']}"
+                )
+
+    decision_audit_text = _read_text(repo_root, decision_audit).lower()
+    if decision_audit_text and ("no major exceptions" in decision_audit_text or "no exceptions" in decision_audit_text):
+        if len(top_exceptions) > 0:
+            consistency_alerts.append("decision_audit_conflict:reports_no_exceptions_but_current_exceptions_exist")
+
+    weekly_review_text = _read_text(repo_root, weekly_review).lower()
+    if weekly_review_text and ("sample-size limitation" in weekly_review_text or "too few records" in weekly_review_text):
+        observed = metrics["counts"]["decisions"] + metrics["counts"]["precommit_checks"] + metrics["counts"]["failures"]
+        if observed >= 3:
+            consistency_alerts.append("weekly_review_conflict:sample_size_limitation_vs_nontrivial_record_count")
+
     return {
         "generated_at": now.isoformat().replace("+00:00", "Z"),
         "window_days": window_days,
@@ -115,6 +170,7 @@ def build_owner_snapshot(repo_root: Path, window_days: int, now: datetime | None
             "weekly_review": weekly_review,
             "metrics_report": metrics_report,
         },
+        "consistency_alerts": consistency_alerts,
     }
 
 
@@ -153,6 +209,20 @@ def render_owner_report(snapshot: dict) -> str:
             f"- decision_audit: {snapshot['source_artifacts']['decision_audit'] or 'N/A'}",
             f"- weekly_review: {snapshot['source_artifacts']['weekly_review'] or 'N/A'}",
             f"- metrics_report: {snapshot['source_artifacts']['metrics_report'] or 'N/A'}",
+            "",
+            "## Consistency Alerts",
+            "",
+        ]
+    )
+
+    if snapshot["consistency_alerts"]:
+        for alert in snapshot["consistency_alerts"]:
+            lines.append(f"- {alert}")
+    else:
+        lines.append("- none")
+
+    lines.extend(
+        [
             "",
             "## Owner Actions",
             "",

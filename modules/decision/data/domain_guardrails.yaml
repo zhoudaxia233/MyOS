@@ -3,12 +3,15 @@ domains:
     require_precommit: true
     require_guardrail_check_id: true
     max_emotional_without_cooldown: 6
+    required_cooldown_hours_when_high_emotion: 12
+    max_loss_limit_r: 0.5
     required_fields:
       - downside
       - invalidation_condition
       - max_loss
       - disconfirming_signal
     allow_override: true
+    require_owner_confirmation_for_override: true
     override_required_fields:
       - override_reason
       - owner_confirmation
@@ -17,10 +20,13 @@ domains:
     require_precommit: true
     require_guardrail_check_id: false
     max_emotional_without_cooldown: 7
+    required_cooldown_hours_when_high_emotion: 6
+    max_loss_limit_r: 1.0
     required_fields:
       - downside
       - invalidation_condition
     allow_override: true
+    require_owner_confirmation_for_override: true
     override_required_fields:
       - override_reason
       - owner_confirmation
@@ -29,10 +35,15 @@ domains:
     require_precommit: false
     require_guardrail_check_id: false
     max_emotional_without_cooldown: 8
+    required_cooldown_hours_when_high_emotion: 2
+    max_loss_limit_r: 2.0
     required_fields: []
     allow_override: false
+    require_owner_confirmation_for_override: false
     override_required_fields: []
 
 global:
   block_when_missing_required_fields: true
   block_when_high_emotion_without_cooldown: true
+  block_when_max_loss_exceeds_limit: true
+  block_when_cooldown_hours_insufficient: true

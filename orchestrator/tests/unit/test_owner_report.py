@@ -59,7 +59,7 @@ def test_owner_snapshot_and_render() -> None:
             root / "modules/decision/logs/failures.jsonl",
             "failures",
             ["id", "created_at", "root_cause"],
-            [],
+            [{"id": "fx_1", "created_at": "2026-03-02T09:30:00Z", "root_cause": "review latency"}],
         )
 
         _write_jsonl(
@@ -84,14 +84,37 @@ def test_owner_snapshot_and_render() -> None:
         )
 
         (root / "modules/decision/outputs").mkdir(parents=True, exist_ok=True)
-        (root / "modules/decision/outputs/decision_audit_20260302.md").write_text("audit", encoding="utf-8")
-        (root / "modules/decision/outputs/weekly_review_20260302.md").write_text("review", encoding="utf-8")
-        (root / "modules/decision/outputs/metrics_20260302.md").write_text("metrics", encoding="utf-8")
+        (root / "modules/decision/outputs/decision_audit_20260302.md").write_text(
+            "No major exceptions in this window.", encoding="utf-8"
+        )
+        (root / "modules/decision/outputs/weekly_review_20260302.md").write_text(
+            "Sample-size limitation noted.", encoding="utf-8"
+        )
+        (root / "modules/decision/outputs/metrics_20260302.md").write_text(
+            "\n".join(
+                [
+                    "# Drift Dashboard",
+                    "",
+                    "| Metric | Value | Threshold | Status | Detail |",
+                    "|---|---:|---:|---|---|",
+                    "| Precommit Coverage | 90.0% | 80.0% | pass | 9/10 |",
+                    "| Cooldown Compliance | 100.0% | 90.0% | pass | 1/1 |",
+                    "| Repeat Failure Rate | 0.0% | 30.0% | pass | 0/1 |",
+                    "| Profile Drift Rate | 0.0% | 40.0% | pass | 0/0 |",
+                    "",
+                ]
+            ),
+            encoding="utf-8",
+        )
 
         snapshot = build_owner_snapshot(root, window_days=7, now=now)
         report = render_owner_report(snapshot)
 
         assert snapshot["override_count"] == 1
+        assert any(a.startswith("metrics_mismatch:precommit_coverage:") for a in snapshot["consistency_alerts"])
+        assert any(a.startswith("decision_audit_conflict:") for a in snapshot["consistency_alerts"])
+        assert any(a.startswith("weekly_review_conflict:") for a in snapshot["consistency_alerts"])
         assert "guardrail_overrides.invest" in report
+        assert "Consistency Alerts" in report
         assert "Owner Report" in report
         assert "Executive Summary" in report
