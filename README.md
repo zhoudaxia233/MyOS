@@ -249,6 +249,16 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "run weekly dec
 2. Run monthly profile snapshot
 3. Update profile YAML baselines with append-only change log
 
+## Testing
+
+Run orchestrator test suite:
+
+```bash
+poetry run pytest -q /Users/closears/MyOS/orchestrator/tests
+```
+
+Includes integration chain coverage for `validate`, `inspect`, `run`, `metrics`, `owner-report`, and `schedule-run`.
+
 ## Data Integrity
 
 - Never overwrite JSONL logs; append only
@@ -270,3 +280,4 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "run weekly dec
 - v0.6-owner-report: Added consolidated owner one-pager and weekly auto-generation
 - v0.6-next: Added manifest-driven routing (`module.manifest.yaml`), skill-driven minimal context loading, and explicit route audit output in `inspect`/`run`
 - v0.6-next: Added plugin contract validator command (`validate`) and CI validation gate
+- v0.6-next: Added integration tests for end-to-end command chain reliability

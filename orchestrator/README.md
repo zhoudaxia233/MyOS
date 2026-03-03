@@ -217,3 +217,14 @@ It checks:
 
 - Planner-generated outputs use UTC timestamp suffixes (`YYYYMMDD_HHMMSS`) to avoid same-day overwrite.
 - `metrics` and `owner-report` default outputs also use UTC timestamp suffixes.
+
+## Test Coverage
+
+- Unit tests cover router/planner/guardrails/metrics/owner-report/writer/validator flows.
+- Integration tests cover command chain execution:
+  - `validate --strict`
+  - `inspect`
+  - `run --provider manual`
+  - `metrics`
+  - `owner-report`
+  - `schedule-run`

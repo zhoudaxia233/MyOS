@@ -91,3 +91,4 @@ Use this checklist before merging changes.
 - [ ] `scripts/run_cycle.sh` is executable
 - [ ] Outputs are written under `modules/*/outputs/`
 - [ ] CI runs `validate --strict` before tests
+- [ ] Integration command-chain test passes (`orchestrator/tests/integration/test_workflow_e2e.py`)

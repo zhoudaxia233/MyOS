@@ -237,6 +237,16 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "run weekly dec
 3. 每月生成 profile snapshot
 4. 你只审计异常并批准调整
 
+## 测试
+
+运行 orchestrator 测试集：
+
+```bash
+poetry run pytest -q /Users/closears/MyOS/orchestrator/tests
+```
+
+其中包含 `validate`、`inspect`、`run`、`metrics`、`owner-report`、`schedule-run` 的集成链路测试。
+
 ## 数据纪律
 
 - JSONL 不覆盖，只追加
@@ -258,3 +268,4 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "run weekly dec
 - v0.6-owner-report：新增 owner 一页报告与每周自动汇总
 - v0.6-next：新增 manifest 驱动路由（`module.manifest.yaml`）、按 skill 的最小上下文加载、以及 `inspect`/`run` 的路由审计输出
 - v0.6-next：新增插件契约校验命令（`validate`）和 CI 校验门禁
+- v0.6-next：新增端到端集成测试，覆盖核心命令链路稳定性

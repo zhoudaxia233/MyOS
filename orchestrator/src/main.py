@@ -65,6 +65,16 @@ def _next_id(root: Path, prefix: str, log_rel_path: str) -> str:
     return f"{prefix}_{date}_{max_seq + 1:03d}"
 
 
+def _root_relative(path: Path, root: Path) -> str:
+    try:
+        return str(path.relative_to(root))
+    except ValueError:
+        try:
+            return str(path.resolve().relative_to(root.resolve()))
+        except ValueError:
+            return str(path)
+
+
 def _retrieval_hits(root: Path, query: str, module: str | None, top_k: int) -> list[dict]:
     try:
         return search_index(root, query=query, module=module, top_k=top_k)
@@ -133,7 +143,7 @@ def execute_task(
         "task": task,
         "module": module,
         "provider": provider,
-        "result_path": str(out.relative_to(root)),
+        "result_path": _root_relative(out, root),
     }
     log_run(root, run_record)
 
@@ -144,7 +154,7 @@ def execute_task(
         "module": module,
         "route": route,
         "plan": plan,
-        "output_path": str(out.relative_to(root)),
+        "output_path": _root_relative(out, root),
         "retrieval_hits": len(hits),
         "loaded_files": [f["path"] for f in bundle["files"]],
     }
@@ -280,10 +290,7 @@ def cmd_metrics(args: argparse.Namespace) -> int:
         output_rel = f"modules/decision/outputs/metrics_{stamp}.md"
 
     out = write_output(root, output_rel, report)
-    try:
-        report_path = str(out.relative_to(root))
-    except ValueError:
-        report_path = str(out)
+    report_path = _root_relative(out, root)
 
     summary = {k: v["status"] for k, v in snapshot["metrics"].items()}
     record = {
@@ -313,10 +320,7 @@ def cmd_owner_report(args: argparse.Namespace) -> int:
         output_rel = f"modules/decision/outputs/owner_report_{stamp}.md"
 
     out = write_output(root, output_rel, report)
-    try:
-        report_path = str(out.relative_to(root))
-    except ValueError:
-        report_path = str(out)
+    report_path = _root_relative(out, root)
 
     summary = {k: v["status"] for k, v in snapshot["metrics"]["metrics"].items()}
     record = {
@@ -390,7 +394,7 @@ def cmd_schedule_run(args: argparse.Namespace) -> int:
         stamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
         owner_output = f"modules/decision/outputs/owner_report_{stamp}.md"
         out = write_output(root, owner_output, owner_report)
-        out_rel = str(out.relative_to(root))
+        out_rel = _root_relative(out, root)
 
         owner_record = {
             "id": _next_id(root, "or", "orchestrator/logs/owner_reports.jsonl"),

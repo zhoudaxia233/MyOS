@@ -106,6 +106,9 @@ Build a stable personal operating center for AI agents, where execution scales b
    - Added `orchestrator/src/main.py validate` command
    - Added plugin contract validator for module structure, skill refs, JSONL schema + record integrity (`id`/timestamps/`status`/`source_refs`), routes, and cadence refs
    - Added CI gate: `validate --strict` before test execution
+5. End-to-end reliability
+   - Added integration command-chain test covering `validate/inspect/run/metrics/owner-report/schedule-run`
+   - Fixed path canonicalization in runtime logs for `/var` vs `/private/var` compatibility
 
 ## v0.7-plugin-contract (Planned)
 
