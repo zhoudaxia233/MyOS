@@ -80,38 +80,46 @@ OWNER_REPORT_SCHEMA = {
 }
 
 
+def _safe_repo_path(repo_root: Path, rel_path: str) -> Path:
+    root = repo_root.resolve()
+    target = (repo_root / rel_path).resolve()
+    if not target.is_relative_to(root):
+        raise ValueError(f"Path escapes repository root: {rel_path}")
+    return target
+
+
 def write_output(repo_root: Path, output_rel: str, content: str) -> Path:
-    p = repo_root / output_rel
+    p = _safe_repo_path(repo_root, output_rel)
     ensure_parent(p)
     p.write_text(content, encoding="utf-8")
     return p
 
 
 def log_run(repo_root: Path, record: dict) -> None:
-    runs = repo_root / "orchestrator" / "logs" / "runs.jsonl"
+    runs = _safe_repo_path(repo_root, "orchestrator/logs/runs.jsonl")
     append_jsonl(runs, record, schema_header=RUNS_SCHEMA)
 
 
 def log_retrieval_query(repo_root: Path, record: dict, rel_log_path: str) -> None:
-    path = repo_root / rel_log_path
+    path = _safe_repo_path(repo_root, rel_log_path)
     append_jsonl(path, record, schema_header=RETRIEVAL_QUERY_SCHEMA)
 
 
 def log_schedule_run(repo_root: Path, record: dict) -> None:
-    path = repo_root / "orchestrator" / "logs" / "schedule_runs.jsonl"
+    path = _safe_repo_path(repo_root, "orchestrator/logs/schedule_runs.jsonl")
     append_jsonl(path, record, schema_header=SCHEDULE_RUN_SCHEMA)
 
 
 def log_metrics_snapshot(repo_root: Path, record: dict) -> None:
-    path = repo_root / "orchestrator" / "logs" / "metrics_snapshots.jsonl"
+    path = _safe_repo_path(repo_root, "orchestrator/logs/metrics_snapshots.jsonl")
     append_jsonl(path, record, schema_header=METRICS_SNAPSHOT_SCHEMA)
 
 
 def log_guardrail_override(repo_root: Path, record: dict) -> None:
-    path = repo_root / "modules" / "decision" / "logs" / "guardrail_overrides.jsonl"
+    path = _safe_repo_path(repo_root, "modules/decision/logs/guardrail_overrides.jsonl")
     append_jsonl(path, record, schema_header=GUARDRAIL_OVERRIDE_SCHEMA)
 
 
 def log_owner_report(repo_root: Path, record: dict) -> None:
-    path = repo_root / "orchestrator" / "logs" / "owner_reports.jsonl"
+    path = _safe_repo_path(repo_root, "orchestrator/logs/owner_reports.jsonl")
     append_jsonl(path, record, schema_header=OWNER_REPORT_SCHEMA)

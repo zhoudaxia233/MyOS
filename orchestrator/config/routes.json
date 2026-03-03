@@ -1,0 +1,21 @@
+{
+  "default_module": "decision",
+  "routes": [
+    {
+      "module": "content",
+      "keywords": ["write", "publish", "thread", "tone", "edit", "post", "draft", "message"]
+    },
+    {
+      "module": "decision",
+      "keywords": ["decision", "priority", "review", "failure", "risk", "audit", "tradeoff", "plan"]
+    },
+    {
+      "module": "profile",
+      "keywords": ["profile", "goal", "value", "alignment", "psych", "drift", "trigger", "identity"]
+    },
+    {
+      "module": "memory",
+      "keywords": ["memory", "reflect", "insight", "distill", "paradigm", "pattern", "chat", "journal"]
+    }
+  ]
+}

@@ -52,3 +52,4 @@ Do not go beyond two hops unless the module explicitly instructs a necessary fil
 - Kernel files define routing, global rules, schemas, and shared terms.
 - Modules own domain workflows, SSOT data, and append-only logs.
 - Cross-module references are ID-only (no content duplication).
+- Runtime keyword routing rules for the orchestrator live in `orchestrator/config/routes.json`; keep this file aligned with this table.

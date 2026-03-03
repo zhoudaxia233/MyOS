@@ -94,42 +94,47 @@ Build a stable personal operating center for AI agents, where execution scales b
 ## v0.6-next (In Progress)
 
 1. Guardrail policy depth
-   - Add richer per-domain constraints and escalation paths
+   - Added richer per-domain constraints (cooldown hours, max loss caps, override confirmation)
+   - Next: escalation-path policy suggestions by repeated exception patterns
 2. Cross-report quality
-   - Add consistency checks between weekly review, decision audit, and owner report
+   - Added consistency checks between weekly review, decision audit, and owner report
+3. Routing and loading auditability
+   - Added config-driven route rules (`orchestrator/config/routes.json`)
+   - Added route reason + keyword visibility in `inspect`/`run`
+   - Switched context loading to skill-driven required files (reduced hardcoded preload)
 
-## v0.7-academic-review-plugin (Planned)
+## v0.7-plugin-contract (Planned)
 
-1. Academic review as a standalone plugin
-   - Add `modules/review_academic/` (domain plugin, not a generic principles bucket)
-   - Canonical SSOT files:
-     - `modules/review_academic/data/reviewer_question_bank.yaml`
-     - `modules/review_academic/data/checklists/paper_pre_submit.yaml`
-   - Append-only logs:
-     - `modules/review_academic/logs/review_findings.jsonl`
-     - `modules/review_academic/logs/check_runs.jsonl`
+1. Module contract standardization
+   - Define a strict plugin contract for `modules/<name>/`:
+     - `MODULE.md` (purpose, workflow, progressive loading rules)
+     - `skills/*.md` (task entrypoints with required files)
+     - `data/*` (SSOT)
+     - `logs/*.jsonl` (append-only with schema header)
+   - Add a plugin acceptance checklist and validation script
 
-2. Reviewer feedback distillation workflow
-   - Ingest reviewer comments / rebuttal feedback
-   - Distill them into reusable review questions with IDs
-   - Attach each question to stages (idea, method, experiment, writing, rebuttal)
+2. Router extensibility without kernel edits
+   - Keep kernel docs stable
+   - Add route registration in `orchestrator/config/routes.json`
+   - New plugin onboarding should require config + module files, not Python code edits
 
-3. Submission gate workflow
-   - Before paper finalization, run `paper_pre_submit` checklist skill
-   - Output blocking findings, weak evidence points, and required revisions
-   - Append run result to `check_runs.jsonl`; feed recurring misses into weekly review
+3. Task loading by skill contract
+   - Loader should resolve data files from selected skill’s required-file section
+   - Avoid module-wide preload
+   - Keep `ROUTER -> MODULE -> SKILL -> REQUIRED DATA` with minimal context budget
 
-4. Progressive disclosure and composability
-   - Router loads `modules/review_academic/MODULE.md` only for academic-review intents
-   - Other modules reference findings/check items by ID only
-   - Plugin can be removed without changing internals of content/decision/profile/memory
+4. Example plugin templates (non-binding)
+   - Provide two example domain plugin blueprints:
+     - review/checklist plugin (e.g., paper review)
+     - project execution plugin
+   - Keep as templates/examples, not hardcoded roadmap commitments
 
 ## v0.8-principles-layer (Planned)
 
-1. Cross-plugin abstraction (after enough domain modules exist)
-   - Add optional `modules/principles/` as a synthesis layer
-   - Aggregate stable principles from multiple plugins (academic, investing, projects)
-   - Keep principle IDs as cross-domain references, never duplicate source content
+1. Cross-plugin synthesis (optional abstraction)
+   - Add optional `modules/principles/` after multiple domain plugins exist
+   - Aggregate stable principles from plugin outputs
+   - Keep principle IDs as references to source plugin records, never content duplication
 
 ## Existing Alignment (Already Present)
 

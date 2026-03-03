@@ -21,6 +21,9 @@ if [[ $# -eq 0 ]]; then
   exit 1
 fi
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
 task=""
 module=""
 
@@ -52,25 +55,32 @@ if [[ -z "$task" && -z "$module" ]]; then
 fi
 
 route_from_task() {
-  local t
-  t="$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')"
-  if [[ "$t" =~ write|publish|thread|tone|edit|message|post|draft ]]; then
-    echo "content"
-    return
-  fi
-  if [[ "$t" =~ decision|priority|plan|review|failure|post-mortem|risk|tradeoff|audit|governance|exception ]]; then
-    echo "decision"
-    return
-  fi
-  if [[ "$t" =~ profile|goal|value|identity|alignment|temperament|trigger|psych|drift ]]; then
-    echo "profile"
-    return
-  fi
-  if [[ "$t" =~ memory|journal|reflect|reflection|insight|distill|summary|paradigm|pattern|extract ]]; then
-    echo "memory"
-    return
-  fi
-  echo ""
+  python3 - "$REPO_ROOT" "$1" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+repo_root = Path(sys.argv[1])
+task = sys.argv[2].lower()
+cfg_path = repo_root / "orchestrator/config/routes.json"
+
+default_module = "decision"
+routes = []
+
+if cfg_path.exists():
+    data = json.loads(cfg_path.read_text(encoding="utf-8"))
+    default_module = str(data.get("default_module", default_module))
+    routes = [r for r in data.get("routes", []) if isinstance(r, dict)]
+
+for rule in routes:
+    module = str(rule.get("module", "")).strip()
+    keywords = [str(k).lower().strip() for k in rule.get("keywords", [])]
+    if any(k and k in task for k in keywords):
+        print(module)
+        raise SystemExit(0)
+
+print(default_module)
+PY
 }
 
 if [[ -z "$module" ]]; then

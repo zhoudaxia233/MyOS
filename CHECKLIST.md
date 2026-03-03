@@ -6,6 +6,7 @@ Use this checklist before merging changes.
 
 - [ ] `core/ROUTER.md` defines two-hop loading: `ROUTER -> MODULE -> DATA`
 - [ ] Routing table covers `content`, `decision`, `profile`, and `memory`
+- [ ] `orchestrator/config/routes.json` is the routing keyword SSOT for runtime auto-routing
 - [ ] `core/RULES.md` includes no-fabrication and append-only integrity rules
 - [ ] `core/SCHEMAS.md` defines ID and timestamp conventions
 
@@ -47,7 +48,9 @@ Use this checklist before merging changes.
 
 - [ ] `orchestrator/` exists as a separate execution subsystem
 - [ ] `orchestrator/src/main.py inspect` prints route + file plan
+- [ ] `orchestrator/src/main.py inspect` shows route reason + matched keywords
 - [ ] `orchestrator/src/main.py run --provider manual` writes execution output
+- [ ] `orchestrator/src/main.py run` shows route reason + loaded files for audit visibility
 - [ ] `orchestrator/logs/runs.jsonl` preserves `_schema` header and append-only records
 - [ ] `orchestrator/src/main.py schedule-run --cycle weekly` executes cadence routines
 - [ ] `orchestrator/logs/schedule_runs.jsonl` preserves `_schema` header and append-only records

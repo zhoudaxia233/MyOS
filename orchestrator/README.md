@@ -15,7 +15,7 @@ It reads kernel/module protocols, builds minimal context bundles, optionally ret
 ## Architecture
 
 - `router.py`: map task intent to module
-- `loader.py`: load two-hop context bundle (`ROUTER -> MODULE -> DATA`)
+- `loader.py`: load minimal context bundle from selected skill required files
 - `planner.py`: pick skill + output target
 - `retrieval.py`: build/search lexical index for JSONL histories
 - `scheduling.py`: load cadence routines and build cycle tasks
@@ -26,6 +26,8 @@ It reads kernel/module protocols, builds minimal context bundles, optionally ret
 - `writer.py`: write outputs and append run/query/schedule/metrics/override/owner logs
 - `validators.py`: guardrails for JSONL and append-only behavior
 - `providers/`: provider adapters (`manual`, `openai`)
+
+Routing rules are defined in `orchestrator/config/routes.json`, so adding module keywords does not require router code changes.
 
 ## Retrieval Scaling
 
@@ -151,6 +153,13 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py run \
   --provider manual
 ```
 
+`run` prints:
+
+- route module
+- route reason + matched keywords
+- selected skill
+- exact files loaded into context
+
 ### 2) Optional OpenAI mode
 
 Set env vars:
@@ -178,3 +187,8 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py metrics [--window 7|30] [-
 python3 /Users/closears/MyOS/orchestrator/src/main.py guardrail-check --domain <invest|project|content> [policy fields...]
 python3 /Users/closears/MyOS/orchestrator/src/main.py owner-report [--window 7|30] [--output <path>]
 ```
+
+## Output Naming
+
+- Planner-generated outputs use UTC timestamp suffixes (`YYYYMMDD_HHMMSS`) to avoid same-day overwrite.
+- `metrics` and `owner-report` default outputs also use UTC timestamp suffixes.

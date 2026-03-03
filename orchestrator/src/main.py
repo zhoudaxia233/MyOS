@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import argparse
+import json
 from datetime import datetime, timezone
 from pathlib import Path
-import uuid
 
 from config import load_runtime_config
 from guardrails import evaluate_guardrail, load_domain_guardrails
@@ -12,7 +12,7 @@ from metrics import compute_drift_metrics, render_metrics_report
 from owner_report import build_owner_snapshot, render_owner_report
 from planner import plan_task
 from retrieval import build_index, format_hits, load_retrieval_config, search_index
-from router import route_task
+from router import route_trace
 from runner import run_with_provider
 from scheduling import task_from_routine
 from schedulers.cron import cron_hint
@@ -36,8 +36,32 @@ def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
-def _id(prefix: str) -> str:
-    return f"{prefix}_{datetime.now(timezone.utc).strftime('%Y%m%d')}_{str(uuid.uuid4())[:8]}"
+def _next_id(root: Path, prefix: str, log_rel_path: str) -> str:
+    date = datetime.now(timezone.utc).strftime("%Y%m%d")
+    path = root / log_rel_path
+    max_seq = 0
+
+    if path.exists() and path.is_file():
+        for i, raw in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+            line = raw.strip()
+            if not line:
+                continue
+            if i == 1 and '"_schema"' in line:
+                continue
+            try:
+                obj = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if not isinstance(obj, dict):
+                continue
+            rec_id = str(obj.get("id", ""))
+            if not rec_id.startswith(f"{prefix}_{date}_"):
+                continue
+            tail = rec_id.rsplit("_", 1)[-1]
+            if tail.isdigit():
+                max_seq = max(max_seq, int(tail))
+
+    return f"{prefix}_{date}_{max_seq + 1:03d}"
 
 
 def _retrieval_hits(root: Path, query: str, module: str | None, top_k: int) -> list[dict]:
@@ -64,7 +88,7 @@ def _bundle_with_hits(bundle: dict, hits: list[dict]) -> dict:
 def _log_retrieval(root: Path, query: str, module: str | None, top_k: int, result_count: int) -> None:
     cfg = load_retrieval_config(root)
     rec = {
-        "id": _id("rq"),
+        "id": _next_id(root, "rq", cfg["query_log_path"]),
         "created_at": _utc_now(),
         "status": "active",
         "query": query,
@@ -88,9 +112,10 @@ def execute_task(
     routine_id: str | None = None,
 ) -> dict:
     cfg = load_runtime_config(root)
-    module = route_task(task, forced_module)
-    bundle = load_context_bundle(root, module, cfg["max_context_chars"])
+    route = route_trace(task, forced_module=forced_module, repo_root=root)
+    module = route["module"]
     plan = plan_task(task, module, skill_hint=skill_hint, routine_id=routine_id)
+    bundle = load_context_bundle(root, module, cfg["max_context_chars"], skill_path=plan["skill"])
 
     hits: list[dict] = []
     if with_retrieval:
@@ -101,7 +126,7 @@ def execute_task(
     out = write_output(root, plan["output_path"], content)
 
     run_record = {
-        "id": _id("run"),
+        "id": _next_id(root, "run", "orchestrator/logs/runs.jsonl"),
         "created_at": _utc_now(),
         "status": "active",
         "task": task,
@@ -116,24 +141,30 @@ def execute_task(
 
     return {
         "module": module,
+        "route": route,
         "plan": plan,
         "output_path": str(out.relative_to(root)),
         "retrieval_hits": len(hits),
+        "loaded_files": [f["path"] for f in bundle["files"]],
     }
 
 
 def cmd_inspect(args: argparse.Namespace) -> int:
     root = repo_root()
     cfg = load_runtime_config(root)
-    module = route_task(args.task, args.module)
-    bundle = load_context_bundle(root, module, cfg["max_context_chars"])
+    route = route_trace(args.task, forced_module=args.module, repo_root=root)
+    module = route["module"]
     plan = plan_task(args.task, module)
+    bundle = load_context_bundle(root, module, cfg["max_context_chars"], skill_path=plan["skill"])
 
     if args.with_retrieval:
         hits = _retrieval_hits(root, args.task, module, args.retrieval_top_k)
         bundle = _bundle_with_hits(bundle, hits)
 
     print(f"Route: modules/{module}")
+    print(f"Route reason: {route['reason']}")
+    if route["matched_keywords"]:
+        print(f"Matched keywords: {route['matched_keywords']}")
     print(f"Skill: {plan['skill']}")
     print(f"Output path: {plan['output_path']}")
     print("Files:")
@@ -158,6 +189,13 @@ def cmd_run(args: argparse.Namespace) -> int:
         retrieval_top_k=args.retrieval_top_k,
     )
 
+    print(f"Route: modules/{result['module']}")
+    print(f"Route reason: {result['route']['reason']}")
+    if result["route"]["matched_keywords"]:
+        print(f"Matched keywords: {result['route']['matched_keywords']}")
+    print("Loaded files:")
+    for path in result["loaded_files"]:
+        print(f"- {path}")
     print(f"Wrote: {root / result['output_path']}")
     return 0
 
@@ -206,7 +244,7 @@ def cmd_guardrail_check(args: argparse.Namespace) -> int:
 
     if result["status"] == "override_accepted":
         record = {
-            "id": _id("go"),
+            "id": _next_id(root, "go", "modules/decision/logs/guardrail_overrides.jsonl"),
             "created_at": _utc_now(),
             "status": "active",
             "domain": args.domain.lower(),
@@ -237,8 +275,8 @@ def cmd_metrics(args: argparse.Namespace) -> int:
     if args.output:
         output_rel = args.output
     else:
-        date = datetime.now(timezone.utc).strftime("%Y%m%d")
-        output_rel = f"modules/decision/outputs/metrics_{date}.md"
+        stamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        output_rel = f"modules/decision/outputs/metrics_{stamp}.md"
 
     out = write_output(root, output_rel, report)
     try:
@@ -248,7 +286,7 @@ def cmd_metrics(args: argparse.Namespace) -> int:
 
     summary = {k: v["status"] for k, v in snapshot["metrics"].items()}
     record = {
-        "id": _id("mt"),
+        "id": _next_id(root, "mt", "orchestrator/logs/metrics_snapshots.jsonl"),
         "created_at": _utc_now(),
         "status": "active",
         "window_days": args.window,
@@ -270,8 +308,8 @@ def cmd_owner_report(args: argparse.Namespace) -> int:
     if args.output:
         output_rel = args.output
     else:
-        date = datetime.now(timezone.utc).strftime("%Y%m%d")
-        output_rel = f"modules/decision/outputs/owner_report_{date}.md"
+        stamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        output_rel = f"modules/decision/outputs/owner_report_{stamp}.md"
 
     out = write_output(root, output_rel, report)
     try:
@@ -281,7 +319,7 @@ def cmd_owner_report(args: argparse.Namespace) -> int:
 
     summary = {k: v["status"] for k, v in snapshot["metrics"]["metrics"].items()}
     record = {
-        "id": _id("or"),
+        "id": _next_id(root, "or", "orchestrator/logs/owner_reports.jsonl"),
         "created_at": _utc_now(),
         "status": "active",
         "window_days": args.window,
@@ -331,7 +369,7 @@ def cmd_schedule_run(args: argparse.Namespace) -> int:
         )
 
         schedule_record = {
-            "id": _id("sr"),
+            "id": _next_id(root, "sr", "orchestrator/logs/schedule_runs.jsonl"),
             "created_at": _utc_now(),
             "status": "active",
             "cycle": args.cycle,
@@ -348,13 +386,13 @@ def cmd_schedule_run(args: argparse.Namespace) -> int:
     if args.cycle == "weekly" and not args.no_owner_report:
         owner_snapshot = build_owner_snapshot(root, window_days=args.owner_window)
         owner_report = render_owner_report(owner_snapshot)
-        date = datetime.now(timezone.utc).strftime("%Y%m%d")
-        owner_output = f"modules/decision/outputs/owner_report_{date}.md"
+        stamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        owner_output = f"modules/decision/outputs/owner_report_{stamp}.md"
         out = write_output(root, owner_output, owner_report)
         out_rel = str(out.relative_to(root))
 
         owner_record = {
-            "id": _id("or"),
+            "id": _next_id(root, "or", "orchestrator/logs/owner_reports.jsonl"),
             "created_at": _utc_now(),
             "status": "active",
             "window_days": args.owner_window,
@@ -365,7 +403,7 @@ def cmd_schedule_run(args: argparse.Namespace) -> int:
         log_owner_report(root, owner_record)
 
         schedule_record = {
-            "id": _id("sr"),
+            "id": _next_id(root, "sr", "orchestrator/logs/schedule_runs.jsonl"),
             "created_at": _utc_now(),
             "status": "active",
             "cycle": args.cycle,

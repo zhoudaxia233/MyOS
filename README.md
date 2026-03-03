@@ -22,6 +22,7 @@ Separate execution from judgment while keeping them aligned over time.
 3. Progressive disclosure: `ROUTER -> MODULE -> DATA`
 4. SSOT in canonical YAML/MD files
 5. Append-only JSONL logs for historical integrity
+6. Route rules are config-driven in `orchestrator/config/routes.json`
 
 ## Repository Structure
 
@@ -48,6 +49,9 @@ Separate execution from judgment while keeping them aligned over time.
   orchestrator/
     README.md
     config/
+      routes.json
+      runtime.yaml
+      providers.yaml
       retrieval.json
     retrieval/
     src/
@@ -95,6 +99,11 @@ This repository is executed by an agent runtime (not by a monolithic app server)
 4. Load only task-required files
 5. Produce output and/or append one log line per record
 
+Routing is automatic and auditable:
+
+- `inspect` and `run` print route reason, matched keywords, selected skill, and loaded files.
+- Route keyword rules are editable in `orchestrator/config/routes.json` (no kernel rewrite required).
+
 Execution engines can be:
 
 - Human-triggered agent runs (chat-driven)
@@ -123,6 +132,13 @@ Inspect route + plan:
 ```bash
 python3 /Users/closears/MyOS/orchestrator/src/main.py inspect --task "run weekly decision review"
 ```
+
+The output includes:
+
+- Route module
+- Route reason (`keyword_match` / `forced_module` / `fallback_default`)
+- Matched keywords
+- Exact files loaded into context
 
 Run with no API (manual packet generation):
 
@@ -226,6 +242,7 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "run weekly dec
 - Preserve `_schema` header on line 1
 - Archive by `"status": "archived"`
 - Cross-module references are ID-only
+- Orchestrator output files use UTC timestamp suffixes (`YYYYMMDD_HHMMSS`) to avoid same-day overwrite
 
 ## Current Version
 
@@ -238,3 +255,4 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "run weekly dec
 - v0.5-drift: Added drift dashboard metrics command and snapshot logging
 - v0.5-guardrails: Added domain guardrail hardening and override audit trail
 - v0.6-owner-report: Added consolidated owner one-pager and weekly auto-generation
+- v0.6-next: Added config-driven routing (`routes.json`), skill-driven minimal context loading, and explicit route audit output in `inspect`/`run`
