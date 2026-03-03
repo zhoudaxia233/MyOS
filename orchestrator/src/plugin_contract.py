@@ -4,6 +4,7 @@ import json
 import re
 from pathlib import Path
 
+from manifests import load_module_manifest
 from scheduling import load_cadence
 
 REF_RE = re.compile(r"(?:core|modules|routines|orchestrator)/[A-Za-z0-9_./-]+\.(?:md|yaml|yml|jsonl|json)")
@@ -75,7 +76,7 @@ def _validate_module(repo_root: Path, module_dir: Path, errors: list[dict], warn
     module_name = module_dir.name
     module_rel = str(module_dir.relative_to(repo_root))
 
-    required_files = [module_dir / "MODULE.md"]
+    required_files = [module_dir / "MODULE.md", module_dir / "module.manifest.yaml"]
     required_dirs = [module_dir / "data", module_dir / "logs", module_dir / "skills", module_dir / "outputs"]
 
     for path in required_files:
@@ -123,7 +124,7 @@ def _validate_module(repo_root: Path, module_dir: Path, errors: list[dict], warn
 def _validate_routes(repo_root: Path, errors: list[dict], warnings: list[dict]) -> set[str]:
     path = repo_root / "orchestrator/config/routes.json"
     if not path.exists():
-        errors.append(_error("routes.missing", str(path), "Route config file is missing."))
+        warnings.append(_warn("routes.missing", str(path), "Legacy routes config file not found; manifest routing is active."))
         return set()
 
     try:
@@ -137,11 +138,11 @@ def _validate_routes(repo_root: Path, errors: list[dict], warnings: list[dict]) 
         return set()
 
     if "default_module" not in payload:
-        errors.append(_error("routes.default_missing", str(path), "Missing required key: default_module."))
+        warnings.append(_warn("routes.default_missing", str(path), "Missing key: default_module."))
 
     routes = payload.get("routes")
     if not isinstance(routes, list):
-        errors.append(_error("routes.list_missing", str(path), "Missing required key: routes (array)."))
+        warnings.append(_warn("routes.list_missing", str(path), "Missing key: routes (array)."))
         return set()
 
     modules: set[str] = set()
@@ -234,3 +235,21 @@ def validate_repo(repo_root: Path) -> dict:
     _validate_cadence(repo_root, errors, checked)
 
     return {"ok": len(errors) == 0, "errors": errors, "warnings": warnings, "checked": checked}
+    manifest_path = module_dir / "module.manifest.yaml"
+    if manifest_path.exists() and manifest_path.is_file():
+        try:
+            manifest = load_module_manifest(repo_root, module_name)
+            if str(manifest.get("module", "")).strip() != module_name:
+                errors.append(
+                    _error(
+                        "manifest.module_mismatch",
+                        str(manifest_path),
+                        f"Manifest module must match directory name '{module_name}'.",
+                    )
+                )
+            if module_name != "_template" and not manifest.get("routing", {}).get("keywords", []):
+                warnings.append(
+                    _warn("manifest.no_keywords", str(manifest_path), "No routing keywords configured.")
+                )
+        except (ValueError, json.JSONDecodeError) as exc:
+            errors.append(_error("manifest.invalid", str(manifest_path), str(exc)))

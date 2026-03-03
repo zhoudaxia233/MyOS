@@ -42,6 +42,17 @@ def test_validate_repo_passes_for_minimal_valid_plugin_contract() -> None:
         )
 
         _write(root / "modules/content/MODULE.md", "# Content\n")
+        _write(
+            root / "modules/content/module.manifest.yaml",
+            json.dumps(
+                {
+                    "module": "content",
+                    "routing": {"keywords": ["write"]},
+                    "planning": {"default_skill": "MODULE", "default_output_prefix": "task", "rules": []},
+                }
+            )
+            + "\n",
+        )
         (root / "modules/content/data").mkdir(parents=True, exist_ok=True)
         (root / "modules/content/skills").mkdir(parents=True, exist_ok=True)
         (root / "modules/content/logs").mkdir(parents=True, exist_ok=True)
@@ -103,6 +114,17 @@ def test_validate_repo_finds_contract_violations() -> None:
         )
 
         _write(root / "modules/content/MODULE.md", "# Content\n")
+        _write(
+            root / "modules/content/module.manifest.yaml",
+            json.dumps(
+                {
+                    "module": "content",
+                    "routing": {"keywords": ["write"]},
+                    "planning": {"default_skill": "MODULE", "default_output_prefix": "task", "rules": []},
+                }
+            )
+            + "\n",
+        )
         (root / "modules/content/data").mkdir(parents=True, exist_ok=True)
         (root / "modules/content/skills").mkdir(parents=True, exist_ok=True)
         (root / "modules/content/logs").mkdir(parents=True, exist_ok=True)

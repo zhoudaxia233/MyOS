@@ -19,6 +19,7 @@ This module stores judgment memory for decisions, failures, meaningful experienc
 ### Instructions and skills
 
 - `modules/decision/MODULE.md`: Module purpose, workflows, loading rules, and behavioral instructions
+- `modules/decision/module.manifest.yaml`: Routing keywords and planning defaults for orchestrator auto-discovery
 - `modules/decision/skills/log_decision.md`: Minimal workflow for appending a decision record
 - `modules/decision/skills/precommit_check.md`: Guardrail check before committing high-risk decisions
 - `modules/decision/skills/guardrail_override.md`: Override logging workflow for blocked guardrails

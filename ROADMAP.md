@@ -99,7 +99,7 @@ Build a stable personal operating center for AI agents, where execution scales b
 2. Cross-report quality
    - Added consistency checks between weekly review, decision audit, and owner report
 3. Routing and loading auditability
-   - Added config-driven route rules (`orchestrator/config/routes.json`)
+   - Added manifest-driven route rules (`modules/<name>/module.manifest.yaml`)
    - Added route reason + keyword visibility in `inspect`/`run`
    - Switched context loading to skill-driven required files (reduced hardcoded preload)
 4. Contract enforcement
@@ -119,7 +119,7 @@ Build a stable personal operating center for AI agents, where execution scales b
 
 2. Router extensibility without kernel edits
    - Keep kernel docs stable
-   - Add route registration in `orchestrator/config/routes.json`
+   - Add route registration in module manifests
    - New plugin onboarding should require config + module files, not Python code edits
 
 3. Task loading by skill contract

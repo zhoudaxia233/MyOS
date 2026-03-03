@@ -1,0 +1,30 @@
+{
+  "module": "decision",
+  "routing": {
+    "keywords": ["decision", "priority", "review", "failure", "risk", "audit", "tradeoff", "plan"]
+  },
+  "planning": {
+    "default_skill": "MODULE",
+    "default_output_prefix": "task",
+    "rules": [
+      {
+        "id": "weekly_review",
+        "match_any": ["weekly"],
+        "skill": "weekly_review",
+        "output_prefix": "weekly_review"
+      },
+      {
+        "id": "decision_audit",
+        "match_any": ["audit"],
+        "skill": "audit_decision_system",
+        "output_prefix": "decision_audit"
+      },
+      {
+        "id": "owner_report",
+        "match_any": ["owner report"],
+        "skill": "owner_report",
+        "output_prefix": "owner_report"
+      }
+    ]
+  }
+}

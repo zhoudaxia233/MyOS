@@ -6,7 +6,8 @@ Use this checklist before merging changes.
 
 - [ ] `core/ROUTER.md` defines two-hop loading: `ROUTER -> MODULE -> DATA`
 - [ ] Routing table covers `content`, `decision`, `profile`, and `memory`
-- [ ] `orchestrator/config/routes.json` is the routing keyword SSOT for runtime auto-routing
+- [ ] Every module has `module.manifest.yaml` with routing keywords and planning defaults
+- [ ] Runtime auto-routing resolves from module manifests (legacy `routes.json` optional)
 - [ ] `core/RULES.md` includes no-fabrication and append-only integrity rules
 - [ ] `core/SCHEMAS.md` defines ID and timestamp conventions
 
@@ -33,6 +34,7 @@ Use this checklist before merging changes.
 ## Module Quality
 
 - [ ] Every module has `MODULE.md` with purpose, inventory, workflows, and `<instructions>`
+- [ ] Every module has `module.manifest.yaml` with routing keywords and planning defaults
 - [ ] `modules/decision/` includes precommit + weekly review + audit workflow
 - [ ] `modules/profile/` includes psych profile and snapshot workflow
 - [ ] `modules/memory/` includes chat pattern extraction workflow

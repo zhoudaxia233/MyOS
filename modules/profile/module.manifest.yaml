@@ -1,0 +1,24 @@
+{
+  "module": "profile",
+  "routing": {
+    "keywords": ["profile", "goal", "value", "alignment", "psych", "drift", "trigger", "identity"]
+  },
+  "planning": {
+    "default_skill": "MODULE",
+    "default_output_prefix": "task",
+    "rules": [
+      {
+        "id": "profile_snapshot",
+        "match_any": ["snapshot", "monthly"],
+        "skill": "profile_snapshot",
+        "output_prefix": "profile_snapshot"
+      },
+      {
+        "id": "alignment_check",
+        "match_any": ["alignment"],
+        "skill": "alignment_check",
+        "output_prefix": "alignment_check"
+      }
+    ]
+  }
+}

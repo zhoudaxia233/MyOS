@@ -16,6 +16,7 @@ This module handles the content creation pipeline for short-form writing, thread
 ### Instructions and skills
 
 - `modules/content/MODULE.md`: Module purpose, workflows, loading rules, and behavioral instructions
+- `modules/content/module.manifest.yaml`: Routing keywords and planning defaults for orchestrator auto-discovery
 - `modules/content/skills/write_fahou_message.md`: Task-specific skill for producing a short-form "fahou" message
 
 ### Canonical data (SSOT)

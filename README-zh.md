@@ -22,7 +22,7 @@
 3. 渐进加载：`ROUTER -> MODULE -> DATA`
 4. SSOT：规范和知识各有唯一来源
 5. JSONL 只追加，保留完整历史
-6. 路由规则配置化：`orchestrator/config/routes.json`
+6. 路由规则插件化：`modules/<name>/module.manifest.yaml`
 
 ## 目录
 
@@ -35,10 +35,15 @@
   core/
   modules/
     content/
+      module.manifest.yaml
     decision/
+      module.manifest.yaml
     profile/
+      module.manifest.yaml
     memory/
+      module.manifest.yaml
     _template/
+      module.manifest.yaml
   routines/
     cadence.yaml
     CADENCE.md
@@ -96,7 +101,7 @@
 路由是自动且可审计的：
 
 - `inspect` / `run` 会显示路由原因、命中关键词、所选 skill、实际加载文件
-- 路由关键词可在 `orchestrator/config/routes.json` 修改，不需要改内核文档
+- 路由关键词可在各模块的 `module.manifest.yaml` 修改，不需要改内核文档
 
 另外你现在有独立执行引擎层：
 
@@ -137,7 +142,7 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py inspect --task "run weekly
 输出里会明确展示：
 
 - 路由到哪个模块
-- 为什么路由过去（`keyword_match` / `forced_module` / `fallback_default`）
+- 为什么路由过去（`manifest_keyword_match` / `routes_keyword_match` / `forced_module` / `fallback_default`）
 - 命中了哪些关键词
 - 实际加载了哪些文件
 
@@ -251,5 +256,5 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "run weekly dec
 - v0.5-drift：新增偏航仪表盘（`metrics` 命令）与指标快照日志
 - v0.5-guardrails：新增按域 guardrail 硬化与 override 审计链
 - v0.6-owner-report：新增 owner 一页报告与每周自动汇总
-- v0.6-next：新增配置化路由（`routes.json`）、按 skill 的最小上下文加载、以及 `inspect`/`run` 的路由审计输出
+- v0.6-next：新增 manifest 驱动路由（`module.manifest.yaml`）、按 skill 的最小上下文加载、以及 `inspect`/`run` 的路由审计输出
 - v0.6-next：新增插件契约校验命令（`validate`）和 CI 校验门禁

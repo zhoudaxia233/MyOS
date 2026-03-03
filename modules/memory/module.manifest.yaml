@@ -1,0 +1,30 @@
+{
+  "module": "memory",
+  "routing": {
+    "keywords": ["memory", "reflect", "insight", "distill", "paradigm", "pattern", "chat", "journal"]
+  },
+  "planning": {
+    "default_skill": "MODULE",
+    "default_output_prefix": "task",
+    "rules": [
+      {
+        "id": "distill_weekly",
+        "match_any": ["weekly", "distill"],
+        "skill": "distill_weekly",
+        "output_prefix": "weekly_memory"
+      },
+      {
+        "id": "extract_chat_patterns",
+        "match_any": ["chat pattern", "paradigm", "extract"],
+        "skill": "extract_chat_patterns",
+        "output_prefix": "chat_patterns"
+      },
+      {
+        "id": "ingest_memory",
+        "match_any": ["ingest"],
+        "skill": "ingest_memory",
+        "output_prefix": "ingest_memory"
+      }
+    ]
+  }
+}

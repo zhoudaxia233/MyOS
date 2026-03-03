@@ -115,7 +115,7 @@ def execute_task(
     cfg = load_runtime_config(root)
     route = route_trace(task, forced_module=forced_module, repo_root=root)
     module = route["module"]
-    plan = plan_task(task, module, skill_hint=skill_hint, routine_id=routine_id)
+    plan = plan_task(task, module, skill_hint=skill_hint, routine_id=routine_id, repo_root=root)
     bundle = load_context_bundle(root, module, cfg["max_context_chars"], skill_path=plan["skill"])
 
     hits: list[dict] = []
@@ -155,7 +155,7 @@ def cmd_inspect(args: argparse.Namespace) -> int:
     cfg = load_runtime_config(root)
     route = route_trace(args.task, forced_module=args.module, repo_root=root)
     module = route["module"]
-    plan = plan_task(args.task, module)
+    plan = plan_task(args.task, module, repo_root=root)
     bundle = load_context_bundle(root, module, cfg["max_context_chars"], skill_path=plan["skill"])
 
     if args.with_retrieval:

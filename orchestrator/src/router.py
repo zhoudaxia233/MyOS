@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from manifests import discover_module_manifests
+
 DEFAULT_RULES = {
     "default_module": "decision",
     "routes": [
@@ -53,6 +55,18 @@ def route_trace(task: str, forced_module: str | None = None, repo_root: Path | N
         }
 
     t = task.lower()
+    manifests = discover_module_manifests(repo_root) if repo_root else {}
+    if manifests:
+        for module_name, manifest in manifests.items():
+            keywords = manifest.get("routing", {}).get("keywords", [])
+            matched = [k for k in keywords if k in t]
+            if matched:
+                return {
+                    "module": module_name,
+                    "reason": "manifest_keyword_match",
+                    "matched_keywords": matched[:5],
+                }
+
     rules = load_route_rules(repo_root)
 
     for rule in rules["routes"]:
@@ -62,7 +76,7 @@ def route_trace(task: str, forced_module: str | None = None, repo_root: Path | N
         if matched:
             return {
                 "module": module,
-                "reason": "keyword_match",
+                "reason": "routes_keyword_match",
                 "matched_keywords": matched[:5],
             }
 

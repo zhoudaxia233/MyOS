@@ -34,5 +34,27 @@ def test_route_trace_uses_config_rules() -> None:
 
         trace = route_trace("summarize my diary notes", repo_root=root)
         assert trace["module"] == "memory"
-        assert trace["reason"] == "keyword_match"
+        assert trace["reason"] == "routes_keyword_match"
+        assert "diary" in trace["matched_keywords"]
+
+
+def test_route_trace_uses_module_manifest_rules_first() -> None:
+    with TemporaryDirectory() as td:
+        root = Path(td)
+        manifest = root / "modules/memory/module.manifest.yaml"
+        manifest.parent.mkdir(parents=True, exist_ok=True)
+        manifest.write_text(
+            json.dumps(
+                {
+                    "module": "memory",
+                    "routing": {"keywords": ["diary"]},
+                    "planning": {"default_skill": "MODULE", "default_output_prefix": "task", "rules": []},
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        trace = route_trace("summarize my diary notes", repo_root=root)
+        assert trace["module"] == "memory"
+        assert trace["reason"] == "manifest_keyword_match"
         assert "diary" in trace["matched_keywords"]

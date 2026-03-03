@@ -17,6 +17,7 @@ This module is the personal identity and adaptation layer of Personal Core OS. I
 ### Instructions and skills
 
 - `modules/profile/MODULE.md`: Module purpose, workflows, loading rules, and instructions
+- `modules/profile/module.manifest.yaml`: Routing keywords and planning defaults for orchestrator auto-discovery
 - `modules/profile/skills/update_profile.md`: Procedure for updating profile via append-only change log
 - `modules/profile/skills/alignment_check.md`: Quick check for goal/value alignment
 - `modules/profile/skills/log_trigger_event.md`: Append one trigger event record

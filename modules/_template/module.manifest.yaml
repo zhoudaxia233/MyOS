@@ -1,0 +1,11 @@
+{
+  "module": "_template",
+  "routing": {
+    "keywords": []
+  },
+  "planning": {
+    "default_skill": "MODULE",
+    "default_output_prefix": "task",
+    "rules": []
+  }
+}

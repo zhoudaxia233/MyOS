@@ -17,6 +17,7 @@ This module captures evolving operational memory from conversations, reflections
 ### Instructions and skills
 
 - `modules/memory/MODULE.md`: Module purpose, workflows, and loading rules
+- `modules/memory/module.manifest.yaml`: Routing keywords and planning defaults for orchestrator auto-discovery
 - `modules/memory/skills/ingest_memory.md`: Add daily memory records
 - `modules/memory/skills/extract_chat_patterns.md`: Derive paradigms from chat-heavy event slices
 - `modules/memory/skills/distill_weekly.md`: Build weekly distilled memory output

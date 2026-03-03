@@ -1,0 +1,18 @@
+{
+  "module": "content",
+  "routing": {
+    "keywords": ["write", "publish", "thread", "tone", "edit", "post", "draft", "message", "fahou"]
+  },
+  "planning": {
+    "default_skill": "MODULE",
+    "default_output_prefix": "task",
+    "rules": [
+      {
+        "id": "fahou_message",
+        "match_any": ["fahou"],
+        "skill": "write_fahou_message",
+        "output_prefix": "fahou"
+      }
+    ]
+  }
+}

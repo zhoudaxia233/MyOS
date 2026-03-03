@@ -27,7 +27,8 @@ It reads kernel/module protocols, builds minimal context bundles, optionally ret
 - `validators.py`: guardrails for JSONL and append-only behavior
 - `providers/`: provider adapters (`manual`, `openai`)
 
-Routing rules are defined in `orchestrator/config/routes.json`, so adding module keywords does not require router code changes.
+Routing rules are discovered from each module's `module.manifest.yaml`, so adding module keywords does not require router code changes.
+`orchestrator/config/routes.json` remains as legacy fallback.
 
 ## Retrieval Scaling
 
@@ -200,10 +201,11 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py validate --strict
 It checks:
 
 - module contract structure (`MODULE.md`, `data/`, `logs/`, `skills/`, `outputs/`)
+- module manifest presence and parseability (`module.manifest.yaml`)
 - skill file references resolve to existing files
 - skill references stay in-module (or `core/`)
 - JSONL schema header integrity on line 1
-- route config module references in `orchestrator/config/routes.json`
+- optional legacy route config module references in `orchestrator/config/routes.json`
 - cadence module/skill references in `routines/cadence.yaml`
 
 ## Output Naming

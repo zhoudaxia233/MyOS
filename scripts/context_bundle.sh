@@ -62,22 +62,42 @@ from pathlib import Path
 
 repo_root = Path(sys.argv[1])
 task = sys.argv[2].lower()
-cfg_path = repo_root / "orchestrator/config/routes.json"
-
 default_module = "decision"
-routes = []
 
+modules_root = repo_root / "modules"
+if modules_root.exists():
+    for module_dir in sorted([d for d in modules_root.iterdir() if d.is_dir() and not d.name.startswith(".")], key=lambda p: p.name):
+        manifest = module_dir / "module.manifest.yaml"
+        if not manifest.exists():
+            continue
+        try:
+            data = json.loads(manifest.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(data, dict):
+            continue
+        keywords = data.get("routing", {}).get("keywords", [])
+        if not isinstance(keywords, list):
+            keywords = []
+        keywords = [str(k).strip().lower() for k in keywords if str(k).strip()]
+        if any(k in task for k in keywords):
+            print(module_dir.name)
+            raise SystemExit(0)
+
+cfg_path = repo_root / "orchestrator/config/routes.json"
 if cfg_path.exists():
-    data = json.loads(cfg_path.read_text(encoding="utf-8"))
-    default_module = str(data.get("default_module", default_module))
-    routes = [r for r in data.get("routes", []) if isinstance(r, dict)]
-
-for rule in routes:
-    module = str(rule.get("module", "")).strip()
-    keywords = [str(k).lower().strip() for k in rule.get("keywords", [])]
-    if any(k and k in task for k in keywords):
-        print(module)
-        raise SystemExit(0)
+    try:
+        data = json.loads(cfg_path.read_text(encoding="utf-8"))
+        default_module = str(data.get("default_module", default_module))
+        routes = [r for r in data.get("routes", []) if isinstance(r, dict)]
+    except json.JSONDecodeError:
+        routes = []
+    for rule in routes:
+        module = str(rule.get("module", "")).strip()
+        keywords = [str(k).lower().strip() for k in rule.get("keywords", [])]
+        if any(k and k in task for k in keywords):
+            print(module)
+            raise SystemExit(0)
 
 print(default_module)
 PY

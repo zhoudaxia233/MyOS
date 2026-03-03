@@ -14,6 +14,7 @@ Describe the domain this module owns and the outcomes it supports.
 ## File Inventory
 
 - `modules/<name>/MODULE.md`: Module instructions, workflows, and rules
+- `modules/<name>/module.manifest.yaml`: Routing keywords and planning defaults for orchestrator auto-discovery
 - `modules/<name>/data/`: Canonical SSOT data (YAML/MD/JSON as needed)
 - `modules/<name>/logs/`: Append-only JSONL logs with schema header line
 - `modules/<name>/skills/`: Task instructions that reference SSOT paths
@@ -41,6 +42,7 @@ Describe the domain this module owns and the outcomes it supports.
 
 <instructions>
 - Keep canonical content in `data/` (SSOT).
+- Keep routing/planning metadata in `module.manifest.yaml` so new modules can be auto-routed without kernel code edits.
 - Keep task procedures in `skills/` and reference SSOT paths instead of duplicating content.
 - Use append-only JSONL for logs; preserve `_schema` header lines.
 - Archive records by setting `status: archived` instead of deleting them.

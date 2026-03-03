@@ -22,7 +22,7 @@ Separate execution from judgment while keeping them aligned over time.
 3. Progressive disclosure: `ROUTER -> MODULE -> DATA`
 4. SSOT in canonical YAML/MD files
 5. Append-only JSONL logs for historical integrity
-6. Route rules are config-driven in `orchestrator/config/routes.json`
+6. Route rules are plugin-driven from `modules/<name>/module.manifest.yaml`
 
 ## Repository Structure
 
@@ -39,10 +39,15 @@ Separate execution from judgment while keeping them aligned over time.
     GLOSSARY.md
   modules/
     content/
+      module.manifest.yaml
     decision/
+      module.manifest.yaml
     profile/
+      module.manifest.yaml
     memory/
+      module.manifest.yaml
     _template/
+      module.manifest.yaml
   routines/
     cadence.yaml
     CADENCE.md
@@ -102,7 +107,7 @@ This repository is executed by an agent runtime (not by a monolithic app server)
 Routing is automatic and auditable:
 
 - `inspect` and `run` print route reason, matched keywords, selected skill, and loaded files.
-- Route keyword rules are editable in `orchestrator/config/routes.json` (no kernel rewrite required).
+- Route keyword rules are editable in each module manifest (`modules/<name>/module.manifest.yaml`) with no kernel rewrite required.
 
 Execution engines can be:
 
@@ -144,7 +149,7 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py inspect --task "run weekly
 The output includes:
 
 - Route module
-- Route reason (`keyword_match` / `forced_module` / `fallback_default`)
+- Route reason (`manifest_keyword_match` / `routes_keyword_match` / `forced_module` / `fallback_default`)
 - Matched keywords
 - Exact files loaded into context
 
@@ -263,5 +268,5 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "run weekly dec
 - v0.5-drift: Added drift dashboard metrics command and snapshot logging
 - v0.5-guardrails: Added domain guardrail hardening and override audit trail
 - v0.6-owner-report: Added consolidated owner one-pager and weekly auto-generation
-- v0.6-next: Added config-driven routing (`routes.json`), skill-driven minimal context loading, and explicit route audit output in `inspect`/`run`
+- v0.6-next: Added manifest-driven routing (`module.manifest.yaml`), skill-driven minimal context loading, and explicit route audit output in `inspect`/`run`
 - v0.6-next: Added plugin contract validator command (`validate`) and CI validation gate
