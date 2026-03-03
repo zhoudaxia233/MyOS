@@ -98,6 +98,37 @@ Build a stable personal operating center for AI agents, where execution scales b
 2. Cross-report quality
    - Add consistency checks between weekly review, decision audit, and owner report
 
+## v0.7-principles-plugin (Planned)
+
+1. Principles extraction as a plugin
+   - Add `modules/principles/` as a standalone module (no tight coupling with other modules)
+   - Canonical SSOT files:
+     - `modules/principles/data/principles.yaml`
+     - `modules/principles/data/checklists/paper_review.yaml`
+   - Append-only logs:
+     - `modules/principles/logs/principle_events.jsonl`
+     - `modules/principles/logs/check_runs.jsonl`
+
+2. Principle distillation workflow
+   - Ingest external feedback (e.g., reviewer comments)
+   - Distill reusable principles with IDs and trigger conditions
+   - Map principles to domain checklists (paper writing, research notes, proposals)
+
+3. Execution gate workflow
+   - Before finalizing a draft, run checklist skill from principles module
+   - Record pass/fail and misses into `check_runs.jsonl`
+   - Feed misses into weekly review as recurring process defects
+
+4. Progressive disclosure and composability
+   - Router loads `modules/principles/MODULE.md` only for principle/checklist intents
+   - Other modules consume principles by ID only (no content duplication)
+   - Supports adding new checklist domains without changing existing module internals
+
+## Existing Alignment (Already Present)
+
+- Chat pattern extraction is already implemented in `modules/memory/skills/extract_chat_patterns.md`
+- Weekly memory distillation is already implemented in `modules/memory/skills/distill_weekly.md`
+
 ## Success Signals
 
 - Better action alignment with long-term priorities
