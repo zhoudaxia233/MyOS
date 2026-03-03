@@ -28,5 +28,8 @@ jobs:
       - name: Install dependencies
         run: poetry install --with dev --no-root
 
+      - name: Validate plugin contract
+        run: poetry run python orchestrator/src/main.py validate --strict
+
       - name: Run tests
         run: poetry run pytest -q orchestrator/tests

@@ -120,6 +120,14 @@ scripts/run_cycle.sh monthly
 
 ### 3) 用 orchestrator 作为高层执行器
 
+先做契约校验：
+
+```bash
+python3 /Users/closears/MyOS/orchestrator/src/main.py validate --strict
+```
+
+这一步会检查模块目录结构、skill 引用路径、JSONL schema header、路由配置和 cadence 引用关系。
+
 先检查路由和计划：
 
 ```bash
@@ -244,3 +252,4 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "run weekly dec
 - v0.5-guardrails：新增按域 guardrail 硬化与 override 审计链
 - v0.6-owner-report：新增 owner 一页报告与每周自动汇总
 - v0.6-next：新增配置化路由（`routes.json`）、按 skill 的最小上下文加载、以及 `inspect`/`run` 的路由审计输出
+- v0.6-next：新增插件契约校验命令（`validate`）和 CI 校验门禁

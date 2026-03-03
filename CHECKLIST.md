@@ -51,6 +51,7 @@ Use this checklist before merging changes.
 - [ ] `orchestrator/src/main.py inspect` shows route reason + matched keywords
 - [ ] `orchestrator/src/main.py run --provider manual` writes execution output
 - [ ] `orchestrator/src/main.py run` shows route reason + loaded files for audit visibility
+- [ ] `orchestrator/src/main.py validate --strict` passes on current repository state
 - [ ] `orchestrator/logs/runs.jsonl` preserves `_schema` header and append-only records
 - [ ] `orchestrator/src/main.py schedule-run --cycle weekly` executes cadence routines
 - [ ] `orchestrator/logs/schedule_runs.jsonl` preserves `_schema` header and append-only records
@@ -86,3 +87,4 @@ Use this checklist before merging changes.
 - [ ] `scripts/context_bundle.sh` is executable
 - [ ] `scripts/run_cycle.sh` is executable
 - [ ] Outputs are written under `modules/*/outputs/`
+- [ ] CI runs `validate --strict` before tests

@@ -186,7 +186,25 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py search --query "..." [--mo
 python3 /Users/closears/MyOS/orchestrator/src/main.py metrics [--window 7|30] [--output <path>]
 python3 /Users/closears/MyOS/orchestrator/src/main.py guardrail-check --domain <invest|project|content> [policy fields...]
 python3 /Users/closears/MyOS/orchestrator/src/main.py owner-report [--window 7|30] [--output <path>]
+python3 /Users/closears/MyOS/orchestrator/src/main.py validate [--strict]
 ```
+
+## Contract Validation
+
+Run validation before execution and in CI:
+
+```bash
+python3 /Users/closears/MyOS/orchestrator/src/main.py validate --strict
+```
+
+It checks:
+
+- module contract structure (`MODULE.md`, `data/`, `logs/`, `skills/`, `outputs/`)
+- skill file references resolve to existing files
+- skill references stay in-module (or `core/`)
+- JSONL schema header integrity on line 1
+- route config module references in `orchestrator/config/routes.json`
+- cadence module/skill references in `routines/cadence.yaml`
 
 ## Output Naming
 

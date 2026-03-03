@@ -127,6 +127,14 @@ scripts/run_cycle.sh monthly
 
 ### 3) Run orchestrator (high-level execution engine)
 
+Validate plugin contract first:
+
+```bash
+python3 /Users/closears/MyOS/orchestrator/src/main.py validate --strict
+```
+
+This checks module structure, skill references, JSONL schema headers, routes config, and cadence references before execution.
+
 Inspect route + plan:
 
 ```bash
@@ -256,3 +264,4 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "run weekly dec
 - v0.5-guardrails: Added domain guardrail hardening and override audit trail
 - v0.6-owner-report: Added consolidated owner one-pager and weekly auto-generation
 - v0.6-next: Added config-driven routing (`routes.json`), skill-driven minimal context loading, and explicit route audit output in `inspect`/`run`
+- v0.6-next: Added plugin contract validator command (`validate`) and CI validation gate

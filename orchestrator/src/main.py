@@ -11,6 +11,7 @@ from loader import load_context_bundle
 from metrics import compute_drift_metrics, render_metrics_report
 from owner_report import build_owner_snapshot, render_owner_report
 from planner import plan_task
+from plugin_contract import validate_repo
 from retrieval import build_index, format_hits, load_retrieval_config, search_index
 from router import route_trace
 from runner import run_with_provider
@@ -419,6 +420,40 @@ def cmd_schedule_run(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_validate(args: argparse.Namespace) -> int:
+    root = repo_root()
+    result = validate_repo(root)
+
+    checked = result["checked"]
+    print("Validation summary")
+    print(f"- modules_checked: {checked['modules']}")
+    print(f"- skills_checked: {checked['skills']}")
+    print(f"- jsonl_checked: {checked['jsonl']}")
+    print(f"- routines_checked: {checked['routines']}")
+    print(f"- warnings: {len(result['warnings'])}")
+    print(f"- errors: {len(result['errors'])}")
+
+    if result["warnings"]:
+        print("Warnings:")
+        for w in result["warnings"]:
+            print(f"- [{w['code']}] {w['path']}: {w['message']}")
+
+    if result["errors"]:
+        print("Errors:")
+        for e in result["errors"]:
+            print(f"- [{e['code']}] {e['path']}: {e['message']}")
+
+    if result["errors"]:
+        print("Validation status: FAIL")
+        return 1
+    if args.strict and result["warnings"]:
+        print("Validation status: FAIL (strict mode)")
+        return 1
+
+    print("Validation status: PASS")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description="Personal Core OS Orchestrator")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -486,6 +521,10 @@ def build_parser() -> argparse.ArgumentParser:
     sp_schedule.add_argument("--owner-window", type=int, default=7)
     sp_schedule.add_argument("--no-owner-report", action="store_true")
     sp_schedule.set_defaults(func=cmd_schedule_run)
+
+    sp_validate = sub.add_parser("validate")
+    sp_validate.add_argument("--strict", action="store_true")
+    sp_validate.set_defaults(func=cmd_validate)
 
     return p
 
