@@ -138,7 +138,7 @@ Validate plugin contract first:
 python3 /Users/closears/MyOS/orchestrator/src/main.py validate --strict
 ```
 
-This checks module structure, skill references, JSONL schema headers, routes config, and cadence references before execution.
+This checks module structure, skill references, JSONL schema headers and record-level integrity (`id` / timestamp / `status` / `source_refs`), routes config, and cadence references before execution.
 
 Inspect route + plan:
 

@@ -153,3 +153,71 @@ def test_validate_repo_finds_contract_violations() -> None:
         assert "jsonl.schema_missing" in codes
         assert "routes.module_not_found" in codes
         assert "cadence.skill_missing" in codes
+
+
+def test_validate_repo_checks_id_timestamp_and_source_refs() -> None:
+    with TemporaryDirectory() as td:
+        root = Path(td)
+
+        _write(root / "core/ROUTER.md", "# Router\n")
+        _write(
+            root / "orchestrator/config/routes.json",
+            json.dumps(
+                {
+                    "default_module": "content",
+                    "routes": [{"module": "content", "keywords": ["write"]}],
+                }
+            ),
+        )
+        _write(
+            root / "routines/cadence.yaml",
+            "\n".join(
+                [
+                    "routines:",
+                    "  daily:",
+                    "    - id: \"rt_daily_content\"",
+                    "      module: \"content\"",
+                    "      skill: \"write_one\"",
+                    "      objective: \"Write one post\"",
+                    "  weekly:",
+                    "  monthly:",
+                ]
+            )
+            + "\n",
+        )
+        _write(root / "modules/content/MODULE.md", "# Content\n")
+        _write(
+            root / "modules/content/module.manifest.yaml",
+            json.dumps(
+                {
+                    "module": "content",
+                    "routing": {"keywords": ["write"]},
+                    "planning": {"default_skill": "MODULE", "default_output_prefix": "task", "rules": []},
+                }
+            )
+            + "\n",
+        )
+        (root / "modules/content/data").mkdir(parents=True, exist_ok=True)
+        (root / "modules/content/skills").mkdir(parents=True, exist_ok=True)
+        (root / "modules/content/logs").mkdir(parents=True, exist_ok=True)
+        (root / "modules/content/outputs").mkdir(parents=True, exist_ok=True)
+        _write(root / "modules/content/skills/write_one.md", "# Skill\n")
+        _write(
+            root / "modules/content/logs/posts.jsonl",
+            "\n".join(
+                [
+                    '{"_schema":{"name":"posts","version":"1.0","fields":["id","created_at","status","source_refs"],"notes":"append-only"}}',
+                    '{"id":"bad_id","created_at":"2026-03-03T10:00:00Z","status":"active","source_refs":[]}',
+                    '{"id":"ps_20260303_001","created_at":"2026-03-03 10:00:00","status":"active","source_refs":[]}',
+                    '{"id":"ps_20260303_002","created_at":"2026-03-03T10:10:00Z","status":"active","source_refs":["xx_20260101_001"]}',
+                ]
+            )
+            + "\n",
+        )
+
+        result = validate_repo(root)
+        assert result["ok"] is False
+        codes = {e["code"] for e in result["errors"]}
+        assert "jsonl.id_format" in codes
+        assert "jsonl.created_at_format" in codes
+        assert "jsonl.source_ref_unknown" in codes

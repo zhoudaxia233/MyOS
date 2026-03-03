@@ -104,7 +104,7 @@ Build a stable personal operating center for AI agents, where execution scales b
    - Switched context loading to skill-driven required files (reduced hardcoded preload)
 4. Contract enforcement
    - Added `orchestrator/src/main.py validate` command
-   - Added plugin contract validator for module structure, skill refs, JSONL schema headers, routes, and cadence refs
+   - Added plugin contract validator for module structure, skill refs, JSONL schema + record integrity (`id`/timestamps/`status`/`source_refs`), routes, and cadence refs
    - Added CI gate: `validate --strict` before test execution
 
 ## v0.7-plugin-contract (Planned)

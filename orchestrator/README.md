@@ -205,6 +205,11 @@ It checks:
 - skill file references resolve to existing files
 - skill references stay in-module (or `core/`)
 - JSONL schema header integrity on line 1
+- JSONL record-level integrity:
+  - `id` format (`<prefix>_<YYYYMMDD>_<3-digit-seq>`)
+  - `created_at` / `updated_at` ISO8601 UTC `Z`
+  - `status` in `active|archived`
+  - `source_refs` format and resolvability
 - optional legacy route config module references in `orchestrator/config/routes.json`
 - cadence module/skill references in `routines/cadence.yaml`
 

@@ -131,7 +131,7 @@ scripts/run_cycle.sh monthly
 python3 /Users/closears/MyOS/orchestrator/src/main.py validate --strict
 ```
 
-这一步会检查模块目录结构、skill 引用路径、JSONL schema header、路由配置和 cadence 引用关系。
+这一步会检查模块目录结构、skill 引用路径、JSONL schema header 以及记录级完整性（`id` / 时间戳 / `status` / `source_refs`）、路由配置和 cadence 引用关系。
 
 先检查路由和计划：
 

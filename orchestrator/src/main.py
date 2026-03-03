@@ -429,6 +429,7 @@ def cmd_validate(args: argparse.Namespace) -> int:
     print(f"- modules_checked: {checked['modules']}")
     print(f"- skills_checked: {checked['skills']}")
     print(f"- jsonl_checked: {checked['jsonl']}")
+    print(f"- records_checked: {checked['records']}")
     print(f"- routines_checked: {checked['routines']}")
     print(f"- warnings: {len(result['warnings'])}")
     print(f"- errors: {len(result['errors'])}")

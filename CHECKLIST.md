@@ -27,6 +27,7 @@ Use this checklist before merging changes.
 ## Logs and Integrity
 
 - [ ] Every `*.jsonl` starts with `_schema` on line 1
+- [ ] JSONL records pass `id` / timestamp / `status` / `source_refs` integrity checks via `validate --strict`
 - [ ] Existing historical records were not deleted
 - [ ] New records are appended as new lines only
 - [ ] Deactivation uses `"status": "archived"`
