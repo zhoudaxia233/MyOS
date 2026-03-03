@@ -98,31 +98,38 @@ Build a stable personal operating center for AI agents, where execution scales b
 2. Cross-report quality
    - Add consistency checks between weekly review, decision audit, and owner report
 
-## v0.7-principles-plugin (Planned)
+## v0.7-academic-review-plugin (Planned)
 
-1. Principles extraction as a plugin
-   - Add `modules/principles/` as a standalone module (no tight coupling with other modules)
+1. Academic review as a standalone plugin
+   - Add `modules/review_academic/` (domain plugin, not a generic principles bucket)
    - Canonical SSOT files:
-     - `modules/principles/data/principles.yaml`
-     - `modules/principles/data/checklists/paper_review.yaml`
+     - `modules/review_academic/data/reviewer_question_bank.yaml`
+     - `modules/review_academic/data/checklists/paper_pre_submit.yaml`
    - Append-only logs:
-     - `modules/principles/logs/principle_events.jsonl`
-     - `modules/principles/logs/check_runs.jsonl`
+     - `modules/review_academic/logs/review_findings.jsonl`
+     - `modules/review_academic/logs/check_runs.jsonl`
 
-2. Principle distillation workflow
-   - Ingest external feedback (e.g., reviewer comments)
-   - Distill reusable principles with IDs and trigger conditions
-   - Map principles to domain checklists (paper writing, research notes, proposals)
+2. Reviewer feedback distillation workflow
+   - Ingest reviewer comments / rebuttal feedback
+   - Distill them into reusable review questions with IDs
+   - Attach each question to stages (idea, method, experiment, writing, rebuttal)
 
-3. Execution gate workflow
-   - Before finalizing a draft, run checklist skill from principles module
-   - Record pass/fail and misses into `check_runs.jsonl`
-   - Feed misses into weekly review as recurring process defects
+3. Submission gate workflow
+   - Before paper finalization, run `paper_pre_submit` checklist skill
+   - Output blocking findings, weak evidence points, and required revisions
+   - Append run result to `check_runs.jsonl`; feed recurring misses into weekly review
 
 4. Progressive disclosure and composability
-   - Router loads `modules/principles/MODULE.md` only for principle/checklist intents
-   - Other modules consume principles by ID only (no content duplication)
-   - Supports adding new checklist domains without changing existing module internals
+   - Router loads `modules/review_academic/MODULE.md` only for academic-review intents
+   - Other modules reference findings/check items by ID only
+   - Plugin can be removed without changing internals of content/decision/profile/memory
+
+## v0.8-principles-layer (Planned)
+
+1. Cross-plugin abstraction (after enough domain modules exist)
+   - Add optional `modules/principles/` as a synthesis layer
+   - Aggregate stable principles from multiple plugins (academic, investing, projects)
+   - Keep principle IDs as cross-domain references, never duplicate source content
 
 ## Existing Alignment (Already Present)
 
