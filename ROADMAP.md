@@ -83,12 +83,20 @@ Build a stable personal operating center for AI agents, where execution scales b
    - Added orchestrator command (`guardrail-check`) for policy evaluation
    - Added override logging path with owner confirmation requirements
 
+## v0.6-owner-report (Completed)
+
+1. Dashboard integration
+   - Added consolidated owner one-pager command (`owner-report`)
+   - Aggregates drift metrics, guardrail overrides, and latest decision artifacts
+   - Added owner report logs (`orchestrator/logs/owner_reports.jsonl`)
+   - Weekly schedule-run now auto-generates owner report by default
+
 ## v0.6-next (In Progress)
 
 1. Guardrail policy depth
    - Add richer per-domain constraints and escalation paths
-2. Dashboard integration
-   - Surface drift + guardrail metrics into one consolidated owner report
+2. Cross-report quality
+   - Add consistency checks between weekly review, decision audit, and owner report
 
 ## Success Signals
 

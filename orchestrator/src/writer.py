@@ -70,6 +70,15 @@ GUARDRAIL_OVERRIDE_SCHEMA = {
     }
 }
 
+OWNER_REPORT_SCHEMA = {
+    "_schema": {
+        "name": "owner_reports",
+        "version": "1.0",
+        "fields": ["id", "created_at", "status", "window_days", "summary", "report_path", "source_artifacts"],
+        "notes": "append-only",
+    }
+}
+
 
 def write_output(repo_root: Path, output_rel: str, content: str) -> Path:
     p = repo_root / output_rel
@@ -101,3 +110,8 @@ def log_metrics_snapshot(repo_root: Path, record: dict) -> None:
 def log_guardrail_override(repo_root: Path, record: dict) -> None:
     path = repo_root / "modules" / "decision" / "logs" / "guardrail_overrides.jsonl"
     append_jsonl(path, record, schema_header=GUARDRAIL_OVERRIDE_SCHEMA)
+
+
+def log_owner_report(repo_root: Path, record: dict) -> None:
+    path = repo_root / "orchestrator" / "logs" / "owner_reports.jsonl"
+    append_jsonl(path, record, schema_header=OWNER_REPORT_SCHEMA)

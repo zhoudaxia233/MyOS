@@ -71,6 +71,12 @@ Use this checklist before merging changes.
 - [ ] `orchestrator/src/main.py guardrail-check --domain invest` evaluates policy without errors
 - [ ] `modules/decision/logs/guardrail_overrides.jsonl` preserves `_schema` header and append-only records
 
+## Owner Report Layer
+
+- [ ] `orchestrator/src/main.py owner-report --window 7` generates owner one-pager output
+- [ ] Weekly `schedule-run --cycle weekly` auto-generates owner report (unless disabled)
+- [ ] `orchestrator/logs/owner_reports.jsonl` preserves `_schema` header and append-only records
+
 ## Operational Readiness
 
 - [ ] `scripts/append_jsonl.sh` is executable

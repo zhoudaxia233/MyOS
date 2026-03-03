@@ -24,6 +24,7 @@ This module stores judgment memory for decisions, failures, meaningful experienc
 - `modules/decision/skills/guardrail_override.md`: Override logging workflow for blocked guardrails
 - `modules/decision/skills/weekly_review.md`: Weekly review workflow and output format
 - `modules/decision/skills/audit_decision_system.md`: Generate concise audit report for owner review
+- `modules/decision/skills/owner_report.md`: One-page owner report integrating key signals
 
 ### Canonical data (SSOT)
 

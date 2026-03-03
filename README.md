@@ -164,7 +164,15 @@ Generate 30-day dashboard:
 python3 /Users/closears/MyOS/orchestrator/src/main.py metrics --window 30
 ```
 
-### 6) Guardrail hardening (domain policy + override trail)
+### 6) Owner one-pager (single audit view)
+
+```bash
+python3 /Users/closears/MyOS/orchestrator/src/main.py owner-report --window 7
+```
+
+Weekly cycle auto-includes owner report unless `--no-owner-report` is set.
+
+### 7) Guardrail hardening (domain policy + override trail)
 
 Run domain guardrail check:
 
@@ -174,7 +182,7 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py guardrail-check --domain i
 
 If override is required and approved, use override flags to create audit trail entries in `modules/decision/logs/guardrail_overrides.jsonl`.
 
-### 7) Retrieval scaling (long-history lookup)
+### 8) Retrieval scaling (long-history lookup)
 
 Build index:
 
@@ -194,19 +202,19 @@ Run with retrieval context:
 python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "run weekly decision review" --provider manual --with-retrieval --retrieval-top-k 6
 ```
 
-### 8) High-risk decision flow
+### 9) High-risk decision flow
 
 1. Run precommit check (`modules/decision/skills/precommit_check.md`)
 2. Log decision with `guardrail_check_id`
 3. Include in weekly review and audit report
 
-### 9) Pattern extraction flow
+### 10) Pattern extraction flow
 
 1. Ingest chat/reflection events (`ingest_memory.md`)
 2. Extract paradigms (`extract_chat_patterns.md`)
 3. Distill weekly memory (`distill_weekly.md`)
 
-### 10) Profile adaptation flow
+### 11) Profile adaptation flow
 
 1. Log trigger events and psych observations
 2. Run monthly profile snapshot
@@ -229,3 +237,4 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "run weekly dec
 - v0.4-scheduling: Added cadence-driven `schedule-run` with schedule execution logs
 - v0.5-drift: Added drift dashboard metrics command and snapshot logging
 - v0.5-guardrails: Added domain guardrail hardening and override audit trail
+- v0.6-owner-report: Added consolidated owner one-pager and weekly auto-generation

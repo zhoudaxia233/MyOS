@@ -9,6 +9,7 @@ from config import load_runtime_config
 from guardrails import evaluate_guardrail, load_domain_guardrails
 from loader import load_context_bundle
 from metrics import compute_drift_metrics, render_metrics_report
+from owner_report import build_owner_snapshot, render_owner_report
 from planner import plan_task
 from retrieval import build_index, format_hits, load_retrieval_config, search_index
 from router import route_task
@@ -19,6 +20,7 @@ from schedulers.manual import get_cycle
 from writer import (
     log_guardrail_override,
     log_metrics_snapshot,
+    log_owner_report,
     log_retrieval_query,
     log_run,
     log_schedule_run,
@@ -257,6 +259,40 @@ def cmd_metrics(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_owner_report(args: argparse.Namespace) -> int:
+    root = repo_root()
+    snapshot = build_owner_snapshot(root, window_days=args.window)
+    report = render_owner_report(snapshot)
+
+    if args.output:
+        output_rel = args.output
+    else:
+        date = datetime.now(timezone.utc).strftime("%Y%m%d")
+        output_rel = f"modules/decision/outputs/owner_report_{date}.md"
+
+    out = write_output(root, output_rel, report)
+    try:
+        report_path = str(out.relative_to(root))
+    except ValueError:
+        report_path = str(out)
+
+    summary = {k: v["status"] for k, v in snapshot["metrics"]["metrics"].items()}
+    record = {
+        "id": _id("or"),
+        "created_at": _utc_now(),
+        "status": "active",
+        "window_days": args.window,
+        "summary": summary,
+        "report_path": report_path,
+        "source_artifacts": snapshot["source_artifacts"],
+    }
+    log_owner_report(root, record)
+
+    print(f"Wrote: {out}")
+    print(f"Summary: {summary}")
+    return 0
+
+
 def cmd_schedule_run(args: argparse.Namespace) -> int:
     root = repo_root()
     cfg = load_runtime_config(root)
@@ -305,6 +341,39 @@ def cmd_schedule_run(args: argparse.Namespace) -> int:
         log_schedule_run(root, schedule_record)
 
         print(f"- {routine['id']} -> {result['output_path']}")
+
+    if args.cycle == "weekly" and not args.no_owner_report:
+        owner_snapshot = build_owner_snapshot(root, window_days=args.owner_window)
+        owner_report = render_owner_report(owner_snapshot)
+        date = datetime.now(timezone.utc).strftime("%Y%m%d")
+        owner_output = f"modules/decision/outputs/owner_report_{date}.md"
+        out = write_output(root, owner_output, owner_report)
+        out_rel = str(out.relative_to(root))
+
+        owner_record = {
+            "id": _id("or"),
+            "created_at": _utc_now(),
+            "status": "active",
+            "window_days": args.owner_window,
+            "summary": {k: v["status"] for k, v in owner_snapshot["metrics"]["metrics"].items()},
+            "report_path": out_rel,
+            "source_artifacts": owner_snapshot["source_artifacts"],
+        }
+        log_owner_report(root, owner_record)
+
+        schedule_record = {
+            "id": _id("sr"),
+            "created_at": _utc_now(),
+            "status": "active",
+            "cycle": args.cycle,
+            "routine_id": "rt_weekly_owner_report_auto",
+            "module": "decision",
+            "skill": "owner_report",
+            "provider": provider,
+            "result_path": out_rel,
+        }
+        log_schedule_run(root, schedule_record)
+        print(f"- rt_weekly_owner_report_auto -> {out_rel}")
 
     return 0
 
@@ -359,6 +428,11 @@ def build_parser() -> argparse.ArgumentParser:
     sp_metrics.add_argument("--output", default=None)
     sp_metrics.set_defaults(func=cmd_metrics)
 
+    sp_owner = sub.add_parser("owner-report")
+    sp_owner.add_argument("--window", type=int, default=7)
+    sp_owner.add_argument("--output", default=None)
+    sp_owner.set_defaults(func=cmd_owner_report)
+
     sp_schedule = sub.add_parser("schedule-run")
     sp_schedule.add_argument("--cycle", required=True, choices=["daily", "weekly", "monthly"])
     sp_schedule.add_argument("--scheduler", default="manual", choices=["manual", "cron"])
@@ -367,6 +441,8 @@ def build_parser() -> argparse.ArgumentParser:
     sp_schedule.add_argument("--with-retrieval", action="store_true")
     sp_schedule.add_argument("--retrieval-top-k", type=int, default=6)
     sp_schedule.add_argument("--limit", type=int, default=None)
+    sp_schedule.add_argument("--owner-window", type=int, default=7)
+    sp_schedule.add_argument("--no-owner-report", action="store_true")
     sp_schedule.set_defaults(func=cmd_schedule_run)
 
     return p

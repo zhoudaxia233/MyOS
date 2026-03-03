@@ -21,8 +21,9 @@ It reads kernel/module protocols, builds minimal context bundles, optionally ret
 - `scheduling.py`: load cadence routines and build cycle tasks
 - `metrics.py`: compute drift dashboard metrics from logs
 - `guardrails.py`: evaluate domain-specific hardening policies and override requirements
+- `owner_report.py`: build one-page owner report from metrics + exceptions + artifacts
 - `runner.py`: invoke provider
-- `writer.py`: write outputs and append run/query/schedule/metrics/override logs
+- `writer.py`: write outputs and append run/query/schedule/metrics/override/owner logs
 - `validators.py`: guardrails for JSONL and append-only behavior
 - `providers/`: provider adapters (`manual`, `openai`)
 
@@ -125,6 +126,21 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py guardrail-check \
 
 Accepted overrides are logged to `modules/decision/logs/guardrail_overrides.jsonl`.
 
+## Owner One-Pager
+
+Generate owner report manually:
+
+```bash
+python3 /Users/closears/MyOS/orchestrator/src/main.py owner-report --window 7
+```
+
+Weekly cadence integration:
+
+- `schedule-run --cycle weekly` automatically appends an owner report run unless `--no-owner-report` is set.
+- Use `--owner-window` to control the report window.
+
+Owner report records are logged in `orchestrator/logs/owner_reports.jsonl`.
+
 ## Quick Start
 
 ### 1) Manual mode (no API)
@@ -160,4 +176,5 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py index [--source-glob "modu
 python3 /Users/closears/MyOS/orchestrator/src/main.py search --query "..." [--module <name>] [--top-k 8]
 python3 /Users/closears/MyOS/orchestrator/src/main.py metrics [--window 7|30] [--output <path>]
 python3 /Users/closears/MyOS/orchestrator/src/main.py guardrail-check --domain <invest|project|content> [policy fields...]
+python3 /Users/closears/MyOS/orchestrator/src/main.py owner-report [--window 7|30] [--output <path>]
 ```

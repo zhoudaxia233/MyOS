@@ -157,7 +157,15 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py metrics --window 7
 python3 /Users/closears/MyOS/orchestrator/src/main.py metrics --window 30
 ```
 
-### 6) Guardrail 硬化（按域策略 + override 审计）
+### 6) Owner 一页报告（单页审计）
+
+```bash
+python3 /Users/closears/MyOS/orchestrator/src/main.py owner-report --window 7
+```
+
+每周 `schedule-run --cycle weekly` 默认会自动生成 owner 报告（可用 `--no-owner-report` 关闭）。
+
+### 7) Guardrail 硬化（按域策略 + override 审计）
 
 执行域策略检查：
 
@@ -167,7 +175,7 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py guardrail-check --domain i
 
 如需 override，必须带理由和 owner 确认，并写入 `modules/decision/logs/guardrail_overrides.jsonl`。
 
-### 7) 检索索引（长历史查询）
+### 8) 检索索引（长历史查询）
 
 建立索引：
 
@@ -187,13 +195,13 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py search --query "momentum" 
 python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "run weekly decision review" --provider manual --with-retrieval --retrieval-top-k 6
 ```
 
-### 8) 高风险决策流程
+### 9) 高风险决策流程
 
 1. `precommit_check.md`
 2. `log_decision.md`（带 `guardrail_check_id`）
 3. 周复盘 + 审计报告
 
-### 9) 你的“第二大脑”流程
+### 10) 你的“第二大脑”流程
 
 1. 每天记录 memory event
 2. 每周抽取 chat patterns
@@ -217,3 +225,4 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "run weekly dec
 - v0.4-scheduling：新增 cadence 自动调度执行（`schedule-run`）与调度日志
 - v0.5-drift：新增偏航仪表盘（`metrics` 命令）与指标快照日志
 - v0.5-guardrails：新增按域 guardrail 硬化与 override 审计链
+- v0.6-owner-report：新增 owner 一页报告与每周自动汇总
