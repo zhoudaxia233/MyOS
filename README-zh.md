@@ -106,7 +106,7 @@
 
 另外你现在有独立执行引擎层：
 
-- `orchestrator/`（可手动模式、可选 API 模式）
+- `orchestrator/`（可 dry-run/handoff 无 API 模式、可选 API 模式）
 
 ## 快速使用
 
@@ -128,6 +128,8 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py web --open-browser
 
 - 任务 inspect/run
 - 路由与加载文件审计轨迹
+- `⚙` settings 弹窗可配置 API key、路由模型（轻量）和任务模型（主模型）
+- 当 Module = Auto route 且已配置 API key 时，模块选择会走模型路由
 - 一键动作：validate、metrics、owner report、weekly cycle、retrieval index
 
 ### 1) 先拿最小上下文
@@ -167,10 +169,16 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py inspect --task "run weekly
 - 命中了哪些关键词
 - 实际加载了哪些文件
 
-无 API 运行（生成 execution packet）：
+无 API 运行（Debug：生成 dry-run execution packet）：
 
 ```bash
-python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "run weekly decision review" --provider manual
+python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "run weekly decision review" --provider dry-run
+```
+
+无 API 运行（生成可复制粘贴给外部大模型的 handoff block）：
+
+```bash
+python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "run weekly decision review" --provider handoff
 ```
 
 可选 API 运行：
@@ -184,7 +192,7 @@ OPENAI_API_KEY=... python3 /Users/closears/MyOS/orchestrator/src/main.py run --t
 按周期执行 `routines/cadence.yaml`：
 
 ```bash
-python3 /Users/closears/MyOS/orchestrator/src/main.py schedule-run --cycle weekly --provider manual
+python3 /Users/closears/MyOS/orchestrator/src/main.py schedule-run --cycle weekly --provider dry-run
 ```
 
 只看 cron 提示（不执行）：
@@ -242,7 +250,7 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py search --query "momentum" 
 带检索上下文执行：
 
 ```bash
-python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "run weekly decision review" --provider manual --with-retrieval --retrieval-top-k 6
+python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "run weekly decision review" --provider dry-run --with-retrieval --retrieval-top-k 6
 ```
 
 ### 9) 高风险决策流程
@@ -282,7 +290,7 @@ poetry run pytest -q /Users/closears/MyOS/orchestrator/tests
 - v0.1：内核 + content + decision 基础
 - v0.2：profile + memory + precommit guardrails
 - v0.3-first：心理侧写、chat 范式提取、决策审计视图、周期 runbook
-- v0.3-orchestrator：新增独立 `orchestrator/` 执行层抽象（manual + 可选 openai provider）
+- v0.3-orchestrator：新增独立 `orchestrator/` 执行层抽象（dry-run + 可选 openai provider）
 - v0.4-retrieval：新增可选检索索引、搜索命令、带检索上下文的执行
 - v0.4-scheduling：新增 cadence 自动调度执行（`schedule-run`）与调度日志
 - v0.5-drift：新增偏航仪表盘（`metrics` 命令）与指标快照日志

@@ -52,7 +52,7 @@ Use this checklist before merging changes.
 - [ ] `orchestrator/` exists as a separate execution subsystem
 - [ ] `orchestrator/src/main.py inspect` prints route + file plan
 - [ ] `orchestrator/src/main.py inspect` shows route reason + matched keywords
-- [ ] `orchestrator/src/main.py run --provider manual` writes execution output
+- [ ] `orchestrator/src/main.py run --provider dry-run` writes execution output
 - [ ] `orchestrator/src/main.py run` shows route reason + loaded files for audit visibility
 - [ ] `orchestrator/src/main.py validate --strict` passes on current repository state
 - [ ] `orchestrator/src/main.py web` starts local UI without external dependencies

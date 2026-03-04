@@ -9,12 +9,23 @@ const retrievalTopK = document.getElementById("retrievalTopK");
 const inspectBtn = document.getElementById("inspectBtn");
 const statusBadge = document.getElementById("statusBadge");
 const themeToggle = document.getElementById("themeToggle");
+const settingsToggle = document.getElementById("settingsToggle");
+const copyOutputBtn = document.getElementById("copyOutputBtn");
 
 const routeTrace = document.getElementById("routeTrace");
 const planTrace = document.getElementById("planTrace");
 const loadedFiles = document.getElementById("loadedFiles");
 const resultTrace = document.getElementById("resultTrace");
 const outputPreview = document.getElementById("outputPreview");
+const settingsModal = document.getElementById("settingsModal");
+const settingsClose = document.getElementById("settingsClose");
+const settingsSave = document.getElementById("settingsSave");
+const settingsApiKey = document.getElementById("settingsApiKey");
+const settingsDefaultProvider = document.getElementById("settingsDefaultProvider");
+const settingsRoutingModel = document.getElementById("settingsRoutingModel");
+const settingsTaskModel = document.getElementById("settingsTaskModel");
+let latestOutputPath = null;
+let settingsCache = null;
 
 function addBubble(role, text) {
   const div = document.createElement("div");
@@ -88,6 +99,7 @@ function renderInspectResult(data) {
 
 function renderRunResult(data) {
   renderInspectResult(data);
+  latestOutputPath = data.output_path || null;
   resultTrace.textContent = [
     `output_path: ${data.output_path}`,
     `output_hash: ${data.output_hash}`,
@@ -122,10 +134,12 @@ function renderActionResult(data) {
   resultTrace.textContent = out.join("\n");
 
   if (data.output_preview) {
+    latestOutputPath = data.output_path || latestOutputPath;
     setPreview(data.output_preview);
     return;
   }
   if (Array.isArray(data.runs) && data.runs.length > 0) {
+    latestOutputPath = data.runs[0].output_path || latestOutputPath;
     setPreview(data.runs[0].output_preview || "-");
     return;
   }
@@ -166,6 +180,56 @@ async function postJson(path, payload) {
   return data;
 }
 
+async function getJson(path) {
+  const resp = await fetch(path);
+  let data;
+  try {
+    data = await resp.json();
+  } catch {
+    throw new Error(`Request failed (${resp.status})`);
+  }
+  if (!resp.ok || data.ok === false) {
+    const msg = data.error || `Request failed (${resp.status})`;
+    throw new Error(msg);
+  }
+  return data;
+}
+
+async function copyText(text) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+  const temp = document.createElement("textarea");
+  temp.value = text;
+  temp.setAttribute("readonly", "true");
+  temp.style.position = "absolute";
+  temp.style.left = "-9999px";
+  document.body.appendChild(temp);
+  temp.select();
+  document.execCommand("copy");
+  document.body.removeChild(temp);
+}
+
+async function copyLatestOutput() {
+  if (!latestOutputPath) {
+    addBubble("system", "No output yet. Run a task first.");
+    return;
+  }
+
+  const originalIcon = copyOutputBtn.textContent;
+  try {
+    const data = await getJson(`/api/output?path=${encodeURIComponent(latestOutputPath)}`);
+    await copyText(data.content);
+    copyOutputBtn.textContent = "✓";
+    setTimeout(() => {
+      copyOutputBtn.textContent = originalIcon;
+    }, 1200);
+  } catch (err) {
+    addBubble("system", `Copy failed: ${err.message}`);
+  }
+}
+
 async function loadStatus() {
   try {
     const resp = await fetch("/api/status");
@@ -195,6 +259,54 @@ async function loadStatus() {
   } catch (err) {
     setStatus("Offline", "fail");
     addBubble("system", `Connection failed: ${err.message}`);
+  }
+}
+
+function applySettingsToForm(settings) {
+  settingsApiKey.value = settings.openai_api_key || "";
+  settingsDefaultProvider.value = settings.default_provider || "handoff";
+  settingsRoutingModel.value = settings.routing_model || "gpt-4.1-nano";
+  settingsTaskModel.value = settings.task_model || "gpt-4.1-mini";
+}
+
+async function loadSettings() {
+  try {
+    const data = await getJson("/api/settings");
+    settingsCache = data;
+    applySettingsToForm(data);
+  } catch (err) {
+    addBubble("system", `Settings load failed: ${err.message}`);
+  }
+}
+
+function openSettingsModal() {
+  if (settingsCache) {
+    applySettingsToForm(settingsCache);
+  }
+  settingsModal.classList.remove("hidden");
+}
+
+function closeSettingsModal() {
+  settingsModal.classList.add("hidden");
+}
+
+async function saveSettings() {
+  const payload = {
+    openai_api_key: settingsApiKey.value.trim(),
+    default_provider: settingsDefaultProvider.value,
+    routing_model: settingsRoutingModel.value.trim() || "gpt-4.1-nano",
+    task_model: settingsTaskModel.value.trim() || "gpt-4.1-mini",
+  };
+
+  try {
+    const data = await postJson("/api/settings", payload);
+    settingsCache = data;
+    providerSelect.value = data.default_provider || providerSelect.value;
+    modelInput.value = data.task_model || modelInput.value;
+    closeSettingsModal();
+    addBubble("system", "Settings saved.");
+  } catch (err) {
+    addBubble("system", `Settings save failed: ${err.message}`);
   }
 }
 
@@ -315,5 +427,24 @@ themeToggle.addEventListener("click", () => {
   localStorage.setItem(THEME_KEY, next);
 });
 
+copyOutputBtn.addEventListener("click", () => {
+  copyLatestOutput();
+});
+settingsToggle.addEventListener("click", () => {
+  openSettingsModal();
+});
+settingsClose.addEventListener("click", () => {
+  closeSettingsModal();
+});
+settingsSave.addEventListener("click", () => {
+  saveSettings();
+});
+settingsModal.addEventListener("click", (event) => {
+  if (event.target === settingsModal) {
+    closeSettingsModal();
+  }
+});
+
 initTheme();
 loadStatus();
+loadSettings();

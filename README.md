@@ -113,7 +113,7 @@ Routing is automatic and auditable:
 Execution engines can be:
 
 - Human-triggered agent runs (chat-driven)
-- `orchestrator/` CLI (manual or API provider mode)
+- `orchestrator/` CLI (dry-run/handoff or API provider mode)
 
 ## Fast Usage
 
@@ -135,6 +135,8 @@ You get a local chat-like control center with:
 
 - task inspect/run
 - route + loaded-files audit trace
+- `⚙` settings popup for API key, routing model (lighter), and task model (main)
+- with Module = Auto route, configured API key triggers model-based module selection
 - quick actions: validate, metrics, owner report, weekly cycle, retrieval index
 
 ### 1) Get a route and minimal context bundle
@@ -174,10 +176,16 @@ The output includes:
 - Matched keywords
 - Exact files loaded into context
 
-Run with no API (manual packet generation):
+Run with no API (debug dry-run packet generation):
 
 ```bash
-python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "run weekly decision review" --provider manual
+python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "run weekly decision review" --provider dry-run
+```
+
+Run with no API (copy-paste handoff block for external model):
+
+```bash
+python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "run weekly decision review" --provider handoff
 ```
 
 Optional API mode:
@@ -191,7 +199,7 @@ OPENAI_API_KEY=... python3 /Users/closears/MyOS/orchestrator/src/main.py run --t
 Run a full cadence cycle from `routines/cadence.yaml`:
 
 ```bash
-python3 /Users/closears/MyOS/orchestrator/src/main.py schedule-run --cycle weekly --provider manual
+python3 /Users/closears/MyOS/orchestrator/src/main.py schedule-run --cycle weekly --provider dry-run
 ```
 
 Cron hint mode (no execution):
@@ -249,7 +257,7 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py search --query "momentum" 
 Run with retrieval context:
 
 ```bash
-python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "run weekly decision review" --provider manual --with-retrieval --retrieval-top-k 6
+python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "run weekly decision review" --provider dry-run --with-retrieval --retrieval-top-k 6
 ```
 
 ### 9) High-risk decision flow
@@ -294,7 +302,7 @@ Includes integration chain coverage for `validate`, `inspect`, `run`, `metrics`,
 - v0.1: Kernel + content + decision base
 - v0.2: Profile + memory modules + guardrails
 - v0.3-first: Chat paradigm extraction, psych profiling, audit-first decision view, cadence runbook
-- v0.3-orchestrator: Added `orchestrator/` execution engine abstraction (manual + optional OpenAI provider)
+- v0.3-orchestrator: Added `orchestrator/` execution engine abstraction (dry-run + optional OpenAI provider)
 - v0.4-retrieval: Added optional retrieval index + search + retrieval-augmented runs
 - v0.4-scheduling: Added cadence-driven `schedule-run` with schedule execution logs
 - v0.5-drift: Added drift dashboard metrics command and snapshot logging

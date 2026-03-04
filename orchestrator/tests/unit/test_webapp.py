@@ -4,7 +4,9 @@ import shutil
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from webapp import api_action, api_inspect, api_run, api_status
+import pytest
+
+from webapp import api_action, api_get_settings, api_inspect, api_output, api_run, api_status, api_update_settings
 
 
 def _copy_repo_subset(dst_root: Path) -> Path:
@@ -28,13 +30,38 @@ def test_api_status_lists_modules() -> None:
         assert "decision" in data["modules"]
 
 
+def test_api_settings_roundtrip() -> None:
+    with TemporaryDirectory() as td:
+        root = _copy_repo_subset(Path(td))
+        initial = api_get_settings(root)
+        assert initial["ok"] is True
+        assert initial["default_provider"] == "handoff"
+
+        updated = api_update_settings(
+            root,
+            {
+                "openai_api_key": "sk-test",
+                "default_provider": "dry-run",
+                "task_model": "gpt-4.1-mini",
+                "routing_model": "gpt-4.1-nano",
+            },
+        )
+        assert updated["ok"] is True
+        assert updated["default_provider"] == "dry-run"
+        assert updated["openai_api_key"] == "sk-test"
+
+        status = api_status(root)
+        assert status["default_provider"] == "dry-run"
+        assert status["has_openai_api_key"] is True
+
+
 def test_api_inspect_and_run_writes_output() -> None:
     with TemporaryDirectory() as td:
         root = _copy_repo_subset(Path(td))
 
         inspect_payload = {
             "task": "run weekly decision review",
-            "provider": "manual",
+            "provider": "dry-run",
             "with_retrieval": False,
         }
         inspect_result = api_inspect(root, inspect_payload)
@@ -58,6 +85,11 @@ def test_api_inspect_and_run_writes_output() -> None:
         assert len(run_result["output_preview"]) > 0
         assert (root / run_result["output_path"]).exists()
 
+        output_payload = api_output(root, run_result["output_path"])
+        assert output_payload["ok"] is True
+        assert output_payload["path"] == run_result["output_path"]
+        assert "Execution Packet" in output_payload["content"]
+
 
 def test_api_action_validate_metrics_and_schedule() -> None:
     with TemporaryDirectory() as td:
@@ -78,7 +110,7 @@ def test_api_action_validate_metrics_and_schedule() -> None:
             {
                 "action": "schedule_cycle",
                 "cycle": "weekly",
-                "provider": "manual",
+                "provider": "dry-run",
                 "limit": 1,
                 "no_owner_report": True,
             },
@@ -89,3 +121,12 @@ def test_api_action_validate_metrics_and_schedule() -> None:
         assert len(schedule_result["runs"]) == 1
         assert isinstance(schedule_result["runs"][0]["output_preview"], str)
         assert (root / schedule_result["runs"][0]["output_path"]).exists()
+
+
+def test_api_output_rejects_non_output_and_escape_paths() -> None:
+    with TemporaryDirectory() as td:
+        root = _copy_repo_subset(Path(td))
+        with pytest.raises(ValueError):
+            api_output(root, "core/ROUTER.md")
+        with pytest.raises(ValueError):
+            api_output(root, "../README.md")

@@ -38,7 +38,7 @@ def _manifest(module: str, keywords: list[str], rules: list[dict]) -> str:
 
 def _build_repo(root: Path) -> None:
     _write(root / "core/ROUTER.md", "# Router\n")
-    _write(root / "orchestrator/config/runtime.yaml", 'default_provider: "manual"\ndefault_openai_model: "gpt-4.1-mini"\nmax_context_chars: 24000\n')
+    _write(root / "orchestrator/config/runtime.yaml", 'default_provider: "dry-run"\ndefault_openai_model: "gpt-4.1-mini"\nmax_context_chars: 24000\n')
     _write(
         root / "orchestrator/config/routes.json",
         json.dumps(
@@ -271,7 +271,7 @@ def test_e2e_cli_command_chain(monkeypatch, capsys) -> None:
                 module=None,
                 with_retrieval=False,
                 retrieval_top_k=6,
-                provider="manual",
+                provider="dry-run",
                 model=None,
             )
         )
@@ -303,7 +303,7 @@ def test_e2e_cli_command_chain(monkeypatch, capsys) -> None:
             Namespace(
                 cycle="weekly",
                 scheduler="manual",
-                provider="manual",
+                provider="dry-run",
                 model=None,
                 with_retrieval=False,
                 retrieval_top_k=6,

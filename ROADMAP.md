@@ -44,12 +44,12 @@ Build a stable personal operating center for AI agents, where execution scales b
 - Added dedicated `orchestrator/` subsystem as high-level execution engine
 - Layered architecture in `orchestrator/src/`:
   - router, loader, planner, runner, writer, validators
-  - providers: manual + optional openai
+  - providers: dry-run + handoff + optional openai
 - Added orchestrator runtime logs:
   - `orchestrator/logs/runs.jsonl`
 - Added CLI:
   - `inspect` for route/plan visibility
-  - `run` for execution packet (manual) or provider-based generation
+  - `run` for execution packet (dry-run) or provider-based generation
 
 ## v0.4-retrieval (Completed)
 

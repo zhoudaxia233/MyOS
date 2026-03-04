@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
+from urllib.parse import parse_qs, urlparse
 
 from config import load_runtime_config
 from loader import load_context_bundle
@@ -17,10 +18,11 @@ from owner_report import build_owner_snapshot, render_owner_report
 from planner import plan_task
 from plugin_contract import validate_repo
 from retrieval import build_index, load_retrieval_config, search_index
-from router import route_trace
+from route_selector import select_route
 from runner import run_with_provider
 from schedulers.manual import get_cycle
 from scheduling import task_from_routine
+from settings import apply_openai_api_key_env, load_settings, save_settings
 from writer import (
     log_metrics_snapshot,
     log_owner_report,
@@ -145,6 +147,34 @@ def _preview_text(text: str, max_chars: int = 8000) -> str:
     return text[:max_chars] + "\n\n...[truncated]"
 
 
+def _safe_output_file(root: Path, rel_path: str) -> Path:
+    rel = str(rel_path).strip()
+    if not rel:
+        raise ValueError("path is required")
+
+    rel_norm = rel.replace("\\", "/")
+    if "/outputs/" not in rel_norm:
+        raise ValueError("path must point to an outputs file")
+
+    root_abs = root.resolve()
+    target = (root / rel).resolve()
+    if not target.is_relative_to(root_abs):
+        raise ValueError("path escapes repository root")
+    if not target.exists() or not target.is_file():
+        raise ValueError("output file not found")
+    return target
+
+
+def api_output(root: Path, rel_path: str) -> dict:
+    path = _safe_output_file(root, rel_path)
+    content = path.read_text(encoding="utf-8")
+    return {
+        "ok": True,
+        "path": _root_relative(path, root),
+        "content": content,
+    }
+
+
 def _inspect_task(
     *,
     root: Path,
@@ -154,7 +184,7 @@ def _inspect_task(
     retrieval_top_k: int,
 ) -> dict:
     cfg = load_runtime_config(root)
-    route = route_trace(task, forced_module=forced_module, repo_root=root)
+    route = select_route(task, forced_module=forced_module, repo_root=root)
     module = route["module"]
     plan = plan_task(task, module, repo_root=root)
     bundle = load_context_bundle(root, module, cfg["max_context_chars"], skill_path=plan["skill"])
@@ -186,7 +216,7 @@ def _execute_task(
     routine_id: str | None = None,
 ) -> dict:
     cfg = load_runtime_config(root)
-    route = route_trace(task, forced_module=forced_module, repo_root=root)
+    route = select_route(task, forced_module=forced_module, repo_root=root)
     module = route["module"]
     plan = plan_task(task, module, skill_hint=skill_hint, routine_id=routine_id, repo_root=root)
     bundle = load_context_bundle(root, module, cfg["max_context_chars"], skill_path=plan["skill"])
@@ -196,6 +226,7 @@ def _execute_task(
         hits = _retrieval_hits(root, task, module, retrieval_top_k)
         bundle = _bundle_with_hits(bundle, hits)
 
+    apply_openai_api_key_env(root)
     content = run_with_provider(provider, task, module, plan, bundle, model)
     out = write_output(root, plan["output_path"], content)
     output_hash = hashlib.sha256(content.encode("utf-8")).hexdigest()
@@ -377,15 +408,34 @@ def _run_schedule_cycle(
 
 def api_status(root: Path) -> dict:
     cfg = load_runtime_config(root)
+    settings = load_settings(root)
     manifests = discover_module_manifests(root)
     modules = [m for m in sorted(manifests.keys()) if m != "_template"]
     return {
         "ok": True,
         "repo_root": str(root),
-        "default_provider": cfg["default_provider"],
-        "default_model": cfg["default_openai_model"],
+        "default_provider": settings["default_provider"] or cfg["default_provider"],
+        "default_model": settings["task_model"] or cfg["default_openai_model"],
+        "routing_model": settings["routing_model"],
+        "has_openai_api_key": bool(settings["openai_api_key"]),
         "modules": modules,
     }
+
+
+def api_get_settings(root: Path) -> dict:
+    settings = load_settings(root)
+    return {"ok": True, **settings}
+
+
+def api_update_settings(root: Path, payload: dict[str, Any]) -> dict:
+    updates = {
+        "openai_api_key": str(payload.get("openai_api_key", "")),
+        "default_provider": str(payload.get("default_provider", "")),
+        "task_model": str(payload.get("task_model", "")),
+        "routing_model": str(payload.get("routing_model", "")),
+    }
+    settings = save_settings(root, updates)
+    return {"ok": True, **settings}
 
 
 def api_inspect(root: Path, payload: dict[str, Any]) -> dict:
@@ -413,9 +463,10 @@ def api_run(root: Path, payload: dict[str, Any]) -> dict:
         raise ValueError("task is required")
 
     cfg = load_runtime_config(root)
+    settings = load_settings(root)
     module = _normalize_optional_str(payload.get("module"))
-    provider = _normalize_optional_str(payload.get("provider")) or cfg["default_provider"]
-    model = _normalize_optional_str(payload.get("model")) or cfg["default_openai_model"]
+    provider = _normalize_optional_str(payload.get("provider")) or settings["default_provider"] or cfg["default_provider"]
+    model = _normalize_optional_str(payload.get("model")) or settings["task_model"] or cfg["default_openai_model"]
     with_retrieval = _coerce_bool(payload.get("with_retrieval"), default=False)
     retrieval_top_k = _coerce_int(payload.get("retrieval_top_k"), default=6, minimum=1, maximum=32)
 
@@ -437,6 +488,7 @@ def api_action(root: Path, payload: dict[str, Any]) -> dict:
         raise ValueError("action is required")
 
     cfg = load_runtime_config(root)
+    settings = load_settings(root)
 
     if action == "validate":
         strict = _coerce_bool(payload.get("strict"), default=True)
@@ -475,8 +527,10 @@ def api_action(root: Path, payload: dict[str, Any]) -> dict:
         if cycle not in {"daily", "weekly", "monthly"}:
             raise ValueError("cycle must be one of: daily, weekly, monthly")
 
-        provider = _normalize_optional_str(payload.get("provider")) or cfg["default_provider"]
-        model = _normalize_optional_str(payload.get("model")) or cfg["default_openai_model"]
+        provider = (
+            _normalize_optional_str(payload.get("provider")) or settings["default_provider"] or cfg["default_provider"]
+        )
+        model = _normalize_optional_str(payload.get("model")) or settings["task_model"] or cfg["default_openai_model"]
         with_retrieval = _coerce_bool(payload.get("with_retrieval"), default=False)
         retrieval_top_k = _coerce_int(payload.get("retrieval_top_k"), default=6, minimum=1, maximum=32)
         limit_raw = payload.get("limit")
@@ -555,22 +609,36 @@ def _make_handler(root: Path, static_root: Path) -> type[BaseHTTPRequestHandler]
             return data
 
         def do_GET(self) -> None:  # noqa: N802
-            path = self.path.split("?", 1)[0]
+            try:
+                parsed = urlparse(self.path)
+                path = parsed.path
 
-            if path in {"/", "/index.html"}:
-                self._send_file(static_root / "index.html", "text/html; charset=utf-8")
-                return
-            if path == "/styles.css":
-                self._send_file(static_root / "styles.css", "text/css; charset=utf-8")
-                return
-            if path == "/app.js":
-                self._send_file(static_root / "app.js", "application/javascript; charset=utf-8")
-                return
-            if path == "/api/status":
-                self._send_json(200, api_status(root))
-                return
+                if path in {"/", "/index.html"}:
+                    self._send_file(static_root / "index.html", "text/html; charset=utf-8")
+                    return
+                if path == "/styles.css":
+                    self._send_file(static_root / "styles.css", "text/css; charset=utf-8")
+                    return
+                if path == "/app.js":
+                    self._send_file(static_root / "app.js", "application/javascript; charset=utf-8")
+                    return
+                if path == "/api/status":
+                    self._send_json(200, api_status(root))
+                    return
+                if path == "/api/settings":
+                    self._send_json(200, api_get_settings(root))
+                    return
+                if path == "/api/output":
+                    query = parse_qs(parsed.query)
+                    rel_path = query.get("path", [""])[0]
+                    self._send_json(200, api_output(root, rel_path))
+                    return
 
-            self._send_json(404, {"ok": False, "error": "not found"})
+                self._send_json(404, {"ok": False, "error": "not found"})
+            except ValueError as exc:
+                self._send_json(400, {"ok": False, "error": str(exc)})
+            except Exception as exc:  # noqa: BLE001
+                self._send_json(500, {"ok": False, "error": str(exc)})
 
         def do_POST(self) -> None:  # noqa: N802
             path = self.path.split("?", 1)[0]
@@ -581,6 +649,9 @@ def _make_handler(root: Path, static_root: Path) -> type[BaseHTTPRequestHandler]
                     return
                 if path == "/api/run":
                     self._send_json(200, api_run(root, payload))
+                    return
+                if path == "/api/settings":
+                    self._send_json(200, api_update_settings(root, payload))
                     return
                 if path == "/api/action":
                     self._send_json(200, api_action(root, payload))

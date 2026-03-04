@@ -1,5 +1,7 @@
 providers:
-  manual:
+  dry-run:
+    enabled: true
+  handoff:
     enabled: true
   openai:
     enabled: true

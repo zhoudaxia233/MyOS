@@ -9,7 +9,7 @@ It reads kernel/module protocols, builds minimal context bundles, optionally ret
 - Keep protocol/data in `core/` and `modules/`
 - Keep execution logic in `orchestrator/`
 - Preserve append-only integrity for JSONL logs
-- Support both no-API manual mode and optional API mode
+- Support no-API dry-run/handoff modes and optional API mode
 - Add scalable retrieval for long-history memory and audit logs
 
 ## Architecture
@@ -26,7 +26,7 @@ It reads kernel/module protocols, builds minimal context bundles, optionally ret
 - `runner.py`: invoke provider
 - `writer.py`: write outputs and append run/query/schedule/metrics/override/owner logs
 - `validators.py`: guardrails for JSONL and append-only behavior
-- `providers/`: provider adapters (`manual`, `openai`)
+- `providers/`: provider adapters (`dry-run`, `handoff`, `openai`)
 
 Routing rules are discovered from each module's `module.manifest.yaml`, so adding module keywords does not require router code changes.
 `orchestrator/config/routes.json` remains as legacy fallback.
@@ -54,7 +54,7 @@ Search records are logged in `orchestrator/logs/retrieval_queries.jsonl`.
 ```bash
 python3 /Users/closears/MyOS/orchestrator/src/main.py run \
   --task "run weekly decision review" \
-  --provider manual \
+  --provider dry-run \
   --with-retrieval \
   --retrieval-top-k 6
 ```
@@ -66,7 +66,7 @@ This adds top retrieval hits into the execution context bundle.
 ### Run configured cadence cycle
 
 ```bash
-python3 /Users/closears/MyOS/orchestrator/src/main.py schedule-run --cycle weekly --provider manual
+python3 /Users/closears/MyOS/orchestrator/src/main.py schedule-run --cycle weekly --provider dry-run
 ```
 
 Uses `routines/cadence.yaml` as SSOT and executes each routine item in order.
@@ -164,7 +164,9 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py web --open-browser
 This opens a local chat-style control center where you can:
 
 - inspect route + context load plan
-- run tasks with manual/openai provider
+- run tasks with dry-run/handoff/openai provider
+- open `⚙` Settings popup to configure API key, routing model, and task model
+- when Module = Auto route and API key is configured, routing is selected by the routing model
 - trigger validate, metrics, owner-report, and weekly cycle actions
 - audit route reason, matched keywords, loaded files, and output hash
 
@@ -174,12 +176,12 @@ If you prefer direct server launch:
 python3 /Users/closears/MyOS/orchestrator/src/webapp.py --open-browser
 ```
 
-### 1) Manual mode (no API)
+### 1) Debug mode (dry-run, no API)
 
 ```bash
 python3 /Users/closears/MyOS/orchestrator/src/main.py run \
   --task "run weekly decision review" \
-  --provider manual
+  --provider dry-run
 ```
 
 `run` prints:
@@ -189,7 +191,17 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py run \
 - selected skill
 - exact files loaded into context
 
-### 2) Optional OpenAI mode
+### 2) Handoff mode (no API, copy-paste block)
+
+```bash
+python3 /Users/closears/MyOS/orchestrator/src/main.py run \
+  --task "run weekly decision review" \
+  --provider handoff
+```
+
+This writes a ready-to-copy model handoff block with task + selected context payload.
+
+### 3) Optional OpenAI mode
 
 Set env vars:
 
@@ -208,8 +220,8 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py run \
 
 ```bash
 python3 /Users/closears/MyOS/orchestrator/src/main.py inspect --task "..." [--module <name>] [--with-retrieval]
-python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "..." [--provider manual|openai] [--module <name>] [--with-retrieval]
-python3 /Users/closears/MyOS/orchestrator/src/main.py schedule-run --cycle <daily|weekly|monthly> [--scheduler manual|cron] [--provider manual|openai]
+python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "..." [--provider dry-run|handoff|openai] [--module <name>] [--with-retrieval]
+python3 /Users/closears/MyOS/orchestrator/src/main.py schedule-run --cycle <daily|weekly|monthly> [--scheduler manual|cron] [--provider dry-run|handoff|openai]
 python3 /Users/closears/MyOS/orchestrator/src/main.py index [--source-glob "modules/decision/logs/*.jsonl"]
 python3 /Users/closears/MyOS/orchestrator/src/main.py search --query "..." [--module <name>] [--top-k 8]
 python3 /Users/closears/MyOS/orchestrator/src/main.py metrics [--window 7|30] [--output <path>]
@@ -253,7 +265,7 @@ It checks:
 - Integration tests cover command chain execution:
   - `validate --strict`
   - `inspect`
-  - `run --provider manual`
+  - `run --provider dry-run`
   - `metrics`
   - `owner-report`
   - `schedule-run`

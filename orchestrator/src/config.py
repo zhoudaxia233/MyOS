@@ -19,7 +19,7 @@ def parse_simple_yaml(path: Path) -> dict:
 def load_runtime_config(repo_root: Path) -> dict:
     cfg = parse_simple_yaml(repo_root / "orchestrator" / "config" / "runtime.yaml")
     return {
-        "default_provider": cfg.get("default_provider", "manual"),
+        "default_provider": cfg.get("default_provider", "dry-run"),
         "default_openai_model": cfg.get("default_openai_model", "gpt-4.1-mini"),
         "max_context_chars": int(cfg.get("max_context_chars", "24000")),
         "output_dir": cfg.get("output_dir", "orchestrator/logs"),
