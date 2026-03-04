@@ -126,6 +126,18 @@ Build a stable personal operating center for AI agents, where execution scales b
    - Added `web` subcommand in orchestrator CLI (`python3 orchestrator/src/main.py web`)
    - Supports `--host`, `--port`, and `--open-browser`
 
+## v1.1-hardening (In Progress)
+
+1. Routing resilience and boundary checks
+   - Auto-route with API key now requires graceful fallback when model routing fails
+   - Forced module selection must validate against existing plugin modules
+2. Output path safety
+   - Restrict generated report/artifact writes to `modules/<name>/outputs/`
+   - Block accidental writes to kernel/config/SSOT files via custom output paths
+3. Secrets hygiene
+   - Keep local settings key file gitignored
+   - Avoid returning raw API keys via web settings APIs
+
 ## v0.7-plugin-contract (Planned)
 
 1. Module contract standardization

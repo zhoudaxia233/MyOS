@@ -167,8 +167,14 @@ This opens a local chat-style control center where you can:
 - run tasks with dry-run/handoff/openai provider
 - open `⚙` Settings popup to configure API key, routing model, and task model
 - when Module = Auto route and API key is configured, routing is selected by the routing model
+- if model routing fails, it automatically falls back to manifest/keyword routing
 - trigger validate, metrics, owner-report, and weekly cycle actions
 - audit route reason, matched keywords, loaded files, and output hash
+
+API key handling:
+
+- Settings API never returns raw API key values.
+- Key is stored locally in `orchestrator/config/settings.json` (gitignored).
 
 If you prefer direct server launch:
 

@@ -8,22 +8,33 @@ from router import route_trace
 from settings import get_openai_api_key, load_settings
 
 
+def _available_modules(repo_root: Path) -> list[str]:
+    manifests = discover_module_manifests(repo_root)
+    return [m for m in sorted(manifests.keys()) if m != "_template"]
+
+
 def select_route(task: str, forced_module: str | None, repo_root: Path) -> dict:
+    module_names = _available_modules(repo_root)
+
     if forced_module:
+        if forced_module not in module_names:
+            raise ValueError(f"Unknown module: {forced_module}")
         return route_trace(task, forced_module=forced_module, repo_root=repo_root)
 
     settings = load_settings(repo_root)
     api_key = get_openai_api_key(repo_root)
 
-    if api_key:
-        manifests = discover_module_manifests(repo_root)
-        module_names = [m for m in sorted(manifests.keys()) if m != "_template"]
-        if module_names:
+    if api_key and module_names:
+        try:
             return llm_route_trace(
                 task=task,
                 module_names=module_names,
                 model=str(settings.get("routing_model", "gpt-4.1-nano")),
                 api_key=api_key,
             )
+        except Exception as exc:  # noqa: BLE001
+            fallback = route_trace(task, forced_module=None, repo_root=repo_root)
+            fallback["reason"] = f"llm_route_fallback:{exc.__class__.__name__}:{fallback['reason']}"
+            return fallback
 
     return route_trace(task, forced_module=None, repo_root=repo_root)

@@ -22,7 +22,7 @@ from route_selector import select_route
 from runner import run_with_provider
 from schedulers.manual import get_cycle
 from scheduling import task_from_routine
-from settings import apply_openai_api_key_env, load_settings, save_settings
+from settings import apply_openai_api_key_env, get_openai_api_key, load_settings, redact_settings, save_settings
 from writer import (
     log_metrics_snapshot,
     log_owner_report,
@@ -417,25 +417,38 @@ def api_status(root: Path) -> dict:
         "default_provider": settings["default_provider"] or cfg["default_provider"],
         "default_model": settings["task_model"] or cfg["default_openai_model"],
         "routing_model": settings["routing_model"],
-        "has_openai_api_key": bool(settings["openai_api_key"]),
+        "has_openai_api_key": bool(get_openai_api_key(root)),
         "modules": modules,
     }
 
 
 def api_get_settings(root: Path) -> dict:
     settings = load_settings(root)
-    return {"ok": True, **settings}
+    payload = redact_settings(settings)
+    payload["has_openai_api_key"] = bool(get_openai_api_key(root))
+    return {"ok": True, **payload}
 
 
 def api_update_settings(root: Path, payload: dict[str, Any]) -> dict:
-    updates = {
-        "openai_api_key": str(payload.get("openai_api_key", "")),
-        "default_provider": str(payload.get("default_provider", "")),
-        "task_model": str(payload.get("task_model", "")),
-        "routing_model": str(payload.get("routing_model", "")),
-    }
+    updates: dict[str, str] = {}
+    if "default_provider" in payload:
+        updates["default_provider"] = str(payload.get("default_provider", ""))
+    if "task_model" in payload:
+        updates["task_model"] = str(payload.get("task_model", ""))
+    if "routing_model" in payload:
+        updates["routing_model"] = str(payload.get("routing_model", ""))
+
+    if "openai_api_key" in payload:
+        key = str(payload.get("openai_api_key", "")).strip()
+        if key:
+            updates["openai_api_key"] = key
+    elif _coerce_bool(payload.get("clear_openai_api_key"), default=False):
+        updates["openai_api_key"] = ""
+
     settings = save_settings(root, updates)
-    return {"ok": True, **settings}
+    data = redact_settings(settings)
+    data["has_openai_api_key"] = bool(get_openai_api_key(root))
+    return {"ok": True, **data}
 
 
 def api_inspect(root: Path, payload: dict[str, Any]) -> dict:

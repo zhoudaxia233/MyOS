@@ -263,7 +263,8 @@ async function loadStatus() {
 }
 
 function applySettingsToForm(settings) {
-  settingsApiKey.value = settings.openai_api_key || "";
+  settingsApiKey.value = "";
+  settingsApiKey.placeholder = settings.has_openai_api_key ? "Configured (stored locally)" : "sk-...";
   settingsDefaultProvider.value = settings.default_provider || "handoff";
   settingsRoutingModel.value = settings.routing_model || "gpt-4.1-nano";
   settingsTaskModel.value = settings.task_model || "gpt-4.1-mini";
@@ -291,18 +292,22 @@ function closeSettingsModal() {
 }
 
 async function saveSettings() {
+  const apiKey = settingsApiKey.value.trim();
   const payload = {
-    openai_api_key: settingsApiKey.value.trim(),
     default_provider: settingsDefaultProvider.value,
     routing_model: settingsRoutingModel.value.trim() || "gpt-4.1-nano",
     task_model: settingsTaskModel.value.trim() || "gpt-4.1-mini",
   };
+  if (apiKey) {
+    payload.openai_api_key = apiKey;
+  }
 
   try {
     const data = await postJson("/api/settings", payload);
     settingsCache = data;
     providerSelect.value = data.default_provider || providerSelect.value;
     modelInput.value = data.task_model || modelInput.value;
+    settingsApiKey.value = "";
     closeSettingsModal();
     addBubble("system", "Settings saved.");
   } catch (err) {

@@ -130,6 +130,7 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py web --open-browser
 - 路由与加载文件审计轨迹
 - `⚙` settings 弹窗可配置 API key、路由模型（轻量）和任务模型（主模型）
 - 当 Module = Auto route 且已配置 API key 时，模块选择会走模型路由
+- 若模型路由失败，会自动回退到 manifest/关键词路由并保留审计原因
 - 一键动作：validate、metrics、owner report、weekly cycle、retrieval index
 
 ### 1) 先拿最小上下文
@@ -186,6 +187,11 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "run weekly dec
 ```bash
 OPENAI_API_KEY=... python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "run weekly decision review" --provider openai
 ```
+
+Settings 说明：
+
+- UI/API 不会返回明文 API key。
+- API key 仅本地存储在 `orchestrator/config/settings.json`（已加入 `.gitignore`）。
 
 ### 4) 自动调度执行（cadence）
 

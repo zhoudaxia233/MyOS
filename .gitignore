@@ -7,3 +7,6 @@ __pycache__/
 
 # Derived retrieval artifacts
 orchestrator/retrieval/index.json
+
+# Local settings (contains API keys)
+orchestrator/config/settings.json

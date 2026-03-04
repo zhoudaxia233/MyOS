@@ -56,6 +56,7 @@ Use this checklist before merging changes.
 - [ ] `orchestrator/src/main.py run` shows route reason + loaded files for audit visibility
 - [ ] `orchestrator/src/main.py validate --strict` passes on current repository state
 - [ ] `orchestrator/src/main.py web` starts local UI without external dependencies
+- [ ] Invalid `--module` values are rejected (no writes to non-existent module paths)
 - [ ] `orchestrator/logs/runs.jsonl` preserves `_schema` header and append-only records
 - [ ] `orchestrator/logs/runs.jsonl` records runtime audit fields (`route_reason`, `matched_keywords`, `loaded_files`, `skill`, `output_hash`)
 - [ ] `orchestrator/src/main.py schedule-run --cycle weekly` executes cadence routines
@@ -65,6 +66,7 @@ Use this checklist before merging changes.
 
 - [ ] `orchestrator/web/index.html` renders task composer and trace panel
 - [ ] `orchestrator/web/app.js` can call `/api/inspect`, `/api/run`, `/api/action`
+- [ ] Settings APIs do not return raw API keys
 - [ ] UI shows route reason, matched keywords, selected skill, and loaded files
 - [ ] UI quick actions can run validate/metrics/owner-report/weekly cycle/retrieval index
 

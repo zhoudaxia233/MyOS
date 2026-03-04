@@ -30,12 +30,22 @@ def test_api_status_lists_modules() -> None:
         assert "decision" in data["modules"]
 
 
+def test_api_status_reports_env_api_key(monkeypatch) -> None:
+    with TemporaryDirectory() as td:
+        root = _copy_repo_subset(Path(td))
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-from-env")
+        data = api_status(root)
+        assert data["has_openai_api_key"] is True
+
+
 def test_api_settings_roundtrip() -> None:
     with TemporaryDirectory() as td:
         root = _copy_repo_subset(Path(td))
         initial = api_get_settings(root)
         assert initial["ok"] is True
         assert initial["default_provider"] == "handoff"
+        assert initial["has_openai_api_key"] is False
+        assert "openai_api_key" not in initial
 
         updated = api_update_settings(
             root,
@@ -48,10 +58,16 @@ def test_api_settings_roundtrip() -> None:
         )
         assert updated["ok"] is True
         assert updated["default_provider"] == "dry-run"
-        assert updated["openai_api_key"] == "sk-test"
+        assert updated["has_openai_api_key"] is True
+        assert "openai_api_key" not in updated
+
+        # Blank key field should keep existing saved key.
+        updated2 = api_update_settings(root, {"default_provider": "handoff"})
+        assert updated2["default_provider"] == "handoff"
+        assert updated2["has_openai_api_key"] is True
 
         status = api_status(root)
-        assert status["default_provider"] == "dry-run"
+        assert status["default_provider"] == "handoff"
         assert status["has_openai_api_key"] is True
 
 
@@ -68,12 +84,13 @@ def test_api_inspect_and_run_writes_output() -> None:
 
         assert inspect_result["ok"] is True
         assert inspect_result["module"] == "decision"
-        assert inspect_result["route"]["reason"] in {
+        reason = inspect_result["route"]["reason"]
+        assert reason in {
             "manifest_keyword_match",
             "routes_keyword_match",
             "forced_module",
             "fallback_default",
-        }
+        } or reason.startswith("llm_")
         assert inspect_result["plan"]["skill"].endswith(".md")
         assert len(inspect_result["loaded_files"]) >= 2
 
@@ -130,3 +147,17 @@ def test_api_output_rejects_non_output_and_escape_paths() -> None:
             api_output(root, "core/ROUTER.md")
         with pytest.raises(ValueError):
             api_output(root, "../README.md")
+
+
+def test_api_run_rejects_unknown_module() -> None:
+    with TemporaryDirectory() as td:
+        root = _copy_repo_subset(Path(td))
+        with pytest.raises(ValueError):
+            api_run(
+                root,
+                {
+                    "task": "do something",
+                    "module": "nonexistent_module",
+                    "provider": "dry-run",
+                },
+            )

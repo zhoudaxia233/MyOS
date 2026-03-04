@@ -563,7 +563,11 @@ def build_parser() -> argparse.ArgumentParser:
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
-    return args.func(args)
+    try:
+        return args.func(args)
+    except (ValueError, RuntimeError) as exc:
+        print(f"Error: {exc}")
+        return 2
 
 
 if __name__ == "__main__":

@@ -137,6 +137,7 @@ You get a local chat-like control center with:
 - route + loaded-files audit trace
 - `⚙` settings popup for API key, routing model (lighter), and task model (main)
 - with Module = Auto route, configured API key triggers model-based module selection
+- route selection auto-falls back to manifest/keyword routing if model routing fails
 - quick actions: validate, metrics, owner report, weekly cycle, retrieval index
 
 ### 1) Get a route and minimal context bundle
@@ -193,6 +194,11 @@ Optional API mode:
 ```bash
 OPENAI_API_KEY=... python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "run weekly decision review" --provider openai
 ```
+
+Settings note:
+
+- UI/API never returns raw API key values.
+- API key is stored locally in `orchestrator/config/settings.json` (gitignored).
 
 ### 4) Automation scheduling (cadence execution)
 

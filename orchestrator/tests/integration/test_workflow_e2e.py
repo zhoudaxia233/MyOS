@@ -283,7 +283,12 @@ def test_e2e_cli_command_chain(monkeypatch, capsys) -> None:
         lines = runs_path.read_text(encoding="utf-8").splitlines()
         assert len(lines) >= 2
         record = json.loads(lines[-1])
-        assert record["route_reason"] in {"manifest_keyword_match", "routes_keyword_match", "forced_module", "fallback_default"}
+        assert record["route_reason"] in {
+            "manifest_keyword_match",
+            "routes_keyword_match",
+            "forced_module",
+            "fallback_default",
+        } or record["route_reason"].startswith("llm_")
         assert record["skill"] == "modules/decision/skills/weekly_review.md"
         assert isinstance(record["matched_keywords"], list)
         assert isinstance(record["loaded_files"], list)

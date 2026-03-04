@@ -101,7 +101,28 @@ def _safe_repo_path(repo_root: Path, rel_path: str) -> Path:
     return target
 
 
+def _validate_output_rel(repo_root: Path, output_rel: str) -> None:
+    rel = str(output_rel).replace("\\", "/").strip()
+    if not rel:
+        raise ValueError("Output path is required.")
+
+    parts = Path(rel).parts
+    if len(parts) < 4 or parts[0] != "modules" or parts[2] != "outputs":
+        raise ValueError(f"Output path must be under modules/<name>/outputs/: {output_rel}")
+    if any(p in {"", ".", ".."} for p in parts):
+        raise ValueError(f"Invalid output path segments: {output_rel}")
+
+    module_name = parts[1]
+    module_dir = repo_root / "modules" / module_name
+    output_dir = module_dir / "outputs"
+    if not module_dir.exists() or not module_dir.is_dir():
+        raise ValueError(f"Unknown module for output path: {module_name}")
+    if not output_dir.exists() or not output_dir.is_dir():
+        raise ValueError(f"Missing outputs directory for module: {module_name}")
+
+
 def write_output(repo_root: Path, output_rel: str, content: str) -> Path:
+    _validate_output_rel(repo_root, output_rel)
     p = _safe_repo_path(repo_root, output_rel)
     ensure_parent(p)
     p.write_text(content, encoding="utf-8")

@@ -55,6 +55,11 @@ def save_settings(repo_root: Path, payload: dict) -> dict:
     path = settings_path(repo_root)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(normalized, ensure_ascii=True, indent=2) + "\n", encoding="utf-8")
+    try:
+        os.chmod(path, 0o600)
+    except OSError:
+        # Best-effort permission hardening; ignore on unsupported platforms.
+        pass
     return normalized
 
 
@@ -70,3 +75,13 @@ def apply_openai_api_key_env(repo_root: Path) -> None:
     key = get_openai_api_key(repo_root)
     if key:
         os.environ["OPENAI_API_KEY"] = key
+
+
+def redact_settings(settings: dict) -> dict:
+    redacted = {
+        "default_provider": settings.get("default_provider", DEFAULT_SETTINGS["default_provider"]),
+        "task_model": settings.get("task_model", DEFAULT_SETTINGS["task_model"]),
+        "routing_model": settings.get("routing_model", DEFAULT_SETTINGS["routing_model"]),
+        "has_openai_api_key": bool(str(settings.get("openai_api_key", "")).strip()),
+    }
+    return redacted
