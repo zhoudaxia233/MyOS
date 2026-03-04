@@ -79,10 +79,17 @@ def _build_repo(root: Path) -> None:
         _manifest(
             "content",
             ["write", "post"],
-            [{"id": "fahou", "match_any": ["fahou"], "skill": "write_fahou_message", "output_prefix": "fahou"}],
+            [
+                {
+                    "id": "after_meal_story",
+                    "match_any": ["after-meal story", "after meal story", "fahou"],
+                    "skill": "write_after_meal_story",
+                    "output_prefix": "after_meal_story",
+                }
+            ],
         ),
     )
-    _write(root / "modules/content/skills/write_fahou_message.md", "# Skill\n1. `modules/content/data/voice.yaml`\n")
+    _write(root / "modules/content/skills/write_after_meal_story.md", "# Skill\n1. `modules/content/data/voice.yaml`\n")
     _write(root / "modules/content/data/voice.yaml", "tone: clear\n")
     _write_jsonl(
         root / "modules/content/logs/posts.jsonl",

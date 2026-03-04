@@ -1,8 +1,8 @@
-# Skill: Write Fahou Message
+# Skill: Write After-Meal Story
 
 ## Purpose
 
-Produce a short-form "fahou" message using the content module SSOT rules and the `fahou_message` template.
+Produce a short-form "after-meal story" using the content module SSOT rules and the `after_meal_story` template.
 
 ## Inputs
 
@@ -14,19 +14,19 @@ Produce a short-form "fahou" message using the content module SSOT rules and the
 1. `modules/content/MODULE.md`
 2. `modules/content/data/voice.yaml`
 3. `modules/content/data/anti_patterns.md`
-4. `modules/content/data/templates/fahou_message.md`
+4. `modules/content/data/templates/after_meal_story.md`
 5. `modules/content/logs/ideas.jsonl` (only if sourcing topic from backlog or linking an idea ID)
 
 Do not load `x_thread.md` unless the user asks for a thread version.
 
 ## Procedure
 
-1. If topic is missing, ask a minimal question: "What topic should the fahou message cover?"
+1. If topic is missing, ask a minimal question: "What topic should the after-meal story cover?"
 2. Read the required files listed above.
 3. Draft the message strictly in the template section order.
 4. Run self-checks before finalizing.
 5. Return the final Markdown and write it to:
-   - `modules/content/outputs/fahou_<YYYYMMDD>_<topic_slug>.md`
+   - `modules/content/outputs/after_meal_story_<YYYYMMDD>_<topic_slug>.md`
 
 ## Self-Checks (Required)
 

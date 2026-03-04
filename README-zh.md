@@ -54,6 +54,7 @@
       runtime.yaml
       providers.yaml
       retrieval.json
+    web/
     retrieval/
     src/
     logs/
@@ -108,6 +109,26 @@
 - `orchestrator/`（可手动模式、可选 API 模式）
 
 ## 快速使用
+
+### 0) 先启动 V1 可视化界面（推荐）
+
+```bash
+./start
+```
+
+这是最短启动命令。若本机有 Poetry，会自动使用 Poetry 虚拟环境。
+
+备用方式：
+
+```bash
+python3 /Users/closears/MyOS/orchestrator/src/main.py web --open-browser
+```
+
+你会得到一个本地 chat 风格控制台，支持：
+
+- 任务 inspect/run
+- 路由与加载文件审计轨迹
+- 一键动作：validate、metrics、owner report、weekly cycle、retrieval index
 
 ### 1) 先拿最小上下文
 
@@ -270,3 +291,4 @@ poetry run pytest -q /Users/closears/MyOS/orchestrator/tests
 - v0.6-next：新增 manifest 驱动路由（`module.manifest.yaml`）、按 skill 的最小上下文加载、以及 `inspect`/`run` 的路由审计输出
 - v0.6-next：新增插件契约校验命令（`validate`）和 CI 校验门禁
 - v0.6-next：新增端到端集成测试，覆盖核心命令链路稳定性
+- v1-ui：新增本地可视化控制中心（`orchestrator/src/main.py web`），支持 chat 式任务输入和执行轨迹可视化

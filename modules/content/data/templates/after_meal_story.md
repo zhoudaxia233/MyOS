@@ -1,4 +1,4 @@
-# Fahou Message Template
+# After-Meal Story Template
 
 ## Title
 

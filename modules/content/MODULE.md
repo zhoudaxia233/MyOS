@@ -17,13 +17,13 @@ This module handles the content creation pipeline for short-form writing, thread
 
 - `modules/content/MODULE.md`: Module purpose, workflows, loading rules, and behavioral instructions
 - `modules/content/module.manifest.yaml`: Routing keywords and planning defaults for orchestrator auto-discovery
-- `modules/content/skills/write_fahou_message.md`: Task-specific skill for producing a short-form "fahou" message
+- `modules/content/skills/write_after_meal_story.md`: Task-specific skill for producing a short-form "after-meal story"
 
 ### Canonical data (SSOT)
 
 - `modules/content/data/voice.yaml`: Voice profile and numeric style targets
 - `modules/content/data/anti_patterns.md`: Banned openings, banned phrases, and structural traps
-- `modules/content/data/templates/fahou_message.md`: Required output structure for fahou messages
+- `modules/content/data/templates/after_meal_story.md`: Required output structure for after-meal stories
 - `modules/content/data/templates/x_thread.md`: X/Twitter thread skeleton template
 
 ### Logs (append-only JSONL)
@@ -41,7 +41,7 @@ This module handles the content creation pipeline for short-form writing, thread
    - Read `ideas.jsonl` only if sourcing from backlog.
    - Select idea by ID when possible.
 2. Outline
-   - Load the relevant template only (`fahou_message.md` or `x_thread.md`).
+   - Load the relevant template only (`after_meal_story.md` or `x_thread.md`).
 3. Draft
    - Load `voice.yaml` and write into the chosen template structure.
 4. Edit

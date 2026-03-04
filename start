@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$ROOT_DIR"
+
+if command -v poetry >/dev/null 2>&1; then
+  exec poetry run python orchestrator/src/main.py web --open-browser
+fi
+
+exec python3 orchestrator/src/main.py web --open-browser

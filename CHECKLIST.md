@@ -55,10 +55,18 @@ Use this checklist before merging changes.
 - [ ] `orchestrator/src/main.py run --provider manual` writes execution output
 - [ ] `orchestrator/src/main.py run` shows route reason + loaded files for audit visibility
 - [ ] `orchestrator/src/main.py validate --strict` passes on current repository state
+- [ ] `orchestrator/src/main.py web` starts local UI without external dependencies
 - [ ] `orchestrator/logs/runs.jsonl` preserves `_schema` header and append-only records
 - [ ] `orchestrator/logs/runs.jsonl` records runtime audit fields (`route_reason`, `matched_keywords`, `loaded_files`, `skill`, `output_hash`)
 - [ ] `orchestrator/src/main.py schedule-run --cycle weekly` executes cadence routines
 - [ ] `orchestrator/logs/schedule_runs.jsonl` preserves `_schema` header and append-only records
+
+## Web UI Layer
+
+- [ ] `orchestrator/web/index.html` renders task composer and trace panel
+- [ ] `orchestrator/web/app.js` can call `/api/inspect`, `/api/run`, `/api/action`
+- [ ] UI shows route reason, matched keywords, selected skill, and loaded files
+- [ ] UI quick actions can run validate/metrics/owner-report/weekly cycle/retrieval index
 
 ## Retrieval Layer
 
@@ -90,6 +98,7 @@ Use this checklist before merging changes.
 - [ ] `scripts/append_jsonl.sh` is executable
 - [ ] `scripts/context_bundle.sh` is executable
 - [ ] `scripts/run_cycle.sh` is executable
+- [ ] `./start` is executable and launches local web UI
 - [ ] Outputs are written under `modules/*/outputs/`
 - [ ] CI runs `validate --strict` before tests
 - [ ] Integration command-chain test passes (`orchestrator/tests/integration/test_workflow_e2e.py`)

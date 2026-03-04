@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Personal Core OS | V1 Control Center</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="bg-layer bg-a"></div>
+  <div class="bg-layer bg-b"></div>
+
+  <header class="topbar">
+    <div class="title-wrap">
+      <h1>Personal Core OS</h1>
+      <p>V1 Control Center</p>
+    </div>
+    <div class="topbar-right">
+      <button id="themeToggle" class="icon-btn" type="button" aria-label="Toggle dark mode" title="Toggle dark mode">☀</button>
+      <div id="statusBadge" class="status-badge pending">Connecting...</div>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="card panel-chat">
+      <div id="chatLog" class="chat-log"></div>
+
+      <form id="taskForm" class="composer">
+        <label class="label" for="taskInput">Task</label>
+        <textarea id="taskInput" rows="3" placeholder="Describe what you want to do..."></textarea>
+
+        <div class="control-grid">
+          <label class="control">
+            <span>Module</span>
+            <select id="moduleSelect">
+              <option value="">Auto route</option>
+            </select>
+          </label>
+
+          <label class="control">
+            <span>Provider</span>
+            <select id="providerSelect">
+              <option value="manual">manual</option>
+              <option value="openai">openai</option>
+            </select>
+          </label>
+
+          <label class="control">
+            <span>Model</span>
+            <input id="modelInput" type="text" placeholder="gpt-4.1-mini">
+          </label>
+
+          <label class="control checkbox">
+            <input id="retrievalToggle" type="checkbox">
+            <span>Use retrieval</span>
+          </label>
+
+          <label class="control">
+            <span>Top K</span>
+            <input id="retrievalTopK" type="number" min="1" max="32" value="6">
+          </label>
+        </div>
+
+        <div class="action-row">
+          <button id="inspectBtn" type="button" class="btn secondary">Inspect</button>
+          <button id="runBtn" type="submit" class="btn primary">Run</button>
+        </div>
+      </form>
+
+      <div class="quick-actions">
+        <h2>Quick Actions</h2>
+        <div class="chips">
+          <button class="chip" data-task="run weekly decision review">Weekly Decision Review</button>
+          <button class="chip" data-task="extract chat patterns from this week">Extract Chat Patterns</button>
+          <button class="chip" data-task="write an after-meal story about BTC market regime">Write After-Meal Story</button>
+        </div>
+        <div class="chips">
+          <button class="chip action" data-action="validate">Validate</button>
+          <button class="chip action" data-action="metrics">Metrics 7D</button>
+          <button class="chip action" data-action="owner_report">Owner Report 7D</button>
+          <button class="chip action" data-action="schedule_weekly">Run Weekly Cycle</button>
+          <button class="chip action" data-action="build_index">Build Retrieval Index</button>
+        </div>
+      </div>
+    </section>
+
+    <aside class="card panel-trace">
+      <h2>Execution Trace</h2>
+
+      <div class="trace-block">
+        <h3>Route</h3>
+        <pre id="routeTrace">-</pre>
+      </div>
+
+      <div class="trace-block">
+        <h3>Plan</h3>
+        <pre id="planTrace">-</pre>
+      </div>
+
+      <div class="trace-block">
+        <h3>Loaded Files</h3>
+        <ul id="loadedFiles" class="file-list">
+          <li>-</li>
+        </ul>
+      </div>
+
+      <div class="trace-block">
+        <h3>Result</h3>
+        <pre id="resultTrace">-</pre>
+      </div>
+
+      <div class="trace-block">
+        <h3>Output Preview</h3>
+        <pre id="outputPreview">-</pre>
+      </div>
+    </aside>
+  </main>
+
+  <script src="/app.js" defer></script>
+</body>
+</html>

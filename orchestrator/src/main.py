@@ -467,6 +467,14 @@ def cmd_validate(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_web(args: argparse.Namespace) -> int:
+    from webapp import start_web_ui
+
+    root = repo_root()
+    start_web_ui(root=root, host=args.host, port=args.port, open_browser=args.open_browser)
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description="Personal Core OS Orchestrator")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -538,6 +546,12 @@ def build_parser() -> argparse.ArgumentParser:
     sp_validate = sub.add_parser("validate")
     sp_validate.add_argument("--strict", action="store_true")
     sp_validate.set_defaults(func=cmd_validate)
+
+    sp_web = sub.add_parser("web")
+    sp_web.add_argument("--host", default="127.0.0.1")
+    sp_web.add_argument("--port", type=int, default=8765)
+    sp_web.add_argument("--open-browser", action="store_true")
+    sp_web.set_defaults(func=cmd_web)
 
     return p
 

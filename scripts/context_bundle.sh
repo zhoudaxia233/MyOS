@@ -11,7 +11,7 @@ What it does:
   - Prints a minimal file bundle following two-hop loading
 
 Examples:
-  scripts/context_bundle.sh --task "write a fahou message about AI workflows"
+  scripts/context_bundle.sh --task "write an after-meal story about AI workflows"
   scripts/context_bundle.sh --task "log this investment decision" --module decision
 USAGE
 }
@@ -123,8 +123,8 @@ case "$module" in
     cat <<'LIST'
 - modules/content/data/voice.yaml
 - modules/content/data/anti_patterns.md
-- modules/content/data/templates/fahou_message.md (or x_thread.md if thread task)
-- modules/content/skills/write_fahou_message.md (if fahou task)
+- modules/content/data/templates/after_meal_story.md (or x_thread.md if thread task)
+- modules/content/skills/write_after_meal_story.md (if after-meal story task)
 LIST
     ;;
   decision)

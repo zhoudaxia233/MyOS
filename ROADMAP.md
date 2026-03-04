@@ -113,6 +113,19 @@ Build a stable personal operating center for AI agents, where execution scales b
    - Added run-log fields for route/load traceability (`route_reason`, `matched_keywords`, `loaded_files`, `skill`, `output_hash`)
    - Integrated coverage in end-to-end test assertions
 
+## v1-ui (Completed)
+
+1. Intuitive local control center
+   - Added lightweight web interface (`orchestrator/web/`) with chat-style task input and trace panel
+   - Added backend server (`orchestrator/src/webapp.py`) using Python standard library (`http.server`)
+   - No frontend framework and no new runtime dependencies required
+2. Action visibility and auditability
+   - UI exposes route reason, matched keywords, selected skill, loaded files, output path, and output hash
+   - Added one-click actions for validate, metrics, owner report, weekly cycle run, and retrieval index build
+3. Unified launch path
+   - Added `web` subcommand in orchestrator CLI (`python3 orchestrator/src/main.py web`)
+   - Supports `--host`, `--port`, and `--open-browser`
+
 ## v0.7-plugin-contract (Planned)
 
 1. Module contract standardization

@@ -22,6 +22,7 @@ It reads kernel/module protocols, builds minimal context bundles, optionally ret
 - `metrics.py`: compute drift dashboard metrics from logs
 - `guardrails.py`: evaluate domain-specific hardening policies and override requirements
 - `owner_report.py`: build one-page owner report from metrics + exceptions + artifacts
+- `webapp.py`: local web control center API + static UI serving
 - `runner.py`: invoke provider
 - `writer.py`: write outputs and append run/query/schedule/metrics/override/owner logs
 - `validators.py`: guardrails for JSONL and append-only behavior
@@ -146,6 +147,33 @@ Owner report records are logged in `orchestrator/logs/owner_reports.jsonl`.
 
 ## Quick Start
 
+### 0) Start V1 Web UI (recommended)
+
+```bash
+./start
+```
+
+This launcher auto-uses Poetry virtualenv when Poetry is installed.
+
+Alternative:
+
+```bash
+python3 /Users/closears/MyOS/orchestrator/src/main.py web --open-browser
+```
+
+This opens a local chat-style control center where you can:
+
+- inspect route + context load plan
+- run tasks with manual/openai provider
+- trigger validate, metrics, owner-report, and weekly cycle actions
+- audit route reason, matched keywords, loaded files, and output hash
+
+If you prefer direct server launch:
+
+```bash
+python3 /Users/closears/MyOS/orchestrator/src/webapp.py --open-browser
+```
+
 ### 1) Manual mode (no API)
 
 ```bash
@@ -188,6 +216,7 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py metrics [--window 7|30] [-
 python3 /Users/closears/MyOS/orchestrator/src/main.py guardrail-check --domain <invest|project|content> [policy fields...]
 python3 /Users/closears/MyOS/orchestrator/src/main.py owner-report [--window 7|30] [--output <path>]
 python3 /Users/closears/MyOS/orchestrator/src/main.py validate [--strict]
+python3 /Users/closears/MyOS/orchestrator/src/main.py web [--host 127.0.0.1] [--port 8765] [--open-browser]
 ```
 
 ## Contract Validation

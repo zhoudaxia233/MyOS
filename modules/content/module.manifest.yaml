@@ -1,17 +1,29 @@
 {
   "module": "content",
   "routing": {
-    "keywords": ["write", "publish", "thread", "tone", "edit", "post", "draft", "message", "fahou"]
+    "keywords": [
+      "write",
+      "publish",
+      "thread",
+      "tone",
+      "edit",
+      "post",
+      "draft",
+      "message",
+      "after-meal story",
+      "after meal story",
+      "fahou"
+    ]
   },
   "planning": {
     "default_skill": "MODULE",
     "default_output_prefix": "task",
     "rules": [
       {
-        "id": "fahou_message",
-        "match_any": ["fahou"],
-        "skill": "write_fahou_message",
-        "output_prefix": "fahou"
+        "id": "after_meal_story",
+        "match_any": ["after-meal story", "after meal story", "fahou"],
+        "skill": "write_after_meal_story",
+        "output_prefix": "after_meal_story"
       }
     ]
   }

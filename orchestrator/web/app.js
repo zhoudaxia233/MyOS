@@ -1,0 +1,319 @@
+const chatLog = document.getElementById("chatLog");
+const taskForm = document.getElementById("taskForm");
+const taskInput = document.getElementById("taskInput");
+const moduleSelect = document.getElementById("moduleSelect");
+const providerSelect = document.getElementById("providerSelect");
+const modelInput = document.getElementById("modelInput");
+const retrievalToggle = document.getElementById("retrievalToggle");
+const retrievalTopK = document.getElementById("retrievalTopK");
+const inspectBtn = document.getElementById("inspectBtn");
+const statusBadge = document.getElementById("statusBadge");
+const themeToggle = document.getElementById("themeToggle");
+
+const routeTrace = document.getElementById("routeTrace");
+const planTrace = document.getElementById("planTrace");
+const loadedFiles = document.getElementById("loadedFiles");
+const resultTrace = document.getElementById("resultTrace");
+const outputPreview = document.getElementById("outputPreview");
+
+function addBubble(role, text) {
+  const div = document.createElement("div");
+  div.className = `bubble ${role}`;
+  div.textContent = text;
+  chatLog.appendChild(div);
+  chatLog.scrollTop = chatLog.scrollHeight;
+}
+
+function getLastUserBubbleText() {
+  const userBubbles = chatLog.querySelectorAll(".bubble.user");
+  if (userBubbles.length === 0) {
+    return null;
+  }
+  return userBubbles[userBubbles.length - 1].textContent;
+}
+
+function addUserTaskOnce(task) {
+  const lastUserText = getLastUserBubbleText();
+  if (lastUserText === task) {
+    return;
+  }
+  addBubble("user", task);
+}
+
+function setStatus(label, kind) {
+  statusBadge.textContent = label;
+  statusBadge.classList.remove("pending", "ok", "fail");
+  statusBadge.classList.add(kind);
+}
+
+function setPreview(text) {
+  const value = String(text || "").trim();
+  outputPreview.textContent = value || "-";
+}
+
+function renderLoadedFiles(files) {
+  loadedFiles.innerHTML = "";
+  if (!Array.isArray(files) || files.length === 0) {
+    const li = document.createElement("li");
+    li.textContent = "-";
+    loadedFiles.appendChild(li);
+    return;
+  }
+
+  for (const file of files) {
+    const li = document.createElement("li");
+    li.textContent = file;
+    loadedFiles.appendChild(li);
+  }
+}
+
+function renderInspectResult(data) {
+  routeTrace.textContent = [
+    `module: ${data.module}`,
+    `reason: ${data.route.reason}`,
+    `keywords: ${(data.route.matched_keywords || []).join(", ") || "-"}`,
+  ].join("\n");
+
+  planTrace.textContent = [
+    `skill: ${data.plan.skill}`,
+    `output_path: ${data.plan.output_path}`,
+    `retrieval_hits: ${data.retrieval_hits}`,
+  ].join("\n");
+
+  renderLoadedFiles(data.loaded_files || []);
+  if (!data.output_preview) {
+    setPreview("-");
+  }
+}
+
+function renderRunResult(data) {
+  renderInspectResult(data);
+  resultTrace.textContent = [
+    `output_path: ${data.output_path}`,
+    `output_hash: ${data.output_hash}`,
+    `module: ${data.module}`,
+  ].join("\n");
+  setPreview(data.output_preview || "-");
+}
+
+function renderActionResult(data) {
+  const out = [];
+  out.push(`action: ${data.action}`);
+
+  if (data.status) {
+    out.push(`status: ${data.status}`);
+  }
+  if (data.output_path) {
+    out.push(`output_path: ${data.output_path}`);
+  }
+  if (typeof data.routine_count === "number") {
+    out.push(`routine_count: ${data.routine_count}`);
+  }
+  if (data.summary) {
+    out.push(`summary: ${JSON.stringify(data.summary)}`);
+  }
+  if (Array.isArray(data.errors) && data.errors.length > 0) {
+    out.push(`errors: ${data.errors.length}`);
+  }
+  if (Array.isArray(data.warnings) && data.warnings.length > 0) {
+    out.push(`warnings: ${data.warnings.length}`);
+  }
+
+  resultTrace.textContent = out.join("\n");
+
+  if (data.output_preview) {
+    setPreview(data.output_preview);
+    return;
+  }
+  if (Array.isArray(data.runs) && data.runs.length > 0) {
+    setPreview(data.runs[0].output_preview || "-");
+    return;
+  }
+  setPreview("-");
+}
+
+function buildPayload() {
+  const model = modelInput.value.trim();
+  return {
+    task: taskInput.value.trim(),
+    module: moduleSelect.value || null,
+    provider: providerSelect.value,
+    model: model || null,
+    with_retrieval: retrievalToggle.checked,
+    retrieval_top_k: Number(retrievalTopK.value || 6),
+  };
+}
+
+async function postJson(path, payload) {
+  const resp = await fetch(path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload || {}),
+  });
+
+  let data;
+  try {
+    data = await resp.json();
+  } catch {
+    throw new Error(`Request failed (${resp.status})`);
+  }
+
+  if (!resp.ok || data.ok === false) {
+    const msg = data.error || `Request failed (${resp.status})`;
+    throw new Error(msg);
+  }
+
+  return data;
+}
+
+async function loadStatus() {
+  try {
+    const resp = await fetch("/api/status");
+    const data = await resp.json();
+
+    if (!resp.ok || data.ok === false) {
+      throw new Error(data.error || "Failed to load status");
+    }
+
+    moduleSelect.innerHTML = "<option value=\"\">Auto route</option>";
+    for (const moduleName of data.modules || []) {
+      const option = document.createElement("option");
+      option.value = moduleName;
+      option.textContent = moduleName;
+      moduleSelect.appendChild(option);
+    }
+
+    if (data.default_provider) {
+      providerSelect.value = data.default_provider;
+    }
+    if (data.default_model) {
+      modelInput.value = data.default_model;
+    }
+
+    setStatus("Connected", "ok");
+    addBubble("system", `Connected to ${data.repo_root}`);
+  } catch (err) {
+    setStatus("Offline", "fail");
+    addBubble("system", `Connection failed: ${err.message}`);
+  }
+}
+
+async function inspectTask() {
+  const payload = buildPayload();
+  if (!payload.task) {
+    addBubble("system", "Task is required for inspect.");
+    return;
+  }
+
+  addUserTaskOnce(payload.task);
+
+  try {
+    const data = await postJson("/api/inspect", payload);
+    renderInspectResult(data);
+    addBubble("system", `Inspect complete: ${data.module} -> ${data.plan.skill}`);
+  } catch (err) {
+    addBubble("system", `Inspect failed: ${err.message}`);
+  }
+}
+
+async function runTask() {
+  const payload = buildPayload();
+  if (!payload.task) {
+    addBubble("system", "Task is required for run.");
+    return;
+  }
+
+  addUserTaskOnce(payload.task);
+
+  try {
+    const data = await postJson("/api/run", payload);
+    renderRunResult(data);
+    addBubble("system", `Run complete. Output: ${data.output_path}`);
+  } catch (err) {
+    addBubble("system", `Run failed: ${err.message}`);
+  }
+}
+
+async function runAction(action) {
+  const payload = {
+    action,
+    provider: providerSelect.value,
+    model: modelInput.value.trim() || null,
+    with_retrieval: retrievalToggle.checked,
+    retrieval_top_k: Number(retrievalTopK.value || 6),
+  };
+
+  if (action === "metrics" || action === "owner_report") {
+    payload.window_days = 7;
+  }
+
+  if (action === "schedule_weekly") {
+    payload.action = "schedule_cycle";
+    payload.cycle = "weekly";
+    payload.no_owner_report = false;
+  }
+
+  addBubble("system", `Running action: ${payload.action}`);
+
+  try {
+    const data = await postJson("/api/action", payload);
+    renderActionResult(data);
+    addBubble("system", `Action complete: ${data.action}`);
+  } catch (err) {
+    addBubble("system", `Action failed: ${err.message}`);
+  }
+}
+
+inspectBtn.addEventListener("click", (event) => {
+  event.preventDefault();
+  inspectTask();
+});
+
+taskForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  runTask();
+});
+
+for (const button of document.querySelectorAll(".chip[data-task]")) {
+  button.addEventListener("click", () => {
+    taskInput.value = button.getAttribute("data-task") || "";
+    taskInput.focus();
+  });
+}
+
+for (const button of document.querySelectorAll(".chip.action")) {
+  button.addEventListener("click", () => {
+    const action = button.getAttribute("data-action");
+    if (!action) {
+      return;
+    }
+    runAction(action);
+  });
+}
+
+addBubble("system", "Type a task, click Inspect, then Run.");
+
+const THEME_KEY = "pcos_theme";
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute("data-theme", theme);
+  document.body.setAttribute("data-theme", theme);
+  themeToggle.textContent = theme === "dark" ? "☾" : "☀";
+}
+
+function initTheme() {
+  const saved = localStorage.getItem(THEME_KEY);
+  const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+  const theme = saved || (prefersDark ? "dark" : "light");
+  applyTheme(theme);
+}
+
+themeToggle.addEventListener("click", () => {
+  const current = document.documentElement.getAttribute("data-theme") || "light";
+  const next = current === "dark" ? "light" : "dark";
+  applyTheme(next);
+  localStorage.setItem(THEME_KEY, next);
+});
+
+initTheme();
+loadStatus();

@@ -58,6 +58,7 @@ Separate execution from judgment while keeping them aligned over time.
       runtime.yaml
       providers.yaml
       retrieval.json
+    web/
     retrieval/
     src/
     logs/
@@ -115,6 +116,26 @@ Execution engines can be:
 - `orchestrator/` CLI (manual or API provider mode)
 
 ## Fast Usage
+
+### 0) Start the V1 Web UI (recommended)
+
+```bash
+./start
+```
+
+This is the shortest startup command. It uses Poetry virtualenv automatically when Poetry is available.
+
+Alternative:
+
+```bash
+python3 /Users/closears/MyOS/orchestrator/src/main.py web --open-browser
+```
+
+You get a local chat-like control center with:
+
+- task inspect/run
+- route + loaded-files audit trace
+- quick actions: validate, metrics, owner report, weekly cycle, retrieval index
 
 ### 1) Get a route and minimal context bundle
 
@@ -282,3 +303,4 @@ Includes integration chain coverage for `validate`, `inspect`, `run`, `metrics`,
 - v0.6-next: Added manifest-driven routing (`module.manifest.yaml`), skill-driven minimal context loading, and explicit route audit output in `inspect`/`run`
 - v0.6-next: Added plugin contract validator command (`validate`) and CI validation gate
 - v0.6-next: Added integration tests for end-to-end command chain reliability
+- v1-ui: Added local web control center (`orchestrator/src/main.py web`) with chat-style task entry and execution trace visibility
