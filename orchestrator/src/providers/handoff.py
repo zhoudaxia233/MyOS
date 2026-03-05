@@ -8,11 +8,6 @@ def _sanitize_fence(text: str) -> str:
 
 def run_handoff(task: str, module: str, plan: dict, bundle: dict) -> str:
     lines: list[str] = []
-    lines.append("# Model Handoff Block")
-    lines.append("")
-    lines.append("Copy the block below and send it to your external model.")
-    lines.append("")
-    lines.append("```markdown")
     lines.append("[BEGIN PERSONAL CORE OS HANDOFF]")
     lines.append("")
     lines.append("Role: You are an execution assistant for Personal Core OS.")
@@ -46,6 +41,4 @@ def run_handoff(task: str, module: str, plan: dict, bundle: dict) -> str:
     lines.append("Return only the final content for the required output path.")
     lines.append("")
     lines.append("[END PERSONAL CORE OS HANDOFF]")
-    lines.append("```")
-    lines.append("")
     return "\n".join(lines)
