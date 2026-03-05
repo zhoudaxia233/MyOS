@@ -6,6 +6,7 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
+from decision_gate import evaluate_decision_entry_gate
 from config import load_runtime_config
 from chat_ingest import ingest_chat_export
 from guardrails import evaluate_guardrail, load_domain_guardrails
@@ -22,6 +23,8 @@ from schedulers.cron import cron_hint
 from schedulers.manual import get_cycle
 from settings import apply_openai_api_key_env, load_settings
 from writer import (
+    log_decision,
+    log_decision_gate_check,
     log_guardrail_override,
     log_metrics_snapshot,
     log_owner_report,
@@ -76,6 +79,11 @@ def _root_relative(path: Path, root: Path) -> str:
             return str(path.resolve().relative_to(root.resolve()))
         except ValueError:
             return str(path)
+
+
+def _normalize_optional_str(value: str | None) -> str | None:
+    text = str(value or "").strip()
+    return text or None
 
 
 def _retrieval_hits(root: Path, query: str, module: str | None, top_k: int) -> list[dict]:
@@ -315,6 +323,101 @@ def cmd_guardrail_check(args: argparse.Namespace) -> int:
         print(f"Required cooldown hours: {result['required_cooldown_hours']}")
     if result["missing_override_fields"]:
         print(f"Missing override fields: {result['missing_override_fields']}")
+    return 0
+
+
+def cmd_log_decision(args: argparse.Namespace) -> int:
+    root = repo_root()
+    domain = str(args.domain).strip().lower()
+    decision_text = str(args.decision).strip()
+    options = [str(item).strip() for item in (args.option or []) if str(item).strip()]
+    confidence = int(args.confidence)
+
+    if not domain:
+        raise ValueError("domain is required")
+    if not decision_text:
+        raise ValueError("decision is required")
+    if not options:
+        raise ValueError("at least one --option is required")
+    if confidence < 1 or confidence > 10:
+        raise ValueError("confidence must be in range 1..10")
+
+    guardrail_check_id = _normalize_optional_str(args.guardrail_check_id)
+    gate = evaluate_decision_entry_gate(
+        root,
+        domain=domain,
+        guardrail_check_id=guardrail_check_id,
+        downside=_normalize_optional_str(args.downside),
+        invalidation_condition=_normalize_optional_str(args.invalidation_condition),
+        max_loss=_normalize_optional_str(args.max_loss),
+        disconfirming_signal=_normalize_optional_str(args.disconfirming_signal),
+        emotional_weight=int(args.emotional_weight),
+        cooldown_applied=bool(args.cooldown_applied),
+        cooldown_hours=int(args.cooldown_hours),
+        override_requested=bool(args.override_requested),
+        override_reason=_normalize_optional_str(args.override_reason),
+        owner_confirmation=_normalize_optional_str(args.owner_confirmation),
+    )
+
+    gate_record = {
+        "id": _next_id(root, "dgc", "modules/decision/logs/decision_gate_checks.jsonl"),
+        "created_at": _utc_now(),
+        "status": "active",
+        "domain": gate["domain"],
+        "decision": decision_text,
+        "guardrail_check_id": guardrail_check_id,
+        "precommit_required": gate["precommit_required"],
+        "precommit_status": gate["precommit_status"],
+        "guardrail_status": gate["guardrail_status"],
+        "gate_status": gate["gate_status"],
+        "violations": gate["violations"],
+        "missing_override_fields": gate["missing_override_fields"],
+        "source_refs": gate["source_refs"],
+    }
+    log_decision_gate_check(root, gate_record)
+
+    if gate["gate_status"] == "blocked":
+        details = ", ".join(gate["violations"]) if gate["violations"] else "unspecified"
+        raise RuntimeError(f"Decision gate blocked; no decision was logged. Violations: {details}")
+
+    decision_id = _next_id(root, "dc", "modules/decision/logs/decisions.jsonl")
+    decision_record = {
+        "id": decision_id,
+        "created_at": _utc_now(),
+        "status": "active",
+        "domain": gate["domain"],
+        "decision": decision_text,
+        "options": options,
+        "reasoning": _normalize_optional_str(args.reasoning),
+        "risks": [str(item).strip() for item in (args.risk or []) if str(item).strip()],
+        "expected_outcome": _normalize_optional_str(args.expected_outcome),
+        "time_horizon": _normalize_optional_str(args.time_horizon),
+        "confidence": confidence,
+        "guardrail_check_id": guardrail_check_id,
+        "follow_up_date": _normalize_optional_str(args.follow_up_date),
+        "outcome": _normalize_optional_str(args.outcome),
+    }
+    log_decision(root, decision_record)
+
+    if gate["gate_status"] == "override_accepted":
+        override_record = {
+            "id": _next_id(root, "go", "modules/decision/logs/guardrail_overrides.jsonl"),
+            "created_at": _utc_now(),
+            "status": "active",
+            "domain": gate["domain"],
+            "decision_ref": decision_id,
+            "violations": gate["violations"],
+            "override_reason": _normalize_optional_str(args.override_reason),
+            "owner_confirmation": _normalize_optional_str(args.owner_confirmation),
+            "provider": args.provider,
+            "notes": _normalize_optional_str(args.notes),
+        }
+        log_guardrail_override(root, override_record)
+
+    print(f"Decision ID: {decision_id}")
+    print(f"Gate status: {gate['gate_status']}")
+    print(f"Precommit status: {gate['precommit_status']}")
+    print(f"Guardrail status: {gate['guardrail_status']}")
     return 0
 
 
@@ -560,6 +663,32 @@ def build_parser() -> argparse.ArgumentParser:
     sp_guardrail.add_argument("--provider", default="dry-run")
     sp_guardrail.add_argument("--notes", default=None)
     sp_guardrail.set_defaults(func=cmd_guardrail_check)
+
+    sp_log_decision = sub.add_parser("log-decision")
+    sp_log_decision.add_argument("--domain", required=True)
+    sp_log_decision.add_argument("--decision", required=True)
+    sp_log_decision.add_argument("--option", action="append", default=[])
+    sp_log_decision.add_argument("--confidence", required=True, type=int)
+    sp_log_decision.add_argument("--reasoning", default=None)
+    sp_log_decision.add_argument("--risk", action="append", default=[])
+    sp_log_decision.add_argument("--expected-outcome", default=None)
+    sp_log_decision.add_argument("--time-horizon", default=None)
+    sp_log_decision.add_argument("--guardrail-check-id", default=None)
+    sp_log_decision.add_argument("--downside", default=None)
+    sp_log_decision.add_argument("--invalidation-condition", default=None)
+    sp_log_decision.add_argument("--max-loss", default=None)
+    sp_log_decision.add_argument("--disconfirming-signal", default=None)
+    sp_log_decision.add_argument("--emotional-weight", type=int, default=0)
+    sp_log_decision.add_argument("--cooldown-applied", action="store_true")
+    sp_log_decision.add_argument("--cooldown-hours", type=int, default=0)
+    sp_log_decision.add_argument("--override-requested", action="store_true")
+    sp_log_decision.add_argument("--override-reason", default=None)
+    sp_log_decision.add_argument("--owner-confirmation", default=None)
+    sp_log_decision.add_argument("--follow-up-date", default=None)
+    sp_log_decision.add_argument("--outcome", default=None)
+    sp_log_decision.add_argument("--provider", default="dry-run")
+    sp_log_decision.add_argument("--notes", default=None)
+    sp_log_decision.set_defaults(func=cmd_log_decision)
 
     sp_metrics = sub.add_parser("metrics")
     sp_metrics.add_argument("--window", type=int, default=7)

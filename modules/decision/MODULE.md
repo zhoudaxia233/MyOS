@@ -41,6 +41,7 @@ This module stores judgment memory for decisions, failures, meaningful experienc
 - `modules/decision/logs/experiences.jsonl`: High-signal experiences and why they mattered
 - `modules/decision/logs/precommit_checks.jsonl`: Guardrail checks before high-risk commitments
 - `modules/decision/logs/guardrail_overrides.jsonl`: Explicit override audit trail records
+- `modules/decision/logs/decision_gate_checks.jsonl`: Gate outcomes before decision append (pass/blocked/override)
 
 ### Outputs
 
@@ -59,6 +60,7 @@ This module stores judgment memory for decisions, failures, meaningful experienc
 4. Guardrail hardening check
    - Validate domain policy in `domain_guardrails.yaml` before committing risky actions.
    - If blocked but overridden, append one record to `guardrail_overrides.jsonl`.
+   - Always append one gate audit record to `decision_gate_checks.jsonl` before writing `decisions.jsonl`.
 5. Weekly review
    - Read the last 7 days of logs.
    - Include precommit checks and guardrail overrides to spot policy drift.
@@ -69,7 +71,7 @@ This module stores judgment memory for decisions, failures, meaningful experienc
 
 ## Progressive Loading Rules (Required)
 
-- For decision logging: load `log_decision.md` and `decisions.jsonl` schema/records as needed.
+- For decision logging: load `log_decision.md`, `precommit_checks.jsonl`, `domain_guardrails.yaml`, and `decisions.jsonl`.
 - For precommit checks: load `precommit_check.md`, `impulse_guardrails.yaml`, and `precommit_checks.jsonl`.
 - For guardrail hardening: load `guardrail_override.md`, `domain_guardrails.yaml`, and `guardrail_overrides.jsonl`.
 - For weekly review: load `weekly_review.md`, recent log slices, `heuristics.yaml`, `precommit_checks.jsonl`, and `guardrail_overrides.jsonl`.

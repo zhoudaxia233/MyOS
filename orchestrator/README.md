@@ -130,6 +130,25 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py guardrail-check \
 
 Accepted overrides are logged to `modules/decision/logs/guardrail_overrides.jsonl`.
 
+Log decision with enforced gate:
+
+```bash
+python3 /Users/closears/MyOS/orchestrator/src/main.py log-decision \
+  --domain invest \
+  --decision "Open bounded-risk momentum position" \
+  --option "skip" \
+  --option "open small" \
+  --confidence 8 \
+  --guardrail-check-id pc_20260304_001 \
+  --downside "Could lose up to 0.5R" \
+  --invalidation-condition "Close below invalidation level" \
+  --max-loss "0.5R" \
+  --disconfirming-signal "Volume collapse on breakout"
+```
+
+Each call appends one record to `modules/decision/logs/decision_gate_checks.jsonl`.  
+If gate status is `blocked`, no decision record is appended.
+
 ## Owner One-Pager
 
 Generate owner report manually:
@@ -234,6 +253,7 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py index [--source-glob "modu
 python3 /Users/closears/MyOS/orchestrator/src/main.py search --query "..." [--module <name>] [--top-k 8]
 python3 /Users/closears/MyOS/orchestrator/src/main.py metrics [--window 7|30] [--output <path>]
 python3 /Users/closears/MyOS/orchestrator/src/main.py guardrail-check --domain <invest|project|content> [policy fields...]
+python3 /Users/closears/MyOS/orchestrator/src/main.py log-decision --domain <name> --decision "..." --option <value> --confidence <1-10> [gate fields...]
 python3 /Users/closears/MyOS/orchestrator/src/main.py owner-report [--window 7|30] [--output <path>]
 python3 /Users/closears/MyOS/orchestrator/src/main.py validate [--strict]
 python3 /Users/closears/MyOS/orchestrator/src/main.py web [--host 127.0.0.1] [--port 8765] [--open-browser]
@@ -275,6 +295,7 @@ It checks:
   - `inspect`
   - `run --provider dry-run`
   - `ingest-chat`
+  - `log-decision`
   - `metrics`
   - `owner-report`
   - `schedule-run`

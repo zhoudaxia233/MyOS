@@ -24,6 +24,12 @@
         "match_any": ["owner report"],
         "skill": "owner_report",
         "output_prefix": "owner_report"
+      },
+      {
+        "id": "log_decision",
+        "match_any": ["log decision", "record decision", "high-risk decision"],
+        "skill": "log_decision",
+        "output_prefix": "decision_log"
       }
     ]
   }

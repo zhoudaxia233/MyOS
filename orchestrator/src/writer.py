@@ -92,6 +92,53 @@ OWNER_REPORT_SCHEMA = {
     }
 }
 
+DECISIONS_SCHEMA = {
+    "_schema": {
+        "name": "decisions",
+        "version": "1.1",
+        "fields": [
+            "id",
+            "created_at",
+            "status",
+            "domain",
+            "decision",
+            "options",
+            "reasoning",
+            "risks",
+            "expected_outcome",
+            "time_horizon",
+            "confidence",
+            "guardrail_check_id",
+            "follow_up_date",
+            "outcome",
+        ],
+        "notes": "append-only",
+    }
+}
+
+DECISION_GATE_CHECKS_SCHEMA = {
+    "_schema": {
+        "name": "decision_gate_checks",
+        "version": "1.0",
+        "fields": [
+            "id",
+            "created_at",
+            "status",
+            "domain",
+            "decision",
+            "guardrail_check_id",
+            "precommit_required",
+            "precommit_status",
+            "guardrail_status",
+            "gate_status",
+            "violations",
+            "missing_override_fields",
+            "source_refs",
+        ],
+        "notes": "append-only",
+    }
+}
+
 
 def _safe_repo_path(repo_root: Path, rel_path: str) -> Path:
     root = repo_root.resolve()
@@ -157,3 +204,13 @@ def log_guardrail_override(repo_root: Path, record: dict) -> None:
 def log_owner_report(repo_root: Path, record: dict) -> None:
     path = _safe_repo_path(repo_root, "orchestrator/logs/owner_reports.jsonl")
     append_jsonl(path, record, schema_header=OWNER_REPORT_SCHEMA)
+
+
+def log_decision(repo_root: Path, record: dict) -> None:
+    path = _safe_repo_path(repo_root, "modules/decision/logs/decisions.jsonl")
+    append_jsonl(path, record, schema_header=DECISIONS_SCHEMA)
+
+
+def log_decision_gate_check(repo_root: Path, record: dict) -> None:
+    path = _safe_repo_path(repo_root, "modules/decision/logs/decision_gate_checks.jsonl")
+    append_jsonl(path, record, schema_header=DECISION_GATE_CHECKS_SCHEMA)

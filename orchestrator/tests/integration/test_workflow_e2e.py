@@ -182,7 +182,24 @@ def _build_repo(root: Path) -> None:
         root / "modules/decision/logs/precommit_checks.jsonl",
         "precommit_checks",
         ["id", "created_at", "status", "domain", "proposed_decision", "emotional_weight", "downside", "invalidation_condition", "max_loss", "disconfirming_signal", "cooldown_required", "override_reason", "owner_confirmation", "result"],
-        [],
+        [
+            {
+                "id": "pc_20260304_001",
+                "created_at": "2026-03-04T09:45:00Z",
+                "status": "active",
+                "domain": "invest",
+                "proposed_decision": "Open bounded-risk momentum position",
+                "emotional_weight": 5,
+                "downside": "Could lose up to 0.5R",
+                "invalidation_condition": "Close below invalidation level",
+                "max_loss": "0.5R",
+                "disconfirming_signal": "Volume collapse on breakout",
+                "cooldown_required": False,
+                "override_reason": None,
+                "owner_confirmation": None,
+                "result": "pass",
+            }
+        ],
     )
     _write_jsonl(
         root / "modules/decision/logs/guardrail_overrides.jsonl",
@@ -314,6 +331,39 @@ def test_e2e_cli_command_chain(monkeypatch, capsys) -> None:
         assert rc == 0
         capsys.readouterr()
         assert len(list((root / "modules/decision/outputs").glob("metrics_*.md"))) == 1
+
+        rc = main.cmd_log_decision(
+            Namespace(
+                domain="invest",
+                decision="Open bounded-risk momentum position",
+                option=["skip", "open small"],
+                confidence=8,
+                reasoning="Precommit passed and downside is explicit.",
+                risk=["breakout failure"],
+                expected_outcome="Capture short-term trend with bounded loss",
+                time_horizon="3 days",
+                guardrail_check_id="pc_20260304_001",
+                downside="Could lose up to 0.5R",
+                invalidation_condition="Close below invalidation level",
+                max_loss="0.5R",
+                disconfirming_signal="Volume collapse on breakout",
+                emotional_weight=5,
+                cooldown_applied=False,
+                cooldown_hours=0,
+                override_requested=False,
+                override_reason=None,
+                owner_confirmation=None,
+                follow_up_date=None,
+                outcome=None,
+                provider="dry-run",
+                notes=None,
+            )
+        )
+        assert rc == 0
+        out = capsys.readouterr().out
+        assert "Gate status: pass" in out
+        decision_lines = (root / "modules/decision/logs/decisions.jsonl").read_text(encoding="utf-8").splitlines()
+        assert len(decision_lines) >= 3
 
         rc = main.cmd_owner_report(Namespace(window=7, output=None))
         assert rc == 0

@@ -270,8 +270,10 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "run weekly dec
 ### 9) High-risk decision flow
 
 1. Run precommit check (`modules/decision/skills/precommit_check.md`)
-2. Log decision with `guardrail_check_id`
-3. Include in weekly review and audit report
+2. Log decision through enforced gate:
+   - `python3 /Users/closears/MyOS/orchestrator/src/main.py log-decision --domain invest --decision "Open bounded-risk momentum position" --option "skip" --option "open small" --confidence 8 --guardrail-check-id pc_20260304_001 --downside "Could lose up to 0.5R" --invalidation-condition "Close below invalidation level" --max-loss "0.5R" --disconfirming-signal "Volume collapse on breakout"`
+3. Gate result is always appended to `modules/decision/logs/decision_gate_checks.jsonl`
+4. Include in weekly review and audit report
 
 ### 10) Pattern extraction flow
 
@@ -295,7 +297,7 @@ Run orchestrator test suite:
 poetry run pytest -q /Users/closears/MyOS/orchestrator/tests
 ```
 
-Includes integration chain coverage for `validate`, `inspect`, `run`, `metrics`, `owner-report`, and `schedule-run`.
+Includes integration chain coverage for `validate`, `inspect`, `run`, `ingest-chat`, `log-decision`, `metrics`, `owner-report`, and `schedule-run`.
 
 ## Data Integrity
 

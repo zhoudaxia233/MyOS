@@ -262,9 +262,11 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "run weekly dec
 
 ### 9) 高风险决策流程
 
-1. `precommit_check.md`
-2. `log_decision.md`（带 `guardrail_check_id`）
-3. 周复盘 + 审计报告
+1. 先做 `precommit_check.md`
+2. 通过强制门禁命令落决策：
+   - `python3 /Users/closears/MyOS/orchestrator/src/main.py log-decision --domain invest --decision "Open bounded-risk momentum position" --option "skip" --option "open small" --confidence 8 --guardrail-check-id pc_20260304_001 --downside "Could lose up to 0.5R" --invalidation-condition "Close below invalidation level" --max-loss "0.5R" --disconfirming-signal "Volume collapse on breakout"`
+3. 门禁结果会落到 `modules/decision/logs/decision_gate_checks.jsonl`
+4. 周复盘 + 审计报告
 
 ### 10) 你的“第二大脑”流程
 
@@ -283,7 +285,7 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "run weekly dec
 poetry run pytest -q /Users/closears/MyOS/orchestrator/tests
 ```
 
-其中包含 `validate`、`inspect`、`run`、`metrics`、`owner-report`、`schedule-run` 的集成链路测试。
+其中包含 `validate`、`inspect`、`run`、`ingest-chat`、`log-decision`、`metrics`、`owner-report`、`schedule-run` 的集成链路测试。
 
 ## 数据纪律
 
