@@ -6,7 +6,7 @@ from tempfile import TemporaryDirectory
 
 import pytest
 
-from webapp import api_action, api_get_settings, api_inspect, api_output, api_run, api_status, api_update_settings
+from webapp import api_action, api_get_settings, api_inspect, api_output, api_output_meta, api_run, api_status, api_update_settings
 
 
 def _copy_repo_subset(dst_root: Path) -> Path:
@@ -106,6 +106,13 @@ def test_api_inspect_and_run_writes_output() -> None:
         assert output_payload["ok"] is True
         assert output_payload["path"] == run_result["output_path"]
         assert "Execution Packet" in output_payload["content"]
+
+        output_meta = api_output_meta(root, run_result["output_path"], "gpt-4.1-mini")
+        assert output_meta["ok"] is True
+        assert output_meta["path"] == run_result["output_path"]
+        assert isinstance(output_meta["prompt_tokens"], int)
+        assert output_meta["prompt_tokens"] > 0
+        assert output_meta["count_method"] in {"tiktoken", "estimate_utf8"}
 
 
 def test_api_action_validate_metrics_and_schedule() -> None:

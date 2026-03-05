@@ -138,6 +138,7 @@ You get a local chat-like control center with:
 - `⚙` settings popup for API key, routing model (lighter), and task model (main)
 - with Module = Auto route, configured API key triggers model-based module selection
 - route selection auto-falls back to manifest/keyword routing if model routing fails
+- in `handoff` mode, Output Preview shows token usage for the copy block (`tiktoken` exact when available, otherwise estimate)
 - quick actions: validate, metrics, owner report, weekly cycle, retrieval index
 
 ### 1) Get a route and minimal context bundle

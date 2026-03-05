@@ -168,6 +168,7 @@ This opens a local chat-style control center where you can:
 - open `⚙` Settings popup to configure API key, routing model, and task model
 - when Module = Auto route and API key is configured, routing is selected by the routing model
 - if model routing fails, it automatically falls back to manifest/keyword routing
+- handoff output panel includes token usage for copy block (`tiktoken` exact if installed, else estimated)
 - trigger validate, metrics, owner-report, and weekly cycle actions
 - audit route reason, matched keywords, loaded files, and output hash
 

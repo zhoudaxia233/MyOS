@@ -23,6 +23,7 @@ from runner import run_with_provider
 from schedulers.manual import get_cycle
 from scheduling import task_from_routine
 from settings import apply_openai_api_key_env, get_openai_api_key, load_settings, redact_settings, save_settings
+from token_count import count_text_tokens
 from writer import (
     log_metrics_snapshot,
     log_owner_report,
@@ -175,6 +176,17 @@ def api_output(root: Path, rel_path: str) -> dict:
     }
 
 
+def api_output_meta(root: Path, rel_path: str, model: str | None = None) -> dict:
+    path = _safe_output_file(root, rel_path)
+    content = path.read_text(encoding="utf-8")
+    stats = count_text_tokens(content, model=model)
+    return {
+        "ok": True,
+        "path": _root_relative(path, root),
+        **stats,
+    }
+
+
 def _inspect_task(
     *,
     root: Path,
@@ -252,6 +264,7 @@ def _execute_task(
 
     return {
         "module": module,
+        "provider": provider,
         "route": route,
         "plan": plan,
         "output_path": _root_relative(out, root),
@@ -645,6 +658,12 @@ def _make_handler(root: Path, static_root: Path) -> type[BaseHTTPRequestHandler]
                     query = parse_qs(parsed.query)
                     rel_path = query.get("path", [""])[0]
                     self._send_json(200, api_output(root, rel_path))
+                    return
+                if path == "/api/output-meta":
+                    query = parse_qs(parsed.query)
+                    rel_path = query.get("path", [""])[0]
+                    model = _normalize_optional_str(query.get("model", [""])[0])
+                    self._send_json(200, api_output_meta(root, rel_path, model))
                     return
 
                 self._send_json(404, {"ok": False, "error": "not found"})

@@ -161,6 +161,7 @@ def execute_task(
 
     return {
         "module": module,
+        "provider": provider,
         "route": route,
         "plan": plan,
         "output_path": _root_relative(out, root),

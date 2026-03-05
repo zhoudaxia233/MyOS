@@ -17,6 +17,7 @@ const planTrace = document.getElementById("planTrace");
 const loadedFiles = document.getElementById("loadedFiles");
 const resultTrace = document.getElementById("resultTrace");
 const outputPreview = document.getElementById("outputPreview");
+const outputTokenMeta = document.getElementById("outputTokenMeta");
 const settingsModal = document.getElementById("settingsModal");
 const settingsClose = document.getElementById("settingsClose");
 const settingsSave = document.getElementById("settingsSave");
@@ -25,6 +26,7 @@ const settingsDefaultProvider = document.getElementById("settingsDefaultProvider
 const settingsRoutingModel = document.getElementById("settingsRoutingModel");
 const settingsTaskModel = document.getElementById("settingsTaskModel");
 let latestOutputPath = null;
+let latestOutputProvider = null;
 let settingsCache = null;
 
 function addBubble(role, text) {
@@ -62,6 +64,10 @@ function setPreview(text) {
   outputPreview.textContent = value || "-";
 }
 
+function setOutputTokenMeta(text) {
+  outputTokenMeta.textContent = String(text || "-");
+}
+
 function renderLoadedFiles(files) {
   loadedFiles.innerHTML = "";
   if (!Array.isArray(files) || files.length === 0) {
@@ -94,18 +100,21 @@ function renderInspectResult(data) {
   renderLoadedFiles(data.loaded_files || []);
   if (!data.output_preview) {
     setPreview("-");
+    setOutputTokenMeta("-");
   }
 }
 
 function renderRunResult(data) {
   renderInspectResult(data);
   latestOutputPath = data.output_path || null;
+  latestOutputProvider = data.provider || providerSelect.value || null;
   resultTrace.textContent = [
     `output_path: ${data.output_path}`,
     `output_hash: ${data.output_hash}`,
     `module: ${data.module}`,
   ].join("\n");
   setPreview(data.output_preview || "-");
+  refreshOutputTokenMeta();
 }
 
 function renderActionResult(data) {
@@ -135,15 +144,20 @@ function renderActionResult(data) {
 
   if (data.output_preview) {
     latestOutputPath = data.output_path || latestOutputPath;
+    latestOutputProvider = providerSelect.value || latestOutputProvider;
     setPreview(data.output_preview);
+    refreshOutputTokenMeta();
     return;
   }
   if (Array.isArray(data.runs) && data.runs.length > 0) {
     latestOutputPath = data.runs[0].output_path || latestOutputPath;
+    latestOutputProvider = providerSelect.value || latestOutputProvider;
     setPreview(data.runs[0].output_preview || "-");
+    refreshOutputTokenMeta();
     return;
   }
   setPreview("-");
+  setOutputTokenMeta("-");
 }
 
 function buildPayload() {
@@ -227,6 +241,33 @@ async function copyLatestOutput() {
     }, 1200);
   } catch (err) {
     addBubble("system", `Copy failed: ${err.message}`);
+  }
+}
+
+async function refreshOutputTokenMeta() {
+  if (!latestOutputPath) {
+    setOutputTokenMeta("-");
+    return;
+  }
+
+  const provider = latestOutputProvider || providerSelect.value;
+  if (provider !== "handoff") {
+    setOutputTokenMeta("-");
+    return;
+  }
+
+  const model = modelInput.value.trim();
+  const params = new URLSearchParams({ path: latestOutputPath });
+  if (model) {
+    params.set("model", model);
+  }
+
+  try {
+    const data = await getJson(`/api/output-meta?${params.toString()}`);
+    const method = data.count_method === "tiktoken" ? "exact" : "estimate";
+    setOutputTokenMeta(`Tokens: ${data.prompt_tokens} (${method})`);
+  } catch {
+    setOutputTokenMeta("Tokens: unavailable");
   }
 }
 
@@ -435,6 +476,13 @@ themeToggle.addEventListener("click", () => {
 copyOutputBtn.addEventListener("click", () => {
   copyLatestOutput();
 });
+providerSelect.addEventListener("change", () => {
+  latestOutputProvider = providerSelect.value || latestOutputProvider;
+  refreshOutputTokenMeta();
+});
+modelInput.addEventListener("change", () => {
+  refreshOutputTokenMeta();
+});
 settingsToggle.addEventListener("click", () => {
   openSettingsModal();
 });
@@ -453,3 +501,4 @@ settingsModal.addEventListener("click", (event) => {
 initTheme();
 loadStatus();
 loadSettings();
+setOutputTokenMeta("-");
