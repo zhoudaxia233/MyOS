@@ -271,6 +271,7 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "run weekly dec
 ### 10) 你的“第二大脑”流程
 
 1. 先接入外部学习内容（视频/文章/书）：
+   - `python3 /Users/closears/MyOS/orchestrator/src/main.py ingest-learning --input <learning_notes.md|txt|json> --source-type video --max-points 6 --confidence 7`
    - 使用 `modules/memory/skills/ingest_learning_asset.md`，把内容沉淀为 `memory_events` + `memory_insights`。
 2. 再导入聊天导出（推荐）：
    - `python3 /Users/closears/MyOS/orchestrator/src/main.py ingest-chat --input <chat_export.json|jsonl|md|txt> --max-events 50`
@@ -287,7 +288,7 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "run weekly dec
 poetry run pytest -q /Users/closears/MyOS/orchestrator/tests
 ```
 
-其中包含 `validate`、`inspect`、`run`、`ingest-chat`、`log-decision`、`metrics`、`owner-report`、`schedule-run` 的集成链路测试。
+其中包含 `validate`、`inspect`、`run`、`ingest-chat`、`ingest-learning`、`log-decision`、`metrics`、`owner-report`、`schedule-run` 的集成链路测试。
 
 ## 数据纪律
 

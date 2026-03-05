@@ -10,6 +10,7 @@ from decision_gate import evaluate_decision_entry_gate
 from config import load_runtime_config
 from chat_ingest import ingest_chat_export
 from guardrails import evaluate_guardrail, load_domain_guardrails
+from learning_ingest import ingest_learning_asset
 from loader import load_context_bundle
 from metrics import compute_drift_metrics, render_metrics_report
 from owner_report import build_owner_snapshot, render_owner_report
@@ -273,6 +274,38 @@ def cmd_ingest_chat(args: argparse.Namespace) -> int:
     print(f"Messages parsed: {result['message_count']}")
     print(f"Normalized events: {result['event_count']}")
     print(f"Appended: {result['appended_count']}")
+    if result["dry_run"]:
+        print("Mode: dry-run")
+    if result["record_ids"]:
+        print("Record IDs:")
+        for rid in result["record_ids"]:
+            print(f"- {rid}")
+    return 0
+
+
+def cmd_ingest_learning(args: argparse.Namespace) -> int:
+    root = repo_root()
+    input_path = Path(args.input).expanduser()
+    if not input_path.is_absolute():
+        input_path = (Path.cwd() / input_path).resolve()
+
+    result = ingest_learning_asset(
+        root,
+        input_path,
+        title=args.title,
+        source_type=args.source_type,
+        max_points=args.max_points,
+        confidence=args.confidence,
+        dry_run=args.dry_run,
+        extra_tags=args.tag,
+    )
+
+    print(f"Input: {result['input_path']}")
+    print(f"Title: {result['title']}")
+    print(f"Source type: {result['source_type']}")
+    print(f"Core points: {result['core_points_count']}")
+    print(f"Appended events: {result['appended_events']}")
+    print(f"Appended insights: {result['appended_insights']}")
     if result["dry_run"]:
         print("Mode: dry-run")
     if result["record_ids"]:
@@ -645,6 +678,16 @@ def build_parser() -> argparse.ArgumentParser:
     sp_ingest_chat.add_argument("--tag", action="append", default=[])
     sp_ingest_chat.add_argument("--dry-run", action="store_true")
     sp_ingest_chat.set_defaults(func=cmd_ingest_chat)
+
+    sp_ingest_learning = sub.add_parser("ingest-learning")
+    sp_ingest_learning.add_argument("--input", required=True)
+    sp_ingest_learning.add_argument("--title", default=None)
+    sp_ingest_learning.add_argument("--source-type", default="video")
+    sp_ingest_learning.add_argument("--max-points", type=int, default=6)
+    sp_ingest_learning.add_argument("--confidence", type=int, default=7)
+    sp_ingest_learning.add_argument("--tag", action="append", default=[])
+    sp_ingest_learning.add_argument("--dry-run", action="store_true")
+    sp_ingest_learning.set_defaults(func=cmd_ingest_learning)
 
     sp_guardrail = sub.add_parser("guardrail-check")
     sp_guardrail.add_argument("--domain", required=True, choices=["invest", "project", "content"])

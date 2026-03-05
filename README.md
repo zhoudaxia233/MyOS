@@ -278,7 +278,8 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "run weekly dec
 ### 10) Pattern extraction flow
 
 1. Ingest external learning assets:
-   - Use `modules/memory/skills/ingest_learning_asset.md` to convert video/article notes into `memory_events` + `memory_insights`.
+   - `python3 /Users/closears/MyOS/orchestrator/src/main.py ingest-learning --input <learning_notes.md|txt|json> --source-type video --max-points 6 --confidence 7`
+   - Skill reference: `modules/memory/skills/ingest_learning_asset.md`
 2. Import chat export into memory events:
    - `python3 /Users/closears/MyOS/orchestrator/src/main.py ingest-chat --input <chat_export.json|jsonl|md|txt> --max-events 50`
 3. Ingest extra reflection events (`ingest_memory.md`) when needed
@@ -299,7 +300,7 @@ Run orchestrator test suite:
 poetry run pytest -q /Users/closears/MyOS/orchestrator/tests
 ```
 
-Includes integration chain coverage for `validate`, `inspect`, `run`, `ingest-chat`, `log-decision`, `metrics`, `owner-report`, and `schedule-run`.
+Includes integration chain coverage for `validate`, `inspect`, `run`, `ingest-chat`, `ingest-learning`, `log-decision`, `metrics`, `owner-report`, and `schedule-run`.
 
 ## Data Integrity
 

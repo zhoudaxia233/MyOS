@@ -327,6 +327,37 @@ def test_e2e_cli_command_chain(monkeypatch, capsys) -> None:
         memory_lines = (root / "modules/memory/logs/memory_events.jsonl").read_text(encoding="utf-8").splitlines()
         assert len(memory_lines) >= 2
 
+        learning_input = root / "learning_asset.md"
+        _write(
+            learning_input,
+            "\n".join(
+                [
+                    "# Reverse Thinking",
+                    "- Find option C when A/B are blocked.",
+                    "- Align motives instead of forcing outcomes.",
+                    "- Inspect hidden value-chain mechanics.",
+                ]
+            )
+            + "\n",
+        )
+        rc = main.cmd_ingest_learning(
+            Namespace(
+                input=str(learning_input),
+                title=None,
+                source_type="video",
+                max_points=6,
+                confidence=8,
+                tag=["import_test"],
+                dry_run=False,
+            )
+        )
+        assert rc == 0
+        out = capsys.readouterr().out
+        assert "Appended events: 1" in out
+        assert "Appended insights: 1" in out
+        insight_lines = (root / "modules/memory/logs/memory_insights.jsonl").read_text(encoding="utf-8").splitlines()
+        assert len(insight_lines) >= 2
+
         rc = main.cmd_metrics(Namespace(window=7, output=None))
         assert rc == 0
         capsys.readouterr()

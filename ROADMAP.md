@@ -147,6 +147,7 @@ Build a stable personal operating center for AI agents, where execution scales b
 1. External learning ingestion
    - Added memory skill for learning assets (`modules/memory/skills/ingest_learning_asset.md`)
    - Route rule supports requests like "video summary" / "extract principles"
+   - Added orchestrator command `ingest-learning` to append `memory_events` + `memory_insights` from notes
    - Converted reverse-thinking video summary into structured memory records and linked insight
 
 ## v0.7-plugin-contract (Planned)
