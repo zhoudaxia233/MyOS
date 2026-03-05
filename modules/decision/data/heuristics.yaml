@@ -18,3 +18,16 @@ project_selection_heuristics:
     - "Prefer projects that improve a repeatable system."
     - "Reject projects with vague success criteria."
     - "Ask: what evidence would prove this is working in 2 weeks?"
+
+reverse_thinking_checks:
+  principle: "Before high-impact execution, run reverse checks to avoid local-optimum traps."
+  checklist:
+    - "Option C: If A/B both fail, what side-door path exists?"
+    - "Motive alignment: Which human motive can make cooperation easier without coercion?"
+    - "Mechanism scan: Where is the real value chain and who captures the upside/downside?"
+  apply_to:
+    - "high-risk decisions"
+    - "strategy planning"
+    - "negotiation-heavy tasks"
+  source_refs:
+    - "mi_20260305_001"

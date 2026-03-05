@@ -270,12 +270,14 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "run weekly dec
 
 ### 10) 你的“第二大脑”流程
 
-1. 先导入聊天导出（推荐）：
+1. 先接入外部学习内容（视频/文章/书）：
+   - 使用 `modules/memory/skills/ingest_learning_asset.md`，把内容沉淀为 `memory_events` + `memory_insights`。
+2. 再导入聊天导出（推荐）：
    - `python3 /Users/closears/MyOS/orchestrator/src/main.py ingest-chat --input <chat_export.json|jsonl|md|txt> --max-events 50`
-2. 需要时补充手工 memory event（`ingest_memory.md`）
-3. 每周抽取 chat patterns
-4. 每月生成 profile snapshot
-5. 你只审计异常并批准调整
+3. 需要时补充手工 memory event（`ingest_memory.md`）
+4. 每周抽取 chat patterns
+5. 每月生成 profile snapshot
+6. 你只审计异常并批准调整
 
 ## 测试
 

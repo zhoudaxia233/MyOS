@@ -26,6 +26,12 @@
         "output_prefix": "import_chat"
       },
       {
+        "id": "ingest_learning_asset",
+        "match_any": ["video summary", "ingest learning", "external learning", "extract principles"],
+        "skill": "ingest_learning_asset",
+        "output_prefix": "learning_ingest"
+      },
+      {
         "id": "ingest_memory",
         "match_any": ["ingest"],
         "skill": "ingest_memory",

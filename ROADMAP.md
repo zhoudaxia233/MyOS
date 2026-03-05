@@ -137,6 +137,17 @@ Build a stable personal operating center for AI agents, where execution scales b
 3. Secrets hygiene
    - Keep local settings key file gitignored
    - Avoid returning raw API keys via web settings APIs
+4. Decision gate enforcement
+   - Added `log-decision` command with hard gate checks (precommit + domain guardrail)
+   - Block decision appends when gate status is `blocked`
+   - Added append-only gate audit log (`modules/decision/logs/decision_gate_checks.jsonl`)
+
+## v1.2-learning-loop (In Progress)
+
+1. External learning ingestion
+   - Added memory skill for learning assets (`modules/memory/skills/ingest_learning_asset.md`)
+   - Route rule supports requests like "video summary" / "extract principles"
+   - Converted reverse-thinking video summary into structured memory records and linked insight
 
 ## v0.7-plugin-contract (Planned)
 

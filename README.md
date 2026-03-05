@@ -277,11 +277,13 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "run weekly dec
 
 ### 10) Pattern extraction flow
 
-1. Import chat export into memory events:
+1. Ingest external learning assets:
+   - Use `modules/memory/skills/ingest_learning_asset.md` to convert video/article notes into `memory_events` + `memory_insights`.
+2. Import chat export into memory events:
    - `python3 /Users/closears/MyOS/orchestrator/src/main.py ingest-chat --input <chat_export.json|jsonl|md|txt> --max-events 50`
-2. Ingest extra reflection events (`ingest_memory.md`) when needed
-3. Extract paradigms (`extract_chat_patterns.md`)
-4. Distill weekly memory (`distill_weekly.md`)
+3. Ingest extra reflection events (`ingest_memory.md`) when needed
+4. Extract paradigms (`extract_chat_patterns.md`)
+5. Distill weekly memory (`distill_weekly.md`)
 
 ### 11) Profile adaptation flow
 
