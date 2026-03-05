@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from config import load_runtime_config
+from chat_ingest import ingest_chat_export
 from guardrails import evaluate_guardrail, load_domain_guardrails
 from loader import load_context_bundle
 from metrics import compute_drift_metrics, render_metrics_report
@@ -243,6 +244,33 @@ def cmd_search(args: argparse.Namespace) -> int:
         return 0
 
     print(format_hits(hits))
+    return 0
+
+
+def cmd_ingest_chat(args: argparse.Namespace) -> int:
+    root = repo_root()
+    input_path = Path(args.input).expanduser()
+    if not input_path.is_absolute():
+        input_path = (Path.cwd() / input_path).resolve()
+
+    result = ingest_chat_export(
+        root,
+        input_path,
+        max_events=args.max_events,
+        dry_run=args.dry_run,
+        extra_tags=args.tag,
+    )
+
+    print(f"Input: {result['input_path']}")
+    print(f"Messages parsed: {result['message_count']}")
+    print(f"Normalized events: {result['event_count']}")
+    print(f"Appended: {result['appended_count']}")
+    if result["dry_run"]:
+        print("Mode: dry-run")
+    if result["record_ids"]:
+        print("Record IDs:")
+        for rid in result["record_ids"]:
+            print(f"- {rid}")
     return 0
 
 
@@ -507,6 +535,13 @@ def build_parser() -> argparse.ArgumentParser:
     sp_search.add_argument("--module", default=None)
     sp_search.add_argument("--top-k", type=int, default=8)
     sp_search.set_defaults(func=cmd_search)
+
+    sp_ingest_chat = sub.add_parser("ingest-chat")
+    sp_ingest_chat.add_argument("--input", required=True)
+    sp_ingest_chat.add_argument("--max-events", type=int, default=50)
+    sp_ingest_chat.add_argument("--tag", action="append", default=[])
+    sp_ingest_chat.add_argument("--dry-run", action="store_true")
+    sp_ingest_chat.set_defaults(func=cmd_ingest_chat)
 
     sp_guardrail = sub.add_parser("guardrail-check")
     sp_guardrail.add_argument("--domain", required=True, choices=["invest", "project", "content"])

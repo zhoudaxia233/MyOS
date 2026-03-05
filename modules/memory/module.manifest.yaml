@@ -20,6 +20,12 @@
         "output_prefix": "chat_patterns"
       },
       {
+        "id": "import_chat_export",
+        "match_any": ["import chat", "chat export", "ingest chat export"],
+        "skill": "import_chat_export",
+        "output_prefix": "import_chat"
+      },
+      {
         "id": "ingest_memory",
         "match_any": ["ingest"],
         "skill": "ingest_memory",

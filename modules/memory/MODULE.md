@@ -19,6 +19,7 @@ This module captures evolving operational memory from conversations, reflections
 - `modules/memory/MODULE.md`: Module purpose, workflows, and loading rules
 - `modules/memory/module.manifest.yaml`: Routing keywords and planning defaults for orchestrator auto-discovery
 - `modules/memory/skills/ingest_memory.md`: Add daily memory records
+- `modules/memory/skills/import_chat_export.md`: Import chat export and normalize into memory events
 - `modules/memory/skills/extract_chat_patterns.md`: Derive paradigms from chat-heavy event slices
 - `modules/memory/skills/distill_weekly.md`: Build weekly distilled memory output
 
@@ -41,18 +42,22 @@ This module captures evolving operational memory from conversations, reflections
 
 1. Daily ingest
    - Append raw events with minimal structured fields.
-2. Pattern extraction
+2. Chat export import
+   - Normalize chat export messages to `memory_events` records.
+   - Append imported records with `source_type=chat` and deterministic tags.
+3. Pattern extraction
    - Filter chat events and derive paradigms using pattern taxonomy.
    - Append paradigm records to `chat_patterns.jsonl`.
-3. Insight extraction
+4. Insight extraction
    - Group related events and append insight records.
-4. Weekly distillation
+5. Weekly distillation
    - Read last 7 days of events/insights/patterns.
    - Produce concise pattern summary and recommended updates.
 
 ## Progressive Loading Rules (Required)
 
 - For ingest: load `ingest_memory.md`, `memory_policy.yaml`, and `memory_events.jsonl` schema.
+- For chat export import: load `import_chat_export.md`, `memory_policy.yaml`, and `memory_events.jsonl`.
 - For pattern extraction: load `extract_chat_patterns.md`, `pattern_taxonomy.yaml`, and recent `memory_events.jsonl`.
 - For distillation: load memory logs plus `memory_policy.yaml`.
 - Do not load full content/decision logs unless cross-module analysis is explicitly requested.

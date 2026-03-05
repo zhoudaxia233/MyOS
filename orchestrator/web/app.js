@@ -250,12 +250,6 @@ async function refreshOutputTokenMeta() {
     return;
   }
 
-  const provider = latestOutputProvider || providerSelect.value;
-  if (provider !== "handoff") {
-    setOutputTokenMeta("-");
-    return;
-  }
-
   const model = modelInput.value.trim();
   const params = new URLSearchParams({ path: latestOutputPath });
   if (model) {

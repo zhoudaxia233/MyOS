@@ -10,3 +10,13 @@ orchestrator/retrieval/index.json
 
 # Local settings (contains API keys)
 orchestrator/config/settings.json
+
+# Local orchestrator runtime logs (generated on each run)
+orchestrator/logs/*.jsonl
+!orchestrator/logs/.gitkeep
+
+# Generated module outputs (keep placeholders/templates tracked)
+modules/*/outputs/*
+!modules/*/outputs/.gitkeep
+!modules/*/outputs/templates/
+!modules/*/outputs/templates/**

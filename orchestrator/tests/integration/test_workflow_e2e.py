@@ -294,6 +294,22 @@ def test_e2e_cli_command_chain(monkeypatch, capsys) -> None:
         assert isinstance(record["loaded_files"], list)
         assert len(record["output_hash"]) == 64
 
+        chat_input = root / "chat_export.txt"
+        _write(chat_input, "User: I need better review discipline\nAssistant: Use a weekly checklist\n")
+        rc = main.cmd_ingest_chat(
+            Namespace(
+                input=str(chat_input),
+                max_events=10,
+                tag=["import_test"],
+                dry_run=False,
+            )
+        )
+        assert rc == 0
+        out = capsys.readouterr().out
+        assert "Appended: 1" in out
+        memory_lines = (root / "modules/memory/logs/memory_events.jsonl").read_text(encoding="utf-8").splitlines()
+        assert len(memory_lines) >= 2
+
         rc = main.cmd_metrics(Namespace(window=7, output=None))
         assert rc == 0
         capsys.readouterr()

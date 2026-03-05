@@ -229,6 +229,7 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py run \
 python3 /Users/closears/MyOS/orchestrator/src/main.py inspect --task "..." [--module <name>] [--with-retrieval]
 python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "..." [--provider dry-run|handoff|openai] [--module <name>] [--with-retrieval]
 python3 /Users/closears/MyOS/orchestrator/src/main.py schedule-run --cycle <daily|weekly|monthly> [--scheduler manual|cron] [--provider dry-run|handoff|openai]
+python3 /Users/closears/MyOS/orchestrator/src/main.py ingest-chat --input <chat_export.json|jsonl|md|txt> [--max-events 50] [--tag <tag>] [--dry-run]
 python3 /Users/closears/MyOS/orchestrator/src/main.py index [--source-glob "modules/decision/logs/*.jsonl"]
 python3 /Users/closears/MyOS/orchestrator/src/main.py search --query "..." [--module <name>] [--top-k 8]
 python3 /Users/closears/MyOS/orchestrator/src/main.py metrics [--window 7|30] [--output <path>]
@@ -273,6 +274,7 @@ It checks:
   - `validate --strict`
   - `inspect`
   - `run --provider dry-run`
+  - `ingest-chat`
   - `metrics`
   - `owner-report`
   - `schedule-run`
