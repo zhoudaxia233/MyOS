@@ -104,6 +104,51 @@ def test_compute_drift_metrics_windowed() -> None:
             ],
         )
 
+        _write_jsonl(
+            root / "modules/cognition/logs/schema_versions.jsonl",
+            "schema_versions",
+            ["id", "created_at"],
+            [{"id": "sv_1", "created_at": "2026-03-01T05:00:00Z"}],
+        )
+
+        _write_jsonl(
+            root / "modules/cognition/logs/assimilation_events.jsonl",
+            "assimilation_events",
+            ["id", "created_at", "schema_version_id"],
+            [
+                {"id": "as_1", "created_at": "2026-03-01T05:10:00Z", "schema_version_id": "sv_1"},
+                {"id": "as_2", "created_at": "2026-03-01T05:20:00Z", "schema_version_id": ""},
+            ],
+        )
+
+        _write_jsonl(
+            root / "modules/cognition/logs/disequilibrium_events.jsonl",
+            "disequilibrium_events",
+            ["id", "created_at", "tension_score"],
+            [
+                {"id": "dq_1", "created_at": "2026-03-01T05:30:00Z", "tension_score": 8},
+                {"id": "dq_2", "created_at": "2026-03-01T05:40:00Z", "tension_score": 7},
+                {"id": "dq_3", "created_at": "2026-03-01T05:50:00Z", "tension_score": 4},
+            ],
+        )
+
+        _write_jsonl(
+            root / "modules/cognition/logs/accommodation_revisions.jsonl",
+            "accommodation_revisions",
+            ["id", "created_at", "source_refs"],
+            [{"id": "ar_1", "created_at": "2026-03-01T06:00:00Z", "source_refs": ["dq_1"]}],
+        )
+
+        _write_jsonl(
+            root / "modules/cognition/logs/equilibration_cycles.jsonl",
+            "equilibration_cycles",
+            ["id", "created_at", "coherence_score", "source_refs"],
+            [
+                {"id": "eq_1", "created_at": "2026-03-01T06:10:00Z", "coherence_score": 8, "source_refs": ["dq_1"]},
+                {"id": "eq_2", "created_at": "2026-03-01T06:20:00Z", "coherence_score": 5, "source_refs": []},
+            ],
+        )
+
         snapshot = compute_drift_metrics(root, window_days=7, now=now)
 
         assert snapshot["metrics"]["precommit_coverage"]["value"] == 0.5
@@ -114,3 +159,9 @@ def test_compute_drift_metrics_windowed() -> None:
         assert snapshot["metrics"]["repeat_failure_rate"]["status"] == "fail"
         assert snapshot["metrics"]["profile_drift_rate"]["value"] == 0.5
         assert snapshot["metrics"]["profile_drift_rate"]["status"] == "warn"
+        assert snapshot["metrics"]["unresolved_disequilibrium_rate"]["value"] == 0.5
+        assert snapshot["metrics"]["unresolved_disequilibrium_rate"]["status"] == "warn"
+        assert snapshot["metrics"]["equilibration_quality_rate"]["value"] == 0.5
+        assert snapshot["metrics"]["equilibration_quality_rate"]["status"] == "warn"
+        assert snapshot["metrics"]["schema_explicitness_rate"]["value"] == 0.5
+        assert snapshot["metrics"]["schema_explicitness_rate"]["status"] == "fail"

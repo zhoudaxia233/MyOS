@@ -101,6 +101,16 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py metrics --window 30 --outp
 
 Metrics snapshot records are logged in `orchestrator/logs/metrics_snapshots.jsonl`.
 
+Dashboard metrics include:
+
+- precommit coverage
+- cooldown compliance
+- repeat failure rate
+- profile drift rate
+- unresolved disequilibrium rate
+- equilibration quality rate
+- schema explicitness rate
+
 ## Guardrail Hardening
 
 Run domain policy check:

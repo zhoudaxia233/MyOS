@@ -70,6 +70,9 @@ def _parse_metrics_status_from_report(text: str) -> dict[str, str]:
         "cooldown compliance": "cooldown_compliance",
         "repeat failure rate": "repeat_failure_rate",
         "profile drift rate": "profile_drift_rate",
+        "unresolved disequilibrium rate": "unresolved_disequilibrium_rate",
+        "equilibration quality rate": "equilibration_quality_rate",
+        "schema explicitness rate": "schema_explicitness_rate",
     }
     out: dict[str, str] = {}
     for raw in text.splitlines():
@@ -134,6 +137,7 @@ def build_owner_snapshot(repo_root: Path, window_days: int, now: datetime | None
     decision_audit = _latest_file(repo_root, "modules/decision/outputs/decision_audit_*.md")
     weekly_review = _latest_file(repo_root, "modules/decision/outputs/weekly_review_*.md")
     metrics_report = _latest_file(repo_root, "modules/decision/outputs/metrics_*.md")
+    cognition_timeline = _latest_file(repo_root, "modules/cognition/outputs/cognitive_timeline_*.md")
 
     consistency_alerts: list[str] = []
 
@@ -169,6 +173,7 @@ def build_owner_snapshot(repo_root: Path, window_days: int, now: datetime | None
             "decision_audit": decision_audit,
             "weekly_review": weekly_review,
             "metrics_report": metrics_report,
+            "cognition_timeline": cognition_timeline,
         },
         "consistency_alerts": consistency_alerts,
     }
@@ -189,6 +194,9 @@ def render_owner_report(snapshot: dict) -> str:
         f"- cooldown_compliance: {metrics['cooldown_compliance']['status']}",
         f"- repeat_failure_rate: {metrics['repeat_failure_rate']['status']}",
         f"- profile_drift_rate: {metrics['profile_drift_rate']['status']}",
+        f"- unresolved_disequilibrium_rate: {metrics['unresolved_disequilibrium_rate']['status']}",
+        f"- equilibration_quality_rate: {metrics['equilibration_quality_rate']['status']}",
+        f"- schema_explicitness_rate: {metrics['schema_explicitness_rate']['status']}",
         f"- guardrail_override_count: {snapshot['override_count']}",
         "",
         "## Top Exceptions",
@@ -209,6 +217,7 @@ def render_owner_report(snapshot: dict) -> str:
             f"- decision_audit: {snapshot['source_artifacts']['decision_audit'] or 'N/A'}",
             f"- weekly_review: {snapshot['source_artifacts']['weekly_review'] or 'N/A'}",
             f"- metrics_report: {snapshot['source_artifacts']['metrics_report'] or 'N/A'}",
+            f"- cognition_timeline: {snapshot['source_artifacts']['cognition_timeline'] or 'N/A'}",
             "",
             "## Consistency Alerts",
             "",
@@ -228,6 +237,7 @@ def render_owner_report(snapshot: dict) -> str:
             "",
             "- Approve or reject any guardrail overrides with unresolved violations.",
             "- If any metric is `fail`, assign one corrective action with owner + due date.",
+            "- If cognition metrics fail (`unresolved_disequilibrium_rate` or `equilibration_quality_rate`), trigger a schema revision cycle.",
             "- If two consecutive windows show the same exception, escalate policy depth.",
         ]
     )

@@ -98,6 +98,12 @@ def _status_higher_better(value: float, threshold: float) -> str:
     return "fail"
 
 
+def _status_higher_better_no_data_warn(value: float, threshold: float, denominator: int) -> str:
+    if denominator <= 0:
+        return "warn"
+    return _status_higher_better(value, threshold)
+
+
 def compute_drift_metrics(repo_root: Path, window_days: int, now: datetime | None = None) -> dict:
     now = now or _now_utc()
 
@@ -115,6 +121,21 @@ def compute_drift_metrics(repo_root: Path, window_days: int, now: datetime | Non
     )
     psych_observations = _window_filter(
         _load_jsonl(repo_root / "modules/profile/logs/psych_observations.jsonl"), now, window_days
+    )
+    schema_versions = _window_filter(
+        _load_jsonl(repo_root / "modules/cognition/logs/schema_versions.jsonl"), now, window_days
+    )
+    assimilation_events = _window_filter(
+        _load_jsonl(repo_root / "modules/cognition/logs/assimilation_events.jsonl"), now, window_days
+    )
+    disequilibrium_events = _window_filter(
+        _load_jsonl(repo_root / "modules/cognition/logs/disequilibrium_events.jsonl"), now, window_days
+    )
+    accommodation_revisions = _window_filter(
+        _load_jsonl(repo_root / "modules/cognition/logs/accommodation_revisions.jsonl"), now, window_days
+    )
+    equilibration_cycles = _window_filter(
+        _load_jsonl(repo_root / "modules/cognition/logs/equilibration_cycles.jsonl"), now, window_days
     )
 
     high_risk_domains = _load_high_risk_domains(repo_root / "modules/decision/data/impulse_guardrails.yaml")
@@ -148,11 +169,51 @@ def compute_drift_metrics(repo_root: Path, window_days: int, now: datetime | Non
     drift_base_count = len(trigger_events) + len(psych_observations)
     profile_drift_rate = _safe_ratio(drift_signal_count, drift_base_count)
 
+    high_tension_events = [
+        e for e in disequilibrium_events if int(e.get("tension_score", 0) or 0) >= 6
+    ]
+    high_tension_ids = {str(e.get("id", "")).strip() for e in high_tension_events if str(e.get("id", "")).strip()}
+
+    resolved_high_tension_ids: set[str] = set()
+    for row in accommodation_revisions:
+        refs = row.get("source_refs", [])
+        if not isinstance(refs, list):
+            continue
+        for ref in refs:
+            rid = str(ref).strip()
+            if rid and rid in high_tension_ids:
+                resolved_high_tension_ids.add(rid)
+
+    for row in equilibration_cycles:
+        refs = row.get("source_refs", [])
+        if not isinstance(refs, list):
+            continue
+        for ref in refs:
+            rid = str(ref).strip()
+            if rid and rid in high_tension_ids:
+                resolved_high_tension_ids.add(rid)
+
+    unresolved_high_tension = len(high_tension_ids - resolved_high_tension_ids)
+    unresolved_disequilibrium_rate = _safe_ratio(unresolved_high_tension, len(high_tension_events))
+
+    high_quality_equilibrations = [
+        e for e in equilibration_cycles if int(e.get("coherence_score", 0) or 0) >= 7
+    ]
+    equilibration_quality_rate = _safe_ratio(len(high_quality_equilibrations), len(equilibration_cycles))
+
+    schema_linked_assimilations = [
+        e for e in assimilation_events if str(e.get("schema_version_id", "")).strip()
+    ]
+    schema_explicitness_rate = _safe_ratio(len(schema_linked_assimilations), len(assimilation_events))
+
     thresholds = {
         "precommit_coverage": 0.8,
         "cooldown_compliance": 0.9,
         "repeat_failure_rate": 0.3,
         "profile_drift_rate": 0.4,
+        "unresolved_disequilibrium_rate": 0.4,
+        "equilibration_quality_rate": 0.6,
+        "schema_explicitness_rate": 0.9,
     }
 
     metrics = {
@@ -184,6 +245,37 @@ def compute_drift_metrics(repo_root: Path, window_days: int, now: datetime | Non
             "numerator": drift_signal_count,
             "denominator": drift_base_count,
         },
+        "unresolved_disequilibrium_rate": {
+            "value": unresolved_disequilibrium_rate,
+            "threshold": thresholds["unresolved_disequilibrium_rate"],
+            "status": _status_lower_better(
+                unresolved_disequilibrium_rate, thresholds["unresolved_disequilibrium_rate"]
+            ),
+            "numerator": unresolved_high_tension,
+            "denominator": len(high_tension_events),
+        },
+        "equilibration_quality_rate": {
+            "value": equilibration_quality_rate,
+            "threshold": thresholds["equilibration_quality_rate"],
+            "status": _status_higher_better_no_data_warn(
+                equilibration_quality_rate,
+                thresholds["equilibration_quality_rate"],
+                len(equilibration_cycles),
+            ),
+            "numerator": len(high_quality_equilibrations),
+            "denominator": len(equilibration_cycles),
+        },
+        "schema_explicitness_rate": {
+            "value": schema_explicitness_rate,
+            "threshold": thresholds["schema_explicitness_rate"],
+            "status": _status_higher_better_no_data_warn(
+                schema_explicitness_rate,
+                thresholds["schema_explicitness_rate"],
+                len(assimilation_events),
+            ),
+            "numerator": len(schema_linked_assimilations),
+            "denominator": len(assimilation_events),
+        },
     }
 
     return {
@@ -196,6 +288,11 @@ def compute_drift_metrics(repo_root: Path, window_days: int, now: datetime | Non
             "failures": len(failures),
             "trigger_events": len(trigger_events),
             "psych_observations": len(psych_observations),
+            "schema_versions": len(schema_versions),
+            "assimilation_events": len(assimilation_events),
+            "disequilibrium_events": len(disequilibrium_events),
+            "accommodation_revisions": len(accommodation_revisions),
+            "equilibration_cycles": len(equilibration_cycles),
         },
         "refs": {
             "high_risk_domains": high_risk_domains,
@@ -227,6 +324,9 @@ def render_metrics_report(snapshot: dict) -> str:
         ("Cooldown Compliance", "cooldown_compliance", "higher"),
         ("Repeat Failure Rate", "repeat_failure_rate", "lower"),
         ("Profile Drift Rate", "profile_drift_rate", "lower"),
+        ("Unresolved Disequilibrium Rate", "unresolved_disequilibrium_rate", "lower"),
+        ("Equilibration Quality Rate", "equilibration_quality_rate", "higher"),
+        ("Schema Explicitness Rate", "schema_explicitness_rate", "higher"),
     ]
 
     for label, key, _dir in rows:
@@ -246,10 +346,16 @@ def render_metrics_report(snapshot: dict) -> str:
             f"- failures: {snapshot['counts']['failures']}",
             f"- trigger_events: {snapshot['counts']['trigger_events']}",
             f"- psych_observations: {snapshot['counts']['psych_observations']}",
+            f"- schema_versions: {snapshot['counts']['schema_versions']}",
+            f"- assimilation_events: {snapshot['counts']['assimilation_events']}",
+            f"- disequilibrium_events: {snapshot['counts']['disequilibrium_events']}",
+            f"- accommodation_revisions: {snapshot['counts']['accommodation_revisions']}",
+            f"- equilibration_cycles: {snapshot['counts']['equilibration_cycles']}",
             "",
             "## Notes",
             "",
             f"- High-risk domains source: {', '.join(snapshot['refs']['high_risk_domains'])}",
+            "- Cognition metrics summarize schema conflict, revision, and coherence quality.",
             "- This report is quantitative and should be paired with weekly/audit narrative outputs.",
         ]
     )

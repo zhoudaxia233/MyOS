@@ -106,6 +106,10 @@ def test_owner_snapshot_and_render() -> None:
             ),
             encoding="utf-8",
         )
+        (root / "modules/cognition/outputs").mkdir(parents=True, exist_ok=True)
+        (root / "modules/cognition/outputs/cognitive_timeline_20260302.md").write_text(
+            "Cognitive Evolution Timeline", encoding="utf-8"
+        )
 
         snapshot = build_owner_snapshot(root, window_days=7, now=now)
         report = render_owner_report(snapshot)
@@ -118,3 +122,4 @@ def test_owner_snapshot_and_render() -> None:
         assert "Consistency Alerts" in report
         assert "Owner Report" in report
         assert "Executive Summary" in report
+        assert "cognition_timeline" in report
