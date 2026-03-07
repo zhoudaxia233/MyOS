@@ -132,7 +132,8 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py web --open-browser
 - 当 Module = Auto route 且已配置 API key 时，模块选择会走模型路由
 - 若模型路由失败，会自动回退到 manifest/关键词路由并保留审计原因
 - `handoff` 模式下，Output Preview 会显示复制块的 token 消耗（有 `tiktoken` 时精确计数，否则估算）
-- 一键动作：validate、metrics、owner report、One-Click Ingest Learning、weekly cycle、retrieval index
+- 独立 `Learning Capture` 区域，含 `Ingest To Memory` 专属按钮
+- 一键动作：validate、metrics、owner report、weekly cycle、retrieval index
 
 ### 1) 先拿最小上下文
 

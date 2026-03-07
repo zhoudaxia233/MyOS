@@ -11,6 +11,7 @@ const statusBadge = document.getElementById("statusBadge");
 const themeToggle = document.getElementById("themeToggle");
 const settingsToggle = document.getElementById("settingsToggle");
 const copyOutputBtn = document.getElementById("copyOutputBtn");
+const quickIngestBtn = document.getElementById("quickIngestBtn");
 
 const routeTrace = document.getElementById("routeTrace");
 const planTrace = document.getElementById("planTrace");
@@ -527,6 +528,9 @@ settingsModal.addEventListener("click", (event) => {
   if (event.target === settingsModal) {
     closeSettingsModal();
   }
+});
+quickIngestBtn.addEventListener("click", () => {
+  runAction("ingest_learning");
 });
 
 initTheme();

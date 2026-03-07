@@ -325,6 +325,54 @@ body {
   border-color: var(--accent);
 }
 
+.learning-capture {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--accent) 42%, var(--border));
+  background: linear-gradient(
+    120deg,
+    color-mix(in srgb, var(--accent) 10%, var(--card) 90%),
+    color-mix(in srgb, var(--warm) 10%, var(--card) 90%)
+  );
+}
+
+.learning-copy h2 {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--accent-ink);
+}
+
+.learning-copy p {
+  margin: 4px 0 0;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.ingest-btn {
+  min-width: 170px;
+  background: linear-gradient(
+    120deg,
+    color-mix(in srgb, var(--accent) 86%, black 14%),
+    color-mix(in srgb, var(--warm) 72%, var(--accent) 28%)
+  );
+  color: #fff;
+  border-color: color-mix(in srgb, var(--accent) 65%, black 35%);
+  box-shadow: 0 6px 16px rgba(15, 127, 136, 0.28);
+}
+
+.ingest-btn:hover {
+  filter: brightness(1.05);
+}
+
+.ingest-btn:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 70%, white);
+  outline-offset: 2px;
+}
+
 .quick-actions {
   border-top: 1px solid color-mix(in srgb, var(--border) 75%, white);
   padding-top: 10px;
@@ -505,6 +553,18 @@ pre {
   .panel-chat,
   .panel-trace {
     min-height: auto;
+  }
+}
+
+@media (max-width: 740px) {
+  .learning-capture {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ingest-btn {
+    width: 100%;
+    min-width: 0;
   }
 }
 
