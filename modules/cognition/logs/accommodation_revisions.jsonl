@@ -1,0 +1,1 @@
+{"_schema":{"name":"accommodation_revisions","version":"1.0","fields":["id","created_at","status","topic","previous_schema_version_id","new_schema_version_id","revision_type","failed_assumptions","revision_summary","new_schema_hypothesis","source_refs","tags"],"notes":"append-only"}}

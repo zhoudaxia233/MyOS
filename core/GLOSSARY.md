@@ -30,3 +30,28 @@ Use short entries with a stable definition and optional examples.
 
 - **Chat Paradigm**: A recurring pattern extracted from multiple chat events and formalized as an actionable rule.
   - Example: Store in `modules/memory/logs/chat_patterns.jsonl` with confidence and source IDs.
+
+### Example Entry
+
+- **Schema**: An explicit mental model used to interpret observations, make predictions, and set boundaries.
+  - Example: Version records in `modules/cognition/logs/schema_versions.jsonl`.
+
+### Example Entry
+
+- **Assimilation**: Interpreting new input through an existing schema without changing the schema structure.
+  - Example: Append interpretation fit records to `modules/cognition/logs/assimilation_events.jsonl`.
+
+### Example Entry
+
+- **Accommodation**: Revising schema structure when prior assumptions fail against evidence.
+  - Example: Log revision operator and failed assumptions in `modules/cognition/logs/accommodation_revisions.jsonl`.
+
+### Example Entry
+
+- **Disequilibrium**: Productive cognitive tension caused by mismatch, contradiction, or recurring confusion.
+  - Example: Track tension score and source signals in `modules/cognition/logs/disequilibrium_events.jsonl`.
+
+### Example Entry
+
+- **Equilibration**: A temporary higher-order balance after schema revision and coherence testing.
+  - Example: Track from/to schema stability in `modules/cognition/logs/equilibration_cycles.jsonl`.

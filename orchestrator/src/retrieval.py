@@ -45,6 +45,7 @@ DEFAULT_CFG = {
         "modules/memory/logs/*.jsonl",
         "modules/profile/logs/*.jsonl",
         "modules/content/logs/*.jsonl",
+        "modules/cognition/logs/*.jsonl",
     ],
     "index_path": "orchestrator/retrieval/index.json",
     "query_log_path": "orchestrator/logs/retrieval_queries.jsonl",

@@ -64,6 +64,8 @@ Roadmap details can evolve while this direction stays stable:
       module.manifest.yaml
     memory/
       module.manifest.yaml
+    cognition/
+      module.manifest.yaml
     _template/
       module.manifest.yaml
   routines/
@@ -113,6 +115,12 @@ Roadmap details can evolve while this direction stays stable:
 - SSOT: memory policy, pattern taxonomy
 - Logs: memory events, memory insights, chat paradigms
 
+### `modules/cognition`
+
+- Role: schema evolution engine (assimilation, disequilibrium, accommodation, equilibration)
+- SSOT: schema policy, conflict taxonomy, revision operators
+- Logs: schema versions, assimilation events, disequilibrium events, accommodation revisions, equilibration cycles
+
 ## Runtime Model
 
 This repository is executed by an agent runtime (not by a monolithic app server):
@@ -158,7 +166,7 @@ You get a local chat-like control center with:
 - route selection auto-falls back to manifest/keyword routing if model routing fails
 - in `handoff` mode, Output Preview shows token usage for the copy block (`tiktoken` exact when available, otherwise estimate)
 - dedicated `Learning Capture` bar with `Ingest To Memory`
-- quick actions: validate, metrics, owner report, weekly cycle, retrieval index
+- quick actions: validate, metrics, owner report, disequilibrium detection, weekly cycle, retrieval index
 
 ### 1) Get a route and minimal context bundle
 

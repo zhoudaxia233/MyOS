@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
+from cognition import detect_disequilibrium, render_disequilibrium_report
 from config import load_runtime_config
 from idgen import next_id_for_rel_path
 from loader import load_context_bundle
@@ -359,6 +360,43 @@ def _run_owner_report(root: Path, window_days: int, output_rel: str | None) -> d
     }
 
 
+def _run_disequilibrium(
+    root: Path,
+    *,
+    topic: str,
+    window_days: int,
+    schema_version_id: str | None,
+    tags: list[str],
+    output_rel: str | None,
+) -> dict:
+    result = detect_disequilibrium(
+        root,
+        topic=topic,
+        window_days=window_days,
+        schema_version_id=schema_version_id,
+        tags=tags,
+    )
+    report = render_disequilibrium_report(result)
+
+    if output_rel:
+        output_path = output_rel
+    else:
+        stamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        output_path = f"modules/cognition/outputs/disequilibrium_{stamp}.md"
+
+    out = write_output(root, output_path, report)
+    record = result["record"]
+    return {
+        "topic": topic,
+        "window_days": window_days,
+        "event_id": record["id"],
+        "tension_score": record["tension_score"],
+        "signal_count": len(result.get("signals", [])),
+        "output_path": _root_relative(out, root),
+        "output_preview": _preview_text(report),
+    }
+
+
 def _run_schedule_cycle(
     *,
     root: Path,
@@ -592,6 +630,24 @@ def api_action(root: Path, payload: dict[str, Any]) -> dict:
             limit=limit,
             owner_window=owner_window,
             no_owner_report=no_owner_report,
+        )
+        return {"ok": True, "action": action, **result}
+
+    if action == "detect_disequilibrium":
+        topic = str(payload.get("task", "")).strip()
+        if not topic:
+            raise ValueError("task is required for detect_disequilibrium")
+        window_days = _coerce_int(payload.get("window_days"), default=30, minimum=1, maximum=365)
+        schema_version_id = _normalize_optional_str(payload.get("schema_version_id"))
+        tags = _coerce_tags(payload.get("tags"))
+        output_rel = _normalize_optional_str(payload.get("output"))
+        result = _run_disequilibrium(
+            root,
+            topic=topic,
+            window_days=window_days,
+            schema_version_id=schema_version_id,
+            tags=tags,
+            output_rel=output_rel,
         )
         return {"ok": True, "action": action, **result}
 

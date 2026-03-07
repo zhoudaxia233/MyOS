@@ -60,6 +60,8 @@
       module.manifest.yaml
     memory/
       module.manifest.yaml
+    cognition/
+      module.manifest.yaml
     _template/
       module.manifest.yaml
   routines/
@@ -107,6 +109,12 @@
 - 从 chats 提取范式（paradigm）
 - 周度蒸馏可执行洞察
 
+### `modules/cognition`
+
+- 认知结构演化引擎（同化/失衡/顺应/再平衡）
+- SSOT：schema 规则、冲突分类、修订操作符
+- 日志：schema 版本、assimilation、disequilibrium、accommodation、equilibration
+
 ## 这套系统怎么跑
 
 系统不自动“自运行”，而是你触发任务，Agent按协议执行：
@@ -151,7 +159,7 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py web --open-browser
 - 若模型路由失败，会自动回退到 manifest/关键词路由并保留审计原因
 - `handoff` 模式下，Output Preview 会显示复制块的 token 消耗（有 `tiktoken` 时精确计数，否则估算）
 - 独立 `Learning Capture` 区域，含 `Ingest To Memory` 专属按钮
-- 一键动作：validate、metrics、owner report、weekly cycle、retrieval index
+- 一键动作：validate、metrics、owner report、disequilibrium 检测、weekly cycle、retrieval index
 
 ### 1) 先拿最小上下文
 

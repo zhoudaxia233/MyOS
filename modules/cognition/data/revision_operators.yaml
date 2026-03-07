@@ -1,0 +1,13 @@
+accommodation_operators:
+  - "weaken"
+  - "replace"
+  - "split"
+  - "merge"
+  - "refine"
+
+guidelines:
+  - "Use weaken when evidence reduces confidence but does not invalidate the schema."
+  - "Use replace when core causal structure fails."
+  - "Use split when one schema conflates distinct contexts."
+  - "Use merge when two schemas are redundant and can be integrated."
+  - "Use refine when distinctions improve explanatory precision without replacing core structure."

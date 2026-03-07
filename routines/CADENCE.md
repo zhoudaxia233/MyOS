@@ -12,6 +12,7 @@ This file defines the default operational rhythm so the system acts like a pract
 - Decision weekly review
 - Memory weekly distillation
 - Decision system audit report
+- Equilibration review (schema conflict and revision quality)
 
 ## Monthly
 

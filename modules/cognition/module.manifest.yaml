@@ -1,0 +1,92 @@
+{
+  "module": "cognition",
+  "routing": {
+    "keywords": [
+      "schema",
+      "mental model",
+      "cognition",
+      "assimilation",
+      "accommodation",
+      "disequilibrium",
+      "equilibration",
+      "contradiction",
+      "conflict",
+      "model mismatch"
+    ],
+    "keyword_weights": {
+      "disequilibrium": 5,
+      "accommodation": 4,
+      "equilibration": 4,
+      "assimilation": 4,
+      "schema": 3,
+      "mental model": 3,
+      "model mismatch": 3
+    }
+  },
+  "planning": {
+    "default_skill": "MODULE",
+    "default_output_prefix": "task",
+    "rules": [
+      {
+        "id": "detect_disequilibrium",
+        "match_any": [
+          "disequilibrium",
+          "contradiction",
+          "conflict",
+          "mismatch"
+        ],
+        "skill": "detect_disequilibrium",
+        "output_prefix": "disequilibrium"
+      },
+      {
+        "id": "run_equilibration_review",
+        "match_any": [
+          "equilibration",
+          "synthesis",
+          "schema revision",
+          "higher-order model"
+        ],
+        "skill": "run_equilibration_review",
+        "output_prefix": "equilibration_review"
+      },
+      {
+        "id": "log_schema",
+        "match_any": [
+          "schema map",
+          "log schema",
+          "mental model map"
+        ],
+        "skill": "log_schema",
+        "output_prefix": "schema_log"
+      },
+      {
+        "id": "log_assimilation",
+        "match_any": [
+          "assimilate",
+          "assimilation log"
+        ],
+        "skill": "log_assimilation",
+        "output_prefix": "assimilation_log"
+      },
+      {
+        "id": "log_accommodation",
+        "match_any": [
+          "accommodate",
+          "schema revision log",
+          "accommodation log"
+        ],
+        "skill": "log_accommodation",
+        "output_prefix": "accommodation_log"
+      },
+      {
+        "id": "log_equilibration",
+        "match_any": [
+          "log equilibration",
+          "stability check"
+        ],
+        "skill": "log_equilibration",
+        "output_prefix": "equilibration_log"
+      }
+    ]
+  }
+}

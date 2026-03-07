@@ -1,0 +1,20 @@
+schema_requirements:
+  minimum_fields:
+    - "schema_name"
+    - "summary"
+    - "assumptions"
+    - "predictions"
+    - "boundaries"
+  quality_checks:
+    - "Assumptions should be falsifiable when possible."
+    - "Predictions should be testable in realistic time windows."
+    - "Boundaries should define where the schema does not apply."
+
+versioning_rules:
+  - "Never overwrite prior schema versions."
+  - "Use parent_schema_version_id when a new version is derived from an old version."
+  - "Keep schema_id stable across versions of the same conceptual model."
+
+evidence_rules:
+  - "Interpretation records should cite source_refs IDs."
+  - "If confidence is low, state uncertainty explicitly."

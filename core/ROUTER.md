@@ -39,6 +39,8 @@ Do not go beyond two hops unless the module explicitly instructs a necessary fil
 | psychological patterning, trigger analysis, drift snapshot | `modules/profile` | Non-clinical psych profiling and stabilizers |
 | memory ingest, reflection capture, weekly distillation | `modules/memory` | Append raw memory, distill reusable insights |
 | chat pattern extraction, paradigm mining | `modules/memory` | Extract recurring patterns from chat events |
+| schema mapping, mental model versioning, cognitive conflict analysis | `modules/cognition` | Schema-layer cognitive adaptation workflows |
+| assimilation, accommodation, disequilibrium, equilibration tracking | `modules/cognition` | Structural cognition evolution over time |
 
 ## Exact Routing Instructions (Required)
 

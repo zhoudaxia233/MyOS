@@ -1,0 +1,15 @@
+signal_classes:
+  - name: "prediction_failure"
+    definition: "Observed outcomes repeatedly diverge from schema predictions."
+  - name: "guardrail_block"
+    definition: "Decision process blocks due to missing conditions or violations."
+  - name: "emotional_friction"
+    definition: "High emotional load recurs around the same topic interpretation."
+  - name: "explicit_confusion"
+    definition: "User language indicates unresolved mismatch or incoherence."
+  - name: "explanatory_gap"
+    definition: "Current schema cannot explain a key observation clearly."
+
+disequilibrium_interpretation:
+  - "Repeated multi-source signals indicate structural mismatch, not just missing data."
+  - "Single low-confidence signals should be tracked but not over-generalized."

@@ -27,6 +27,20 @@ DEFAULT_RULES = {
             "module": "memory",
             "keywords": ["memory", "reflect", "insight", "distill", "paradigm", "pattern", "chat", "journal"],
         },
+        {
+            "module": "cognition",
+            "keywords": [
+                "schema",
+                "mental model",
+                "cognition",
+                "assimilation",
+                "accommodation",
+                "disequilibrium",
+                "equilibration",
+                "contradiction",
+                "model mismatch",
+            ],
+        },
     ],
 }
 

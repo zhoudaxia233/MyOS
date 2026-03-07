@@ -21,6 +21,10 @@ routines:
       module: "decision"
       skill: "audit_decision_system"
       objective: "Generate owner audit report"
+    - id: "rt_weekly_equilibration_review"
+      module: "cognition"
+      skill: "run_equilibration_review"
+      objective: "Review schema conflicts, revisions, and unresolved tensions"
   monthly:
     - id: "rt_monthly_profile_snapshot"
       module: "profile"

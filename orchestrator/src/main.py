@@ -5,6 +5,14 @@ import hashlib
 from datetime import datetime, timezone
 from pathlib import Path
 
+from cognition import (
+    detect_disequilibrium,
+    log_accommodation_revision,
+    log_assimilation_event,
+    log_equilibration_cycle,
+    log_schema_version,
+    render_disequilibrium_report,
+)
 from decision_gate import evaluate_decision_entry_gate
 from config import load_runtime_config
 from chat_ingest import ingest_chat_export
@@ -341,6 +349,123 @@ def cmd_ingest_learning(args: argparse.Namespace) -> int:
         print("Record IDs:")
         for rid in result["record_ids"]:
             print(f"- {rid}")
+    return 0
+
+
+def cmd_log_schema(args: argparse.Namespace) -> int:
+    root = repo_root()
+    record = log_schema_version(
+        root,
+        topic=args.topic,
+        schema_name=args.schema_name,
+        summary=args.summary,
+        assumptions=args.assumption,
+        predictions=args.prediction,
+        boundaries=args.boundary,
+        schema_id=_normalize_optional_str(args.schema_id),
+        parent_schema_version_id=_normalize_optional_str(args.parent_schema_version_id),
+        source_refs=args.source_ref,
+        tags=args.tag,
+    )
+    print(f"Schema version ID: {record['id']}")
+    print(f"Schema ID: {record['schema_id']}")
+    print(f"Version: {record['version']}")
+    return 0
+
+
+def cmd_log_assimilation(args: argparse.Namespace) -> int:
+    root = repo_root()
+    record = log_assimilation_event(
+        root,
+        topic=args.topic,
+        schema_version_id=args.schema_version_id,
+        input_summary=args.input_summary,
+        interpreted_as=args.interpreted_as,
+        fit_score=int(args.fit_score),
+        stretch_points=args.stretch_point,
+        source_refs=args.source_ref,
+        tags=args.tag,
+    )
+    print(f"Assimilation event ID: {record['id']}")
+    print(f"Fit score: {record['fit_score']}")
+    return 0
+
+
+def cmd_detect_disequilibrium(args: argparse.Namespace) -> int:
+    root = repo_root()
+    result = detect_disequilibrium(
+        root,
+        topic=args.topic,
+        window_days=int(args.window),
+        schema_version_id=_normalize_optional_str(args.schema_version_id),
+        source_refs=args.source_ref,
+        tags=args.tag,
+    )
+    report = render_disequilibrium_report(result)
+
+    if args.output:
+        output_rel = args.output
+    else:
+        stamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        output_rel = f"modules/cognition/outputs/disequilibrium_{stamp}.md"
+    out = write_output(root, output_rel, report)
+
+    record = result["record"]
+    print(f"Disequilibrium event ID: {record['id']}")
+    print(f"Tension score: {record['tension_score']}")
+    print(f"Signals: {len(result.get('signals', []))}")
+    print(f"Wrote: {out}")
+    return 0
+
+
+def cmd_log_accommodation(args: argparse.Namespace) -> int:
+    root = repo_root()
+    result = log_accommodation_revision(
+        root,
+        topic=args.topic,
+        previous_schema_version_id=args.previous_schema_version_id,
+        revision_type=args.revision_type,
+        failed_assumptions=args.failed_assumption,
+        revision_summary=args.revision_summary,
+        new_schema_hypothesis=args.new_schema_hypothesis,
+        create_schema_version=not bool(args.no_schema_version),
+        schema_id=_normalize_optional_str(args.schema_id),
+        schema_name=_normalize_optional_str(args.schema_name),
+        schema_summary=_normalize_optional_str(args.schema_summary),
+        assumptions=args.assumption,
+        predictions=args.prediction,
+        boundaries=args.boundary,
+        source_refs=args.source_ref,
+        tags=args.tag,
+    )
+    revision = result["revision"]
+    new_schema = result.get("new_schema")
+
+    print(f"Accommodation revision ID: {revision['id']}")
+    print(f"Revision type: {revision['revision_type']}")
+    if new_schema:
+        print(f"New schema version ID: {new_schema['id']}")
+        print(f"New schema version: {new_schema['version']}")
+    else:
+        print("New schema version: skipped")
+    return 0
+
+
+def cmd_log_equilibration(args: argparse.Namespace) -> int:
+    root = repo_root()
+    record = log_equilibration_cycle(
+        root,
+        topic=args.topic,
+        from_schema_version_id=args.from_schema_version_id,
+        to_schema_version_id=args.to_schema_version_id,
+        stabilizing_tests=args.stabilizing_test,
+        residual_tensions=args.residual_tension,
+        coherence_score=int(args.coherence_score),
+        source_refs=args.source_ref,
+        tags=args.tag,
+    )
+    print(f"Equilibration cycle ID: {record['id']}")
+    print(f"Coherence score: {record['coherence_score']}")
     return 0
 
 
@@ -717,6 +842,68 @@ def build_parser() -> argparse.ArgumentParser:
     sp_ingest_learning.add_argument("--tag", action="append", default=[])
     sp_ingest_learning.add_argument("--dry-run", action="store_true")
     sp_ingest_learning.set_defaults(func=cmd_ingest_learning)
+
+    sp_log_schema = sub.add_parser("log-schema")
+    sp_log_schema.add_argument("--topic", required=True)
+    sp_log_schema.add_argument("--schema-name", required=True)
+    sp_log_schema.add_argument("--summary", required=True)
+    sp_log_schema.add_argument("--assumption", action="append", default=[])
+    sp_log_schema.add_argument("--prediction", action="append", default=[])
+    sp_log_schema.add_argument("--boundary", action="append", default=[])
+    sp_log_schema.add_argument("--schema-id", default=None)
+    sp_log_schema.add_argument("--parent-schema-version-id", default=None)
+    sp_log_schema.add_argument("--source-ref", action="append", default=[])
+    sp_log_schema.add_argument("--tag", action="append", default=[])
+    sp_log_schema.set_defaults(func=cmd_log_schema)
+
+    sp_log_assimilation = sub.add_parser("log-assimilation")
+    sp_log_assimilation.add_argument("--topic", required=True)
+    sp_log_assimilation.add_argument("--schema-version-id", required=True)
+    sp_log_assimilation.add_argument("--input-summary", required=True)
+    sp_log_assimilation.add_argument("--interpreted-as", required=True)
+    sp_log_assimilation.add_argument("--fit-score", type=int, default=7)
+    sp_log_assimilation.add_argument("--stretch-point", action="append", default=[])
+    sp_log_assimilation.add_argument("--source-ref", action="append", default=[])
+    sp_log_assimilation.add_argument("--tag", action="append", default=[])
+    sp_log_assimilation.set_defaults(func=cmd_log_assimilation)
+
+    sp_detect_diseq = sub.add_parser("detect-disequilibrium")
+    sp_detect_diseq.add_argument("--topic", required=True)
+    sp_detect_diseq.add_argument("--window", type=int, default=30)
+    sp_detect_diseq.add_argument("--schema-version-id", default=None)
+    sp_detect_diseq.add_argument("--source-ref", action="append", default=[])
+    sp_detect_diseq.add_argument("--tag", action="append", default=[])
+    sp_detect_diseq.add_argument("--output", default=None)
+    sp_detect_diseq.set_defaults(func=cmd_detect_disequilibrium)
+
+    sp_log_accommodation = sub.add_parser("log-accommodation")
+    sp_log_accommodation.add_argument("--topic", required=True)
+    sp_log_accommodation.add_argument("--previous-schema-version-id", required=True)
+    sp_log_accommodation.add_argument("--revision-type", required=True)
+    sp_log_accommodation.add_argument("--failed-assumption", action="append", default=[])
+    sp_log_accommodation.add_argument("--revision-summary", required=True)
+    sp_log_accommodation.add_argument("--new-schema-hypothesis", required=True)
+    sp_log_accommodation.add_argument("--no-schema-version", action="store_true")
+    sp_log_accommodation.add_argument("--schema-id", default=None)
+    sp_log_accommodation.add_argument("--schema-name", default=None)
+    sp_log_accommodation.add_argument("--schema-summary", default=None)
+    sp_log_accommodation.add_argument("--assumption", action="append", default=[])
+    sp_log_accommodation.add_argument("--prediction", action="append", default=[])
+    sp_log_accommodation.add_argument("--boundary", action="append", default=[])
+    sp_log_accommodation.add_argument("--source-ref", action="append", default=[])
+    sp_log_accommodation.add_argument("--tag", action="append", default=[])
+    sp_log_accommodation.set_defaults(func=cmd_log_accommodation)
+
+    sp_log_equilibration = sub.add_parser("log-equilibration")
+    sp_log_equilibration.add_argument("--topic", required=True)
+    sp_log_equilibration.add_argument("--from-schema-version-id", required=True)
+    sp_log_equilibration.add_argument("--to-schema-version-id", required=True)
+    sp_log_equilibration.add_argument("--stabilizing-test", action="append", default=[])
+    sp_log_equilibration.add_argument("--residual-tension", action="append", default=[])
+    sp_log_equilibration.add_argument("--coherence-score", type=int, default=7)
+    sp_log_equilibration.add_argument("--source-ref", action="append", default=[])
+    sp_log_equilibration.add_argument("--tag", action="append", default=[])
+    sp_log_equilibration.set_defaults(func=cmd_log_equilibration)
 
     sp_guardrail = sub.add_parser("guardrail-check")
     sp_guardrail.add_argument("--domain", required=True, choices=["invest", "project", "content"])

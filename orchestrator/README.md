@@ -20,6 +20,7 @@ It reads kernel/module protocols, builds minimal context bundles, optionally ret
 - `retrieval.py`: build/search lexical index for JSONL histories
 - `scheduling.py`: load cadence routines and build cycle tasks
 - `metrics.py`: compute drift dashboard metrics from logs
+- `cognition.py`: schema-layer cognition events (assimilation, disequilibrium, accommodation, equilibration)
 - `guardrails.py`: evaluate domain-specific hardening policies and override requirements
 - `owner_report.py`: build one-page owner report from metrics + exceptions + artifacts
 - `webapp.py`: local web control center API + static UI serving
@@ -251,6 +252,11 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "..." [--provid
 python3 /Users/closears/MyOS/orchestrator/src/main.py schedule-run --cycle <daily|weekly|monthly> [--scheduler manual|cron] [--provider dry-run|handoff|openai]
 python3 /Users/closears/MyOS/orchestrator/src/main.py ingest-chat --input <chat_export.json|jsonl|md|txt> [--max-events 50] [--tag <tag>] [--dry-run]
 python3 /Users/closears/MyOS/orchestrator/src/main.py ingest-learning --input <notes.md|txt|json> [--title "Title"] [--source-type video|article|book|course] [--max-points 6] [--confidence 7] [--tag <tag>] [--dry-run]
+python3 /Users/closears/MyOS/orchestrator/src/main.py log-schema --topic "..." --schema-name "..." --summary "..." [--assumption "..."] [--prediction "..."] [--boundary "..."]
+python3 /Users/closears/MyOS/orchestrator/src/main.py log-assimilation --topic "..." --schema-version-id <sv_id> --input-summary "..." --interpreted-as "..." [--fit-score 7]
+python3 /Users/closears/MyOS/orchestrator/src/main.py detect-disequilibrium --topic "..." [--window 30] [--schema-version-id <sv_id>] [--output <path>]
+python3 /Users/closears/MyOS/orchestrator/src/main.py log-accommodation --topic "..." --previous-schema-version-id <sv_id> --revision-type <weaken|replace|split|merge|refine> --revision-summary "..." --new-schema-hypothesis "..."
+python3 /Users/closears/MyOS/orchestrator/src/main.py log-equilibration --topic "..." --from-schema-version-id <sv_id> --to-schema-version-id <sv_id> [--coherence-score 7]
 python3 /Users/closears/MyOS/orchestrator/src/main.py index [--source-glob "modules/decision/logs/*.jsonl"]
 python3 /Users/closears/MyOS/orchestrator/src/main.py search --query "..." [--module <name>] [--top-k 8]
 python3 /Users/closears/MyOS/orchestrator/src/main.py metrics [--window 7|30] [--output <path>]

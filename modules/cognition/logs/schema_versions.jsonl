@@ -1,0 +1,1 @@
+{"_schema":{"name":"schema_versions","version":"1.0","fields":["id","created_at","status","schema_id","version","topic","schema_name","summary","assumptions","predictions","boundaries","parent_schema_version_id","source_refs","tags"],"notes":"append-only"}}

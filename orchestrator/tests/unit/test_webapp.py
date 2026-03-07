@@ -179,6 +179,19 @@ def test_api_action_validate_metrics_and_schedule() -> None:
         assert events_after == events_before + 1
         assert insights_after == insights_before + 1
 
+        diseq_result = api_action(
+            root,
+            {
+                "action": "detect_disequilibrium",
+                "task": "invest risk model",
+                "window_days": 30,
+            },
+        )
+        assert diseq_result["ok"] is True
+        assert diseq_result["action"] == "detect_disequilibrium"
+        assert isinstance(diseq_result["tension_score"], int)
+        assert (root / diseq_result["output_path"]).exists()
+
 
 def test_api_output_rejects_non_output_and_escape_paths() -> None:
     with TemporaryDirectory() as td:

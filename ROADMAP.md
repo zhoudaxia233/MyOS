@@ -171,6 +171,25 @@ The system is a stable, extensible operating center where:
    - Added orchestrator command `ingest-learning` to append `memory_events` + `memory_insights` from notes
    - Converted reverse-thinking video summary into structured memory records and linked insight
 
+## v1.3-cognitive-architecture (In Progress)
+
+1. Piaget-inspired cognition module
+   - Added `modules/cognition/` as dedicated schema-evolution layer
+   - Added cognition SSOT data (`schema_policy`, `conflict_taxonomy`, `revision_operators`)
+   - Added append-only logs for:
+     - `schema_versions`
+     - `assimilation_events`
+     - `disequilibrium_events`
+     - `accommodation_revisions`
+     - `equilibration_cycles`
+2. Orchestrator cognition commands
+   - Added `log-schema`, `log-assimilation`, `detect-disequilibrium`, `log-accommodation`, and `log-equilibration`
+   - Added disequilibrium report output generation under `modules/cognition/outputs/`
+3. Routing and workflow integration
+   - Added cognition routing keywords and weighted matching in manifest/routes fallback
+   - Added weekly cadence routine `rt_weekly_equilibration_review`
+   - Added web quick action for disequilibrium detection
+
 ## v0.7-plugin-contract (Planned)
 
 1. Module contract standardization

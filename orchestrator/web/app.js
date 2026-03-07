@@ -179,6 +179,15 @@ function renderActionResult(data) {
   if (typeof data.appended_insights === "number") {
     out.push(`appended_insights: ${data.appended_insights}`);
   }
+  if (typeof data.tension_score === "number") {
+    out.push(`tension_score: ${data.tension_score}`);
+  }
+  if (typeof data.signal_count === "number") {
+    out.push(`signal_count: ${data.signal_count}`);
+  }
+  if (data.event_id) {
+    out.push(`event_id: ${data.event_id}`);
+  }
   if (Array.isArray(data.record_ids) && data.record_ids.length > 0) {
     out.push(`record_ids: ${data.record_ids.join(", ")}`);
   }
@@ -479,6 +488,17 @@ async function runAction(action) {
     payload.max_points = 6;
     payload.confidence = 7;
     payload.tags = ["ui_one_click"];
+    addUserTaskOnce(taskText);
+  }
+
+  if (action === "detect_disequilibrium") {
+    if (!taskText) {
+      addBubble("system", "Task text is required. Enter the topic to scan for mismatch.");
+      return;
+    }
+    payload.task = taskText;
+    payload.window_days = 30;
+    payload.tags = ["ui_quick_action"];
     addUserTaskOnce(taskText);
   }
 
