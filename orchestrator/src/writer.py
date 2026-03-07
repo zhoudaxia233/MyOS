@@ -7,7 +7,7 @@ from validators import append_jsonl, ensure_parent
 RUNS_SCHEMA = {
     "_schema": {
         "name": "runs",
-        "version": "1.1",
+        "version": "1.2",
         "fields": [
             "id",
             "created_at",
@@ -21,6 +21,8 @@ RUNS_SCHEMA = {
             "loaded_files",
             "result_path",
             "output_hash",
+            "object_type",
+            "proposal_target",
         ],
         "notes": "append-only",
     }
@@ -29,8 +31,8 @@ RUNS_SCHEMA = {
 RETRIEVAL_QUERY_SCHEMA = {
     "_schema": {
         "name": "retrieval_queries",
-        "version": "1.0",
-        "fields": ["id", "created_at", "status", "query", "module", "top_k", "result_count"],
+        "version": "1.1",
+        "fields": ["id", "created_at", "status", "query", "module", "top_k", "result_count", "object_type", "proposal_target"],
         "notes": "append-only",
     }
 }
@@ -38,7 +40,7 @@ RETRIEVAL_QUERY_SCHEMA = {
 SCHEDULE_RUN_SCHEMA = {
     "_schema": {
         "name": "schedule_runs",
-        "version": "1.0",
+        "version": "1.1",
         "fields": [
             "id",
             "created_at",
@@ -49,6 +51,8 @@ SCHEDULE_RUN_SCHEMA = {
             "skill",
             "provider",
             "result_path",
+            "object_type",
+            "proposal_target",
         ],
         "notes": "append-only",
     }
@@ -57,8 +61,8 @@ SCHEDULE_RUN_SCHEMA = {
 METRICS_SNAPSHOT_SCHEMA = {
     "_schema": {
         "name": "metrics_snapshots",
-        "version": "1.0",
-        "fields": ["id", "created_at", "status", "window_days", "summary", "report_path"],
+        "version": "1.1",
+        "fields": ["id", "created_at", "status", "window_days", "summary", "report_path", "object_type", "proposal_target"],
         "notes": "append-only",
     }
 }
@@ -66,7 +70,7 @@ METRICS_SNAPSHOT_SCHEMA = {
 GUARDRAIL_OVERRIDE_SCHEMA = {
     "_schema": {
         "name": "guardrail_overrides",
-        "version": "1.0",
+        "version": "1.1",
         "fields": [
             "id",
             "created_at",
@@ -78,6 +82,8 @@ GUARDRAIL_OVERRIDE_SCHEMA = {
             "owner_confirmation",
             "provider",
             "notes",
+            "object_type",
+            "proposal_target",
         ],
         "notes": "append-only",
     }
@@ -86,8 +92,18 @@ GUARDRAIL_OVERRIDE_SCHEMA = {
 OWNER_REPORT_SCHEMA = {
     "_schema": {
         "name": "owner_reports",
-        "version": "1.0",
-        "fields": ["id", "created_at", "status", "window_days", "summary", "report_path", "source_artifacts"],
+        "version": "1.1",
+        "fields": [
+            "id",
+            "created_at",
+            "status",
+            "window_days",
+            "summary",
+            "report_path",
+            "source_artifacts",
+            "object_type",
+            "proposal_target",
+        ],
         "notes": "append-only",
     }
 }
@@ -95,7 +111,7 @@ OWNER_REPORT_SCHEMA = {
 DECISIONS_SCHEMA = {
     "_schema": {
         "name": "decisions",
-        "version": "1.1",
+        "version": "1.2",
         "fields": [
             "id",
             "created_at",
@@ -111,6 +127,8 @@ DECISIONS_SCHEMA = {
             "guardrail_check_id",
             "follow_up_date",
             "outcome",
+            "object_type",
+            "proposal_target",
         ],
         "notes": "append-only",
     }
@@ -119,7 +137,7 @@ DECISIONS_SCHEMA = {
 DECISION_GATE_CHECKS_SCHEMA = {
     "_schema": {
         "name": "decision_gate_checks",
-        "version": "1.0",
+        "version": "1.1",
         "fields": [
             "id",
             "created_at",
@@ -134,6 +152,8 @@ DECISION_GATE_CHECKS_SCHEMA = {
             "violations",
             "missing_override_fields",
             "source_refs",
+            "object_type",
+            "proposal_target",
         ],
         "notes": "append-only",
     }
@@ -142,7 +162,7 @@ DECISION_GATE_CHECKS_SCHEMA = {
 DECISION_CONSTITUTION_CHECKS_SCHEMA = {
     "_schema": {
         "name": "decision_constitution_checks",
-        "version": "1.0",
+        "version": "1.1",
         "fields": [
             "id",
             "created_at",
@@ -156,6 +176,39 @@ DECISION_CONSTITUTION_CHECKS_SCHEMA = {
             "context_status",
             "violations",
             "source_refs",
+            "object_type",
+            "proposal_target",
+        ],
+        "notes": "append-only",
+    }
+}
+
+SUGGESTIONS_SCHEMA = {
+    "_schema": {
+        "name": "suggestions",
+        "version": "1.0",
+        "fields": [
+            "id",
+            "created_at",
+            "status",
+            "task_raw",
+            "interpreted_task",
+            "module",
+            "skill",
+            "route_reason",
+            "matched_keywords",
+            "loaded_files",
+            "retrieval_hit_ids",
+            "retrieval_hit_count",
+            "invoked_artifacts",
+            "tensions",
+            "uncertainties",
+            "recommendation_path",
+            "audit_focus_points",
+            "run_ref",
+            "output_hash",
+            "object_type",
+            "proposal_target",
         ],
         "notes": "append-only",
     }
@@ -190,6 +243,13 @@ def _validate_output_rel(repo_root: Path, output_rel: str) -> None:
         raise ValueError(f"Missing outputs directory for module: {module_name}")
 
 
+def _with_classification(record: dict, *, object_type: str, proposal_target: str | None = None) -> dict:
+    out = dict(record)
+    out.setdefault("object_type", object_type)
+    out.setdefault("proposal_target", proposal_target)
+    return out
+
+
 def write_output(repo_root: Path, output_rel: str, content: str) -> Path:
     _validate_output_rel(repo_root, output_rel)
     p = _safe_repo_path(repo_root, output_rel)
@@ -200,44 +260,49 @@ def write_output(repo_root: Path, output_rel: str, content: str) -> Path:
 
 def log_run(repo_root: Path, record: dict) -> None:
     runs = _safe_repo_path(repo_root, "orchestrator/logs/runs.jsonl")
-    append_jsonl(runs, record, schema_header=RUNS_SCHEMA)
+    append_jsonl(runs, _with_classification(record, object_type="system"), schema_header=RUNS_SCHEMA)
 
 
 def log_retrieval_query(repo_root: Path, record: dict, rel_log_path: str) -> None:
     path = _safe_repo_path(repo_root, rel_log_path)
-    append_jsonl(path, record, schema_header=RETRIEVAL_QUERY_SCHEMA)
+    append_jsonl(path, _with_classification(record, object_type="system"), schema_header=RETRIEVAL_QUERY_SCHEMA)
 
 
 def log_schedule_run(repo_root: Path, record: dict) -> None:
     path = _safe_repo_path(repo_root, "orchestrator/logs/schedule_runs.jsonl")
-    append_jsonl(path, record, schema_header=SCHEDULE_RUN_SCHEMA)
+    append_jsonl(path, _with_classification(record, object_type="system"), schema_header=SCHEDULE_RUN_SCHEMA)
 
 
 def log_metrics_snapshot(repo_root: Path, record: dict) -> None:
     path = _safe_repo_path(repo_root, "orchestrator/logs/metrics_snapshots.jsonl")
-    append_jsonl(path, record, schema_header=METRICS_SNAPSHOT_SCHEMA)
+    append_jsonl(path, _with_classification(record, object_type="system"), schema_header=METRICS_SNAPSHOT_SCHEMA)
 
 
 def log_guardrail_override(repo_root: Path, record: dict) -> None:
     path = _safe_repo_path(repo_root, "modules/decision/logs/guardrail_overrides.jsonl")
-    append_jsonl(path, record, schema_header=GUARDRAIL_OVERRIDE_SCHEMA)
+    append_jsonl(path, _with_classification(record, object_type="decision"), schema_header=GUARDRAIL_OVERRIDE_SCHEMA)
 
 
 def log_owner_report(repo_root: Path, record: dict) -> None:
     path = _safe_repo_path(repo_root, "orchestrator/logs/owner_reports.jsonl")
-    append_jsonl(path, record, schema_header=OWNER_REPORT_SCHEMA)
+    append_jsonl(path, _with_classification(record, object_type="system"), schema_header=OWNER_REPORT_SCHEMA)
 
 
 def log_decision(repo_root: Path, record: dict) -> None:
     path = _safe_repo_path(repo_root, "modules/decision/logs/decisions.jsonl")
-    append_jsonl(path, record, schema_header=DECISIONS_SCHEMA)
+    append_jsonl(path, _with_classification(record, object_type="decision"), schema_header=DECISIONS_SCHEMA)
 
 
 def log_decision_gate_check(repo_root: Path, record: dict) -> None:
     path = _safe_repo_path(repo_root, "modules/decision/logs/decision_gate_checks.jsonl")
-    append_jsonl(path, record, schema_header=DECISION_GATE_CHECKS_SCHEMA)
+    append_jsonl(path, _with_classification(record, object_type="decision"), schema_header=DECISION_GATE_CHECKS_SCHEMA)
 
 
 def log_decision_constitution_check(repo_root: Path, record: dict) -> None:
     path = _safe_repo_path(repo_root, "modules/decision/logs/decision_constitution_checks.jsonl")
-    append_jsonl(path, record, schema_header=DECISION_CONSTITUTION_CHECKS_SCHEMA)
+    append_jsonl(path, _with_classification(record, object_type="decision"), schema_header=DECISION_CONSTITUTION_CHECKS_SCHEMA)
+
+
+def log_suggestion(repo_root: Path, record: dict) -> None:
+    path = _safe_repo_path(repo_root, "orchestrator/logs/suggestions.jsonl")
+    append_jsonl(path, _with_classification(record, object_type="system"), schema_header=SUGGESTIONS_SCHEMA)

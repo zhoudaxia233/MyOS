@@ -46,6 +46,7 @@ from writer import (
     log_retrieval_query,
     log_run,
     log_schedule_run,
+    log_suggestion,
     write_output,
 )
 
@@ -170,6 +171,16 @@ def _log_retrieval(root: Path, query: str, module: str | None, top_k: int, resul
         "result_count": result_count,
     }
     log_retrieval_query(root, rec, cfg["query_log_path"])
+
+
+def _suggestion_tensions(route: dict, with_retrieval: bool, hits: list[dict]) -> list[str]:
+    tensions: list[str] = []
+    reason = str(route.get("reason", ""))
+    if reason.startswith("fallback_default"):
+        tensions.append("routing_low_signal")
+    if with_retrieval and not hits:
+        tensions.append("retrieval_no_hits")
+    return tensions
 
 
 def _preview_text(text: str, max_chars: int = 8000) -> str:
@@ -337,11 +348,36 @@ def _execute_task(
 
     debug_prompts = schema_debugger_questions(module, task)
     debug_sections = schema_debugger_output_sections(module, task)
+    suggestion_id = next_id_for_rel_path(root, "sg", "orchestrator/logs/suggestions.jsonl")
+    suggestion_record = {
+        "id": suggestion_id,
+        "created_at": _utc_now(),
+        "status": "active",
+        "task_raw": task,
+        "interpreted_task": task,
+        "module": module,
+        "skill": plan["skill"],
+        "route_reason": run_record["route_reason"],
+        "matched_keywords": route["matched_keywords"],
+        "loaded_files": [f["path"] for f in bundle["files"]],
+        "retrieval_hit_ids": [str(hit.get("record_id", "")).strip() for hit in hits if str(hit.get("record_id", "")).strip()],
+        "retrieval_hit_count": len(hits),
+        "invoked_artifacts": [f["path"] for f in bundle["files"]],
+        "tensions": _suggestion_tensions(route, with_retrieval, hits),
+        "uncertainties": [],
+        "recommendation_path": _root_relative(out, root),
+        "audit_focus_points": debug_sections,
+        "run_ref": run_record["id"],
+        "output_hash": output_hash,
+    }
+    log_suggestion(root, suggestion_record)
+
     return {
         "module": module,
         "provider": provider,
         "route": route,
         "plan": plan,
+        "suggestion_id": suggestion_id,
         "output_path": _root_relative(out, root),
         "output_hash": output_hash,
         "output_preview": _preview_text(content),

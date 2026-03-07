@@ -102,6 +102,7 @@ def test_api_inspect_and_run_writes_output() -> None:
         assert run_result["ok"] is True
         assert run_result["output_path"].endswith(".md")
         assert len(run_result["output_hash"]) == 64
+        assert run_result["suggestion_id"].startswith("sg_")
         assert isinstance(run_result["output_preview"], str)
         assert len(run_result["output_preview"]) > 0
         assert isinstance(run_result["debug_prompts"], list)
@@ -124,6 +125,16 @@ def test_api_inspect_and_run_writes_output() -> None:
         run_lines = runs_path.read_text(encoding="utf-8").splitlines()
         run_record = json.loads(run_lines[-1])
         assert "|s=" in str(run_record["route_reason"])
+        assert run_record["object_type"] == "system"
+        assert run_record["proposal_target"] is None
+
+        suggestions_path = root / "orchestrator/logs/suggestions.jsonl"
+        suggestion_lines = suggestions_path.read_text(encoding="utf-8").splitlines()
+        suggestion_record = json.loads(suggestion_lines[-1])
+        assert suggestion_record["id"] == run_result["suggestion_id"]
+        assert suggestion_record["run_ref"] == run_record["id"]
+        assert suggestion_record["object_type"] == "system"
+        assert suggestion_record["proposal_target"] is None
 
 
 def test_api_action_validate_metrics_and_schedule() -> None:

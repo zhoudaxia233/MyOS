@@ -33,6 +33,10 @@
 - 从“单点任务”走向“日/周/月运行节奏”
 - 从“工具拼接”走向“统一控制中枢”（orchestrator + UI）
 
+可执行阶段清单见：
+
+- `NEXT_STEPS.md`（Cyber-self suggestion mirror 渐进路线）
+
 ## 架构要点
 
 1. `core/` 是稳定内核（路由 + 全局规则）

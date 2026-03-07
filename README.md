@@ -33,6 +33,10 @@ Roadmap details can evolve while this direction stays stable:
 - From isolated tasks to operational cadence (daily/weekly/monthly loops)
 - From scattered tools to a unified control center (orchestrator + UI)
 
+Actionable stage-by-stage plan:
+
+- `NEXT_STEPS.md` (evolution path toward a transparent cyber-self suggestion mirror)
+
 ## Core Architecture
 
 1. Small stable kernel in `core/`

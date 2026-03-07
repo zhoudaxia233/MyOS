@@ -25,6 +25,11 @@ The system is a stable, extensible operating center where:
 - From isolated tasks to cadence-driven operations (daily/weekly/monthly loops)
 - From scattered tools to a unified control center (orchestrator + UI)
 
+### Current Execution Next Steps
+
+- See `NEXT_STEPS.md` for the stage-by-stage execution plan toward a transparent cyber-self suggestion mirror.
+- Keep the rollout evolutionary: preserve existing extraction/distillation pipelines as first-class upstream inputs.
+
 ## Version Timeline
 
 ## v0.1 (Completed)

@@ -146,7 +146,24 @@ def _build_repo(root: Path) -> None:
     _write_jsonl(
         root / "modules/decision/logs/decisions.jsonl",
         "decisions",
-        ["id", "created_at", "status", "domain", "decision", "options", "reasoning", "risks", "expected_outcome", "time_horizon", "confidence", "guardrail_check_id", "follow_up_date", "outcome"],
+        [
+            "id",
+            "created_at",
+            "status",
+            "domain",
+            "decision",
+            "options",
+            "reasoning",
+            "risks",
+            "expected_outcome",
+            "time_horizon",
+            "confidence",
+            "guardrail_check_id",
+            "follow_up_date",
+            "outcome",
+            "object_type",
+            "proposal_target",
+        ],
         [
             {
                 "id": "dc_20260304_001",
@@ -163,6 +180,8 @@ def _build_repo(root: Path) -> None:
                 "guardrail_check_id": None,
                 "follow_up_date": None,
                 "outcome": None,
+                "object_type": "decision",
+                "proposal_target": None,
             }
         ],
     )
@@ -311,6 +330,17 @@ def test_e2e_cli_command_chain(monkeypatch, capsys) -> None:
         assert isinstance(record["matched_keywords"], list)
         assert isinstance(record["loaded_files"], list)
         assert len(record["output_hash"]) == 64
+        assert record["object_type"] == "system"
+        assert record["proposal_target"] is None
+
+        suggestions_path = root / "orchestrator/logs/suggestions.jsonl"
+        suggestion_lines = suggestions_path.read_text(encoding="utf-8").splitlines()
+        assert len(suggestion_lines) >= 2
+        suggestion = json.loads(suggestion_lines[-1])
+        assert suggestion["run_ref"] == record["id"]
+        assert suggestion["module"] == "decision"
+        assert suggestion["object_type"] == "system"
+        assert suggestion["proposal_target"] is None
 
         chat_input = root / "chat_export.txt"
         _write(chat_input, "User: I need better review discipline\nAssistant: Use a weekly checklist\n")

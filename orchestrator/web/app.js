@@ -250,11 +250,15 @@ function renderRunResult(data) {
   renderInspectResult(data);
   latestOutputPath = data.output_path || null;
   latestOutputProvider = data.provider || providerSelect.value || null;
-  resultTrace.textContent = [
+  const lines = [
     `output_path: ${data.output_path}`,
     `output_hash: ${data.output_hash}`,
     `module: ${data.module}`,
-  ].join("\n");
+  ];
+  if (data.suggestion_id) {
+    lines.push(`suggestion_id: ${data.suggestion_id}`);
+  }
+  resultTrace.textContent = lines.join("\n");
   setPreview(data.output_preview || "-");
   refreshOutputTokenMeta();
 }
