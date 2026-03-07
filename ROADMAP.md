@@ -2,7 +2,28 @@
 
 ## Project Intent
 
-Build a stable personal operating center for AI agents, where execution scales but judgment remains coherent, auditable, and aligned with long-term direction.
+Build a core personal operating system for AI agents, not just a task automation stack.
+
+The system is a stable, extensible operating center where:
+
+- Agents scale execution across workflows (content, research, projects)
+- Shared memory preserves decisions, priorities, principles, and drift signals
+- Owner judgment stays auditable and aligned with long-term direction
+
+### Enduring Principles
+
+1. Separate execution from judgment.
+2. Keep memory and decision history append-only and auditable.
+3. Prefer modular plugin extension over kernel coupling.
+4. Scale by adding modules and contracts, not by rewriting the core.
+5. Optimize for long-term consistency over short-term noise.
+
+### Evolving Direction
+
+- From automation to governance (guardrails, audits, exception handling)
+- From logging history to shaping future decisions (memory + retrieval)
+- From isolated tasks to cadence-driven operations (daily/weekly/monthly loops)
+- From scattered tools to a unified control center (orchestrator + UI)
 
 ## Version Timeline
 

@@ -1,19 +1,37 @@
 # Personal Core OS
 
-Personal Core OS is a file-based operating system for human + AI collaboration.
+Personal Core OS is a core personal operating system for AI agents, not just a task automation toolkit.
 
-It is designed as a durable control plane:
+It is designed as a durable and extensible operating center:
 
-- Agents execute workflows
-- The system preserves identity, memory, and decision discipline
+- Agents execute workflows (content, research, projects)
+- Shared memory preserves decisions, priorities, principles, and drift signals
 - The owner audits exceptions and approves strategic changes
 
 ## North Star
 
-Separate execution from judgment while keeping them aligned over time.
+Separate execution from judgment while keeping both aligned over time.
 
-- Execution: content work, project throughput, daily memory capture
-- Judgment: decisions, guardrails, profile alignment, drift control
+- Execution scales through agents
+- Judgment is anchored in durable memory and guardrails
+- Actions are pulled toward long-term direction over short-term noise
+
+## Enduring Principles
+
+1. Keep execution and judgment decoupled.
+2. Preserve append-only, auditable history.
+3. Prefer modular plugin-like extension over kernel coupling.
+4. Scale by adding modules, not rewriting the core.
+5. Optimize for long-term consistency before short-term speed.
+
+## Evolving Direction
+
+Roadmap details can evolve while this direction stays stable:
+
+- From automation to governance (guardrails, audits, exception handling)
+- From logging history to improving future decisions (memory + retrieval)
+- From isolated tasks to operational cadence (daily/weekly/monthly loops)
+- From scattered tools to a unified control center (orchestrator + UI)
 
 ## Core Architecture
 
