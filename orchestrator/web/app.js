@@ -142,6 +142,12 @@ function renderInspectResult(data) {
       planLines.push(`  ${idx + 1}. ${prompt}`);
     });
   }
+  if (Array.isArray(data.debug_sections) && data.debug_sections.length > 0) {
+    planLines.push("schema_debugger_output_sections:");
+    data.debug_sections.forEach((section, idx) => {
+      planLines.push(`  ${idx + 1}. ${section}`);
+    });
+  }
   planTrace.textContent = planLines.join("\n");
 
   renderLoadedFiles(data.loaded_files || []);

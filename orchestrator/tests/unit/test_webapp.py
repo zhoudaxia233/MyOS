@@ -94,6 +94,8 @@ def test_api_inspect_and_run_writes_output() -> None:
         } or reason.startswith("llm_")
         assert inspect_result["plan"]["skill"].endswith(".md")
         assert len(inspect_result["loaded_files"]) >= 2
+        assert isinstance(inspect_result["debug_prompts"], list)
+        assert isinstance(inspect_result["debug_sections"], list)
 
         run_result = api_run(root, inspect_payload)
         assert run_result["ok"] is True
@@ -101,6 +103,8 @@ def test_api_inspect_and_run_writes_output() -> None:
         assert len(run_result["output_hash"]) == 64
         assert isinstance(run_result["output_preview"], str)
         assert len(run_result["output_preview"]) > 0
+        assert isinstance(run_result["debug_prompts"], list)
+        assert isinstance(run_result["debug_sections"], list)
         assert (root / run_result["output_path"]).exists()
 
         output_payload = api_output(root, run_result["output_path"])

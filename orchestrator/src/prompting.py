@@ -64,6 +64,33 @@ def schema_debugger_questions(module: str, task: str) -> list[str]:
     return questions
 
 
+def schema_debugger_output_sections(module: str, task: str) -> list[str]:
+    if not schema_debugger_enabled(module, task):
+        return []
+
+    sections = [
+        "Facts I Read",
+        "Current Schema",
+        "Assumptions Under Load",
+        "Contradictions / Mismatch",
+        "Accommodation Options",
+        "Best Revision Hypothesis",
+        "Falsification Test",
+        "Next Logging Action",
+    ]
+
+    mod = str(module).strip().lower()
+    if mod == "decision":
+        sections.append("Decision Rule Patch")
+    if mod == "profile":
+        sections.append("Trigger-Response Update")
+    if mod == "memory":
+        sections.append("Pattern Signal to Track")
+    if mod == "cognition":
+        sections.append("Equilibration Criteria")
+    return sections
+
+
 def execution_instruction(task: str, module: str) -> str:
     lines = [BASE_EXECUTION_INSTRUCTION]
     prompts = schema_debugger_questions(module, task)
@@ -72,4 +99,8 @@ def execution_instruction(task: str, module: str) -> str:
         lines.append("Schema debugger prompts (answer explicitly when relevant):")
         for i, prompt in enumerate(prompts, start=1):
             lines.append(f"{i}. {prompt}")
+        lines.append("")
+        lines.append("Output structure guideline (unless task requires a strict template):")
+        for i, section in enumerate(schema_debugger_output_sections(module, task), start=1):
+            lines.append(f"{i}. {section}")
     return "\n".join(lines)

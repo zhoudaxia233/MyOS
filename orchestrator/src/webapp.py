@@ -20,7 +20,7 @@ from metrics import compute_drift_metrics, render_metrics_report
 from owner_report import build_owner_snapshot, render_owner_report
 from planner import plan_task
 from plugin_contract import validate_repo
-from prompting import schema_debugger_questions
+from prompting import schema_debugger_output_sections, schema_debugger_questions
 from retrieval import build_index, load_retrieval_config, search_index
 from route_selector import select_route
 from runner import run_with_provider
@@ -233,6 +233,7 @@ def _inspect_task(
         "retrieval_hits": len(hits),
         "loaded_files": [f["path"] for f in bundle["files"]],
         "debug_prompts": schema_debugger_questions(module, task),
+        "debug_sections": schema_debugger_output_sections(module, task),
     }
 
 
@@ -284,6 +285,7 @@ def _execute_task(
         _log_retrieval(root, task, module, retrieval_top_k, len(hits))
 
     debug_prompts = schema_debugger_questions(module, task)
+    debug_sections = schema_debugger_output_sections(module, task)
     return {
         "module": module,
         "provider": provider,
@@ -295,6 +297,7 @@ def _execute_task(
         "retrieval_hits": len(hits),
         "loaded_files": [f["path"] for f in bundle["files"]],
         "debug_prompts": debug_prompts,
+        "debug_sections": debug_sections,
     }
 
 

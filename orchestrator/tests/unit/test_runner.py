@@ -35,6 +35,7 @@ def test_run_with_handoff_provider_returns_copy_block() -> None:
     assert "Task:" in out
     assert "run weekly decision review" in out
     assert "Schema debugger prompts" in out
+    assert "Output structure guideline" in out
     assert "## FILE: core/ROUTER.md" in out
 
 

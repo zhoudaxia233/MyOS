@@ -33,6 +33,8 @@ It reads kernel/module protocols, builds minimal context bundles, optionally ret
 Routing rules are discovered from each module's `module.manifest.yaml`, so adding module keywords does not require router code changes.
 `orchestrator/config/routes.json` remains as legacy fallback.
 
+`inspect` and `run` now include schema-debugger prompts and output-section guidance for cognition-related tasks.
+
 ## Retrieval Scaling
 
 ### Index build

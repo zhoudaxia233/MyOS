@@ -24,7 +24,7 @@ from metrics import compute_drift_metrics, render_metrics_report
 from owner_report import build_owner_snapshot, render_owner_report
 from planner import plan_task
 from plugin_contract import validate_repo
-from prompting import schema_debugger_questions
+from prompting import schema_debugger_output_sections, schema_debugger_questions
 from retrieval import build_index, format_hits, load_retrieval_config, search_index
 from route_selector import select_route
 from runner import run_with_provider
@@ -206,6 +206,7 @@ def execute_task(
         _log_retrieval(root, task, module, retrieval_top_k, len(hits))
 
     debug_prompts = schema_debugger_questions(module, task)
+    debug_sections = schema_debugger_output_sections(module, task)
     return {
         "module": module,
         "provider": provider,
@@ -216,6 +217,7 @@ def execute_task(
         "retrieval_hits": len(hits),
         "loaded_files": [f["path"] for f in bundle["files"]],
         "debug_prompts": debug_prompts,
+        "debug_sections": debug_sections,
     }
 
 
@@ -243,6 +245,11 @@ def cmd_inspect(args: argparse.Namespace) -> int:
         print("Schema debugger prompts:")
         for i, prompt in enumerate(debug_prompts, start=1):
             print(f"{i}. {prompt}")
+    debug_sections = schema_debugger_output_sections(module, args.task)
+    if debug_sections:
+        print("Schema debugger output sections:")
+        for i, section in enumerate(debug_sections, start=1):
+            print(f"{i}. {section}")
     print("Files:")
     for f in bundle["files"]:
         print(f"- {f['path']}")
@@ -275,6 +282,10 @@ def cmd_run(args: argparse.Namespace) -> int:
         print("Schema debugger prompts:")
         for i, prompt in enumerate(result["debug_prompts"], start=1):
             print(f"{i}. {prompt}")
+    if result["debug_sections"]:
+        print("Schema debugger output sections:")
+        for i, section in enumerate(result["debug_sections"], start=1):
+            print(f"{i}. {section}")
     print("Loaded files:")
     for path in result["loaded_files"]:
         print(f"- {path}")
