@@ -23,7 +23,7 @@ from idgen import next_id_for_rel_path
 from learning_ingest import ingest_learning_asset
 from loader import load_context_bundle
 from metrics import compute_cognition_trend, compute_drift_metrics, render_metrics_report
-from owner_report import build_owner_snapshot, render_owner_report
+from owner_report import build_owner_snapshot, render_owner_report, render_owner_todos
 from planner import plan_task
 from plugin_contract import validate_repo
 from prompting import schema_debugger_output_sections, schema_debugger_questions
@@ -699,6 +699,14 @@ def cmd_owner_report(args: argparse.Namespace) -> int:
     out = write_output(root, output_rel, report)
     report_path = _root_relative(out, root)
 
+    todos_path = None
+    if snapshot.get("escalation_todos"):
+        stamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        todos_rel = f"modules/decision/outputs/owner_todos_{stamp}.md"
+        todos_out = write_output(root, todos_rel, render_owner_todos(snapshot))
+        todos_path = _root_relative(todos_out, root)
+        snapshot["source_artifacts"]["owner_todos"] = todos_path
+
     summary = {k: v["status"] for k, v in snapshot["metrics"]["metrics"].items()}
     record = {
         "id": next_id_for_rel_path(root, "or", "orchestrator/logs/owner_reports.jsonl"),
@@ -712,6 +720,8 @@ def cmd_owner_report(args: argparse.Namespace) -> int:
     log_owner_report(root, record)
 
     print(f"Wrote: {out}")
+    if todos_path:
+        print(f"Wrote todos: {root / todos_path}")
     print(f"Summary: {summary}")
     return 0
 
@@ -774,6 +784,13 @@ def cmd_schedule_run(args: argparse.Namespace) -> int:
         out = write_output(root, owner_output, owner_report)
         out_rel = _root_relative(out, root)
 
+        todos_rel = None
+        if owner_snapshot.get("escalation_todos"):
+            todos_output = f"modules/decision/outputs/owner_todos_{stamp}.md"
+            todos_out = write_output(root, todos_output, render_owner_todos(owner_snapshot))
+            todos_rel = _root_relative(todos_out, root)
+            owner_snapshot["source_artifacts"]["owner_todos"] = todos_rel
+
         owner_record = {
             "id": next_id_for_rel_path(root, "or", "orchestrator/logs/owner_reports.jsonl"),
             "created_at": _utc_now(),
@@ -798,6 +815,8 @@ def cmd_schedule_run(args: argparse.Namespace) -> int:
         }
         log_schedule_run(root, schedule_record)
         print(f"- rt_weekly_owner_report_auto -> {out_rel}")
+        if todos_rel:
+            print(f"- rt_weekly_owner_todos_auto -> {todos_rel}")
 
     return 0
 

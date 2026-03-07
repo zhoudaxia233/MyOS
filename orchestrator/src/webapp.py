@@ -22,7 +22,7 @@ from loader import load_context_bundle
 from learning_ingest import ingest_learning_text
 from manifests import discover_module_manifests
 from metrics import compute_cognition_trend, compute_drift_metrics, render_metrics_report
-from owner_report import build_owner_snapshot, render_owner_report
+from owner_report import build_owner_snapshot, render_owner_report, render_owner_todos
 from planner import plan_task
 from plugin_contract import validate_repo
 from prompting import schema_debugger_output_sections, schema_debugger_questions
@@ -393,6 +393,14 @@ def _run_owner_report(root: Path, window_days: int, output_rel: str | None) -> d
     out = write_output(root, output_path, report)
     report_path = _root_relative(out, root)
 
+    todos_path = None
+    if snapshot.get("escalation_todos"):
+        stamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        todos_rel = f"modules/decision/outputs/owner_todos_{stamp}.md"
+        todos_out = write_output(root, todos_rel, render_owner_todos(snapshot))
+        todos_path = _root_relative(todos_out, root)
+        snapshot["source_artifacts"]["owner_todos"] = todos_path
+
     summary = {k: v["status"] for k, v in snapshot["metrics"]["metrics"].items()}
     record = {
         "id": next_id_for_rel_path(root, "or", "orchestrator/logs/owner_reports.jsonl"),
@@ -411,6 +419,7 @@ def _run_owner_report(root: Path, window_days: int, output_rel: str | None) -> d
         "output_path": report_path,
         "output_preview": _preview_text(report),
         "source_artifacts": snapshot["source_artifacts"],
+        "owner_todos_path": todos_path,
     }
 
 
@@ -546,6 +555,19 @@ def _run_schedule_cycle(
             "result_path": owner_output["output_path"],
         }
         log_schedule_run(root, schedule_record)
+        if owner_output.get("owner_todos_path"):
+            todos_record = {
+                "id": next_id_for_rel_path(root, "sr", "orchestrator/logs/schedule_runs.jsonl"),
+                "created_at": _utc_now(),
+                "status": "active",
+                "cycle": cycle,
+                "routine_id": "rt_weekly_owner_todos_auto",
+                "module": "decision",
+                "skill": "owner_todos",
+                "provider": provider,
+                "result_path": owner_output["owner_todos_path"],
+            }
+            log_schedule_run(root, todos_record)
 
     return {
         "cycle": cycle,

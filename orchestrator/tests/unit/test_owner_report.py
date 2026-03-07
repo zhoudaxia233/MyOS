@@ -2,7 +2,7 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
-from owner_report import build_owner_snapshot, render_owner_report
+from owner_report import build_owner_snapshot, render_owner_report, render_owner_todos
 
 
 def _write_jsonl(path: Path, schema_name: str, fields: list[str], rows: list[dict]) -> None:
@@ -153,3 +153,6 @@ def test_owner_snapshot_and_render() -> None:
         assert "Owner Report" in report
         assert "Executive Summary" in report
         assert "cognition_timeline" in report
+        todos = render_owner_todos(snapshot)
+        assert "Owner Escalation Todos" in todos
+        assert "(RED) precommit_coverage" in todos

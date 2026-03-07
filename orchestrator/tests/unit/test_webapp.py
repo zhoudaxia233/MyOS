@@ -142,6 +142,12 @@ def test_api_action_validate_metrics_and_schedule() -> None:
         assert isinstance(metrics_result["cognition_cards"], list)
         assert (root / metrics_result["output_path"]).exists()
 
+        owner_result = api_action(root, {"action": "owner_report", "window_days": 7})
+        assert owner_result["ok"] is True
+        assert owner_result["action"] == "owner_report"
+        assert "source_artifacts" in owner_result
+        assert "owner_todos" in owner_result["source_artifacts"]
+
         schedule_result = api_action(
             root,
             {

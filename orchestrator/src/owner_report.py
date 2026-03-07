@@ -301,6 +301,7 @@ def build_owner_snapshot(repo_root: Path, window_days: int, now: datetime | None
             "weekly_review": weekly_review,
             "metrics_report": metrics_report,
             "cognition_timeline": cognition_timeline,
+            "owner_todos": None,
         },
         "consistency_alerts": consistency_alerts,
         "auto_triggers": auto_triggers,
@@ -404,3 +405,43 @@ def render_owner_report(snapshot: dict) -> str:
     )
 
     return "\n".join(lines) + "\n"
+
+
+def render_owner_todos(snapshot: dict) -> str:
+    todos = snapshot.get("escalation_todos", [])
+    lines = [
+        "# Owner Escalation Todos",
+        "",
+        f"- Generated at: {snapshot.get('generated_at', '')}",
+        f"- Window: last {snapshot.get('window_days', '')} days",
+        "",
+    ]
+
+    if not todos:
+        lines.extend(
+            [
+                "## Todos",
+                "",
+                "- none",
+                "",
+            ]
+        )
+        return "\n".join(lines)
+
+    lines.extend(["## Todos", ""])
+    for item in todos:
+        metric = str(item.get("metric", "unknown"))
+        priority = str(item.get("priority", "red")).upper()
+        action = str(item.get("action", "")).strip()
+        lines.append(f"- [ ] ({priority}) {metric}: {action}")
+
+    lines.extend(
+        [
+            "",
+            "## Completion Rule",
+            "",
+            "- Mark done only after evidence is appended in decision/profile/cognition logs.",
+            "",
+        ]
+    )
+    return "\n".join(lines)
