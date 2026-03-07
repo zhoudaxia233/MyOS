@@ -26,6 +26,7 @@ It tracks how mental models (schemas) are used, where they fail, how they are re
 - `modules/cognition/skills/log_accommodation.md`: Log an accommodation revision and optional new schema version
 - `modules/cognition/skills/log_equilibration.md`: Log an equilibration cycle after revision
 - `modules/cognition/skills/run_equilibration_review.md`: Weekly synthesis of schema evolution signals
+- `modules/cognition/skills/review_timeline.md`: Build reflective cognitive evolution timeline output
 
 ### Canonical data (SSOT)
 
@@ -59,6 +60,8 @@ It tracks how mental models (schemas) are used, where they fail, how they are re
    - Record whether revision improves explanatory and predictive coherence.
 6. Weekly synthesis
    - Summarize recurrent tensions, revisions, and unresolved topics.
+7. Reflective timeline
+   - Build longitudinal event view of schema evolution.
 
 ## Progressive Loading Rules (Required)
 

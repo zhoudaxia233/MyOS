@@ -260,6 +260,7 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py log-assimilation --topic "
 python3 /Users/closears/MyOS/orchestrator/src/main.py detect-disequilibrium --topic "..." [--window 30] [--schema-version-id <sv_id>] [--output <path>]
 python3 /Users/closears/MyOS/orchestrator/src/main.py log-accommodation --topic "..." --previous-schema-version-id <sv_id> --revision-type <weaken|replace|split|merge|refine> --revision-summary "..." --new-schema-hypothesis "..."
 python3 /Users/closears/MyOS/orchestrator/src/main.py log-equilibration --topic "..." --from-schema-version-id <sv_id> --to-schema-version-id <sv_id> [--coherence-score 7]
+python3 /Users/closears/MyOS/orchestrator/src/main.py cognition-timeline [--topic "..."] [--window 90] [--output <path>]
 python3 /Users/closears/MyOS/orchestrator/src/main.py index [--source-glob "modules/decision/logs/*.jsonl"]
 python3 /Users/closears/MyOS/orchestrator/src/main.py search --query "..." [--module <name>] [--top-k 8]
 python3 /Users/closears/MyOS/orchestrator/src/main.py metrics [--window 7|30] [--output <path>]

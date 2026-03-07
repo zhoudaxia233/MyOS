@@ -10,7 +10,12 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
-from cognition import detect_disequilibrium, render_disequilibrium_report
+from cognition import (
+    build_cognitive_timeline,
+    detect_disequilibrium,
+    render_cognitive_timeline,
+    render_disequilibrium_report,
+)
 from config import load_runtime_config
 from idgen import next_id_for_rel_path
 from loader import load_context_bundle
@@ -404,6 +409,32 @@ def _run_disequilibrium(
     }
 
 
+def _run_cognition_timeline(
+    root: Path,
+    *,
+    topic: str | None,
+    window_days: int,
+    output_rel: str | None,
+) -> dict:
+    snapshot = build_cognitive_timeline(root, topic=topic, window_days=window_days)
+    report = render_cognitive_timeline(snapshot)
+
+    if output_rel:
+        output_path = output_rel
+    else:
+        stamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        output_path = f"modules/cognition/outputs/cognitive_timeline_{stamp}.md"
+
+    out = write_output(root, output_path, report)
+    return {
+        "topic": topic,
+        "window_days": window_days,
+        "event_count": snapshot["counts"]["events"],
+        "output_path": _root_relative(out, root),
+        "output_preview": _preview_text(report),
+    }
+
+
 def _run_schedule_cycle(
     *,
     root: Path,
@@ -654,6 +685,18 @@ def api_action(root: Path, payload: dict[str, Any]) -> dict:
             window_days=window_days,
             schema_version_id=schema_version_id,
             tags=tags,
+            output_rel=output_rel,
+        )
+        return {"ok": True, "action": action, **result}
+
+    if action == "cognition_timeline":
+        topic = _normalize_optional_str(payload.get("task"))
+        window_days = _coerce_int(payload.get("window_days"), default=90, minimum=1, maximum=3650)
+        output_rel = _normalize_optional_str(payload.get("output"))
+        result = _run_cognition_timeline(
+            root,
+            topic=topic,
+            window_days=window_days,
             output_rel=output_rel,
         )
         return {"ok": True, "action": action, **result}

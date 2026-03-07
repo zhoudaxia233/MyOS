@@ -745,3 +745,176 @@ def log_equilibration_cycle(
     }
     append_jsonl(path, record, schema_header=EQUILIBRATION_CYCLES_SCHEMA)
     return record
+
+
+def build_cognitive_timeline(
+    repo_root: Path,
+    *,
+    topic: str | None = None,
+    window_days: int = 90,
+) -> dict:
+    if window_days <= 0:
+        raise ValueError("window_days must be > 0")
+
+    topic_text = str(topic).strip()
+    topic_tokens = _topic_tokens(topic_text)
+    cutoff = datetime.now(timezone.utc) - timedelta(days=window_days)
+
+    events: list[dict] = []
+
+    def include_row(row: dict) -> bool:
+        if not _in_window(row, cutoff):
+            return False
+        if not topic_text:
+            return True
+        text = " ".join(
+            [
+                str(row.get("topic", "")),
+                str(row.get("schema_name", "")),
+                str(row.get("summary", "")),
+                _flatten(row),
+            ]
+        )
+        return _topic_match(text, topic_tokens)
+
+    def created(row: dict) -> str:
+        return str(row.get("created_at", "")).strip()
+
+    for row in _load_jsonl(_schema_versions_path(repo_root)):
+        if not include_row(row):
+            continue
+        events.append(
+            {
+                "created_at": created(row),
+                "event_type": "schema_version",
+                "id": str(row.get("id", "")).strip(),
+                "topic": str(row.get("topic", "")).strip(),
+                "summary": f"Schema v{row.get('version', '?')} {row.get('schema_name', '')}: {row.get('summary', '')}",
+                "source_refs": _normalize_list(row.get("source_refs", [])),
+            }
+        )
+
+    for row in _load_jsonl(_disequilibrium_events_path(repo_root)):
+        if not include_row(row):
+            continue
+        events.append(
+            {
+                "created_at": created(row),
+                "event_type": "disequilibrium",
+                "id": str(row.get("id", "")).strip(),
+                "topic": str(row.get("topic", "")).strip(),
+                "summary": f"Tension {row.get('tension_score', '?')}/10: {row.get('conflict_summary', '')}",
+                "source_refs": _normalize_list(row.get("source_refs", [])),
+            }
+        )
+
+    for row in _load_jsonl(_accommodation_revisions_path(repo_root)):
+        if not include_row(row):
+            continue
+        events.append(
+            {
+                "created_at": created(row),
+                "event_type": "accommodation",
+                "id": str(row.get("id", "")).strip(),
+                "topic": str(row.get("topic", "")).strip(),
+                "summary": f"{row.get('revision_type', '')}: {row.get('revision_summary', '')}",
+                "source_refs": _normalize_list(row.get("source_refs", [])),
+            }
+        )
+
+    for row in _load_jsonl(_equilibration_cycles_path(repo_root)):
+        if not include_row(row):
+            continue
+        events.append(
+            {
+                "created_at": created(row),
+                "event_type": "equilibration",
+                "id": str(row.get("id", "")).strip(),
+                "topic": str(row.get("topic", "")).strip(),
+                "summary": f"Coherence {row.get('coherence_score', '?')}/10 from {row.get('from_schema_version_id')} to {row.get('to_schema_version_id')}",
+                "source_refs": _normalize_list(row.get("source_refs", [])),
+            }
+        )
+
+    events.sort(
+        key=lambda event: (_parse_iso8601(str(event.get("created_at", ""))) or datetime.min.replace(tzinfo=timezone.utc))
+    )
+    type_counts = Counter(str(event.get("event_type", "")) for event in events)
+
+    unresolved: list[dict] = []
+    for event in events:
+        if event["event_type"] != "disequilibrium":
+            continue
+        # Keep only high-tension events as unresolved candidates.
+        match = re.search(r"Tension\s+([0-9]+)/10", event["summary"])
+        if not match:
+            continue
+        if int(match.group(1)) < 6:
+            continue
+        unresolved.append({"id": event["id"], "summary": event["summary"]})
+
+    return {
+        "generated_at": _utc_now(),
+        "window_days": window_days,
+        "topic": topic_text or None,
+        "counts": {
+            "events": len(events),
+            "schema_version": type_counts.get("schema_version", 0),
+            "disequilibrium": type_counts.get("disequilibrium", 0),
+            "accommodation": type_counts.get("accommodation", 0),
+            "equilibration": type_counts.get("equilibration", 0),
+        },
+        "events": events,
+        "unresolved_high_tension": unresolved[:10],
+    }
+
+
+def render_cognitive_timeline(snapshot: dict) -> str:
+    lines = [
+        "# Cognitive Evolution Timeline",
+        "",
+        f"- Generated at: {snapshot['generated_at']}",
+        f"- Window: last {snapshot['window_days']} days",
+        f"- Topic filter: {snapshot.get('topic') or 'all'}",
+        "",
+        "## Event Counts",
+        "",
+        f"- total events: {snapshot['counts']['events']}",
+        f"- schema versions: {snapshot['counts']['schema_version']}",
+        f"- disequilibrium events: {snapshot['counts']['disequilibrium']}",
+        f"- accommodation revisions: {snapshot['counts']['accommodation']}",
+        f"- equilibration cycles: {snapshot['counts']['equilibration']}",
+        "",
+        "## Timeline",
+        "",
+    ]
+
+    events = snapshot.get("events", [])
+    if not events:
+        lines.append("- No cognition events in this window.")
+    else:
+        for event in events:
+            lines.append(
+                f"- {event['created_at']} [{event['event_type']}] {event['id']} | topic={event.get('topic') or 'n/a'}"
+            )
+            lines.append(f"  {event['summary']}")
+            refs = event.get("source_refs", [])
+            if refs:
+                lines.append(f"  source_refs={','.join(refs)}")
+
+    lines.extend(
+        [
+            "",
+            "## Unresolved High-Tension Events",
+            "",
+        ]
+    )
+    unresolved = snapshot.get("unresolved_high_tension", [])
+    if not unresolved:
+        lines.append("- None.")
+    else:
+        for item in unresolved:
+            lines.append(f"- {item['id']}: {item['summary']}")
+
+    lines.append("")
+    return "\n".join(lines)

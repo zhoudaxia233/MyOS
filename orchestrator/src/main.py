@@ -6,11 +6,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from cognition import (
+    build_cognitive_timeline,
     detect_disequilibrium,
     log_accommodation_revision,
     log_assimilation_event,
     log_equilibration_cycle,
     log_schema_version,
+    render_cognitive_timeline,
     render_disequilibrium_report,
 )
 from decision_gate import evaluate_decision_entry_gate
@@ -492,6 +494,27 @@ def cmd_log_equilibration(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_cognition_timeline(args: argparse.Namespace) -> int:
+    root = repo_root()
+    snapshot = build_cognitive_timeline(
+        root,
+        topic=_normalize_optional_str(args.topic),
+        window_days=int(args.window),
+    )
+    report = render_cognitive_timeline(snapshot)
+
+    if args.output:
+        output_rel = args.output
+    else:
+        stamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        output_rel = f"modules/cognition/outputs/cognitive_timeline_{stamp}.md"
+    out = write_output(root, output_rel, report)
+
+    print(f"Events: {snapshot['counts']['events']}")
+    print(f"Wrote: {out}")
+    return 0
+
+
 def cmd_guardrail_check(args: argparse.Namespace) -> int:
     root = repo_root()
     policy = load_domain_guardrails(root)
@@ -927,6 +950,12 @@ def build_parser() -> argparse.ArgumentParser:
     sp_log_equilibration.add_argument("--source-ref", action="append", default=[])
     sp_log_equilibration.add_argument("--tag", action="append", default=[])
     sp_log_equilibration.set_defaults(func=cmd_log_equilibration)
+
+    sp_cognition_timeline = sub.add_parser("cognition-timeline")
+    sp_cognition_timeline.add_argument("--topic", default=None)
+    sp_cognition_timeline.add_argument("--window", type=int, default=90)
+    sp_cognition_timeline.add_argument("--output", default=None)
+    sp_cognition_timeline.set_defaults(func=cmd_cognition_timeline)
 
     sp_guardrail = sub.add_parser("guardrail-check")
     sp_guardrail.add_argument("--domain", required=True, choices=["invest", "project", "content"])

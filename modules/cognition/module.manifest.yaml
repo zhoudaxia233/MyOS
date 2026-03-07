@@ -50,6 +50,16 @@
         "output_prefix": "equilibration_review"
       },
       {
+        "id": "review_timeline",
+        "match_any": [
+          "cognitive timeline",
+          "schema timeline",
+          "reflective timeline"
+        ],
+        "skill": "review_timeline",
+        "output_prefix": "cognitive_timeline"
+      },
+      {
         "id": "log_schema",
         "match_any": [
           "schema map",

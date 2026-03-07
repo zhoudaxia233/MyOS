@@ -198,6 +198,9 @@ function renderActionResult(data) {
   if (typeof data.signal_count === "number") {
     out.push(`signal_count: ${data.signal_count}`);
   }
+  if (typeof data.event_count === "number") {
+    out.push(`event_count: ${data.event_count}`);
+  }
   if (data.event_id) {
     out.push(`event_id: ${data.event_id}`);
   }
@@ -513,6 +516,15 @@ async function runAction(action) {
     payload.window_days = 30;
     payload.tags = ["ui_quick_action"];
     addUserTaskOnce(taskText);
+  }
+
+  if (action === "cognition_timeline") {
+    payload.task = taskText || null;
+    payload.window_days = 90;
+    payload.tags = ["ui_quick_action"];
+    if (taskText) {
+      addUserTaskOnce(taskText);
+    }
   }
 
   addBubble("system", `Running action: ${payload.action}`);

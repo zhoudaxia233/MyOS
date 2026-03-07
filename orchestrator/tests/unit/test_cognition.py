@@ -6,11 +6,13 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from cognition import (
+    build_cognitive_timeline,
     detect_disequilibrium,
     log_accommodation_revision,
     log_assimilation_event,
     log_equilibration_cycle,
     log_schema_version,
+    render_cognitive_timeline,
 )
 
 
@@ -201,3 +203,12 @@ def test_accommodation_creates_new_schema_version_and_equilibration_cycle() -> N
 
         eq_lines = (root / "modules/cognition/logs/equilibration_cycles.jsonl").read_text(encoding="utf-8").splitlines()
         assert len(eq_lines) >= 2
+
+        timeline = build_cognitive_timeline(root, topic="investing", window_days=365)
+        assert timeline["counts"]["events"] >= 3
+        assert timeline["counts"]["schema_version"] >= 2
+        assert timeline["counts"]["accommodation"] >= 1
+        assert timeline["counts"]["equilibration"] >= 1
+
+        report = render_cognitive_timeline(timeline)
+        assert "Cognitive Evolution Timeline" in report

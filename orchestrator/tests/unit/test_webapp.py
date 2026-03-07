@@ -196,6 +196,19 @@ def test_api_action_validate_metrics_and_schedule() -> None:
         assert isinstance(diseq_result["tension_score"], int)
         assert (root / diseq_result["output_path"]).exists()
 
+        timeline_result = api_action(
+            root,
+            {
+                "action": "cognition_timeline",
+                "task": "invest risk model",
+                "window_days": 180,
+            },
+        )
+        assert timeline_result["ok"] is True
+        assert timeline_result["action"] == "cognition_timeline"
+        assert isinstance(timeline_result["event_count"], int)
+        assert (root / timeline_result["output_path"]).exists()
+
 
 def test_api_output_rejects_non_output_and_escape_paths() -> None:
     with TemporaryDirectory() as td:
