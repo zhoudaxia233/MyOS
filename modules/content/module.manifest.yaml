@@ -13,7 +13,14 @@
       "after-meal story",
       "after meal story",
       "fahou"
-    ]
+    ],
+    "negative_keywords": ["postmortem", "post-mortem"],
+    "keyword_weights": {
+      "post": 1,
+      "after-meal story": 3,
+      "after meal story": 3,
+      "fahou": 3
+    }
   },
   "planning": {
     "default_skill": "MODULE",

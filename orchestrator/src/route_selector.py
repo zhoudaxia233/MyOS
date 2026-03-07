@@ -26,12 +26,18 @@ def select_route(task: str, forced_module: str | None, repo_root: Path) -> dict:
 
     if api_key and module_names:
         try:
-            return llm_route_trace(
+            route = llm_route_trace(
                 task=task,
                 module_names=module_names,
                 model=str(settings.get("routing_model", "gpt-4.1-nano")),
                 api_key=api_key,
             )
+            route["scoring"] = {
+                "strategy": "llm_model_route",
+                "manifest_candidates": [],
+                "routes_candidates": [],
+            }
+            return route
         except Exception as exc:  # noqa: BLE001
             fallback = route_trace(task, forced_module=None, repo_root=repo_root)
             fallback["reason"] = f"llm_route_fallback:{exc.__class__.__name__}:{fallback['reason']}"

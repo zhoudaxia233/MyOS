@@ -57,16 +57,85 @@ fi
 route_from_task() {
   python3 - "$REPO_ROOT" "$1" <<'PY'
 import json
+import re
 import sys
 from pathlib import Path
 
 repo_root = Path(sys.argv[1])
 task = sys.argv[2].lower()
 default_module = "decision"
+token_re = re.compile(r"[a-z0-9]+")
+
+
+def norm_tokens(text: str) -> list[str]:
+    return token_re.findall(str(text).lower())
+
+
+def norm_keyword(text: str) -> str:
+    return " ".join(norm_tokens(text))
+
+
+def match_keywords(task_tokens: list[str], keywords: list[str]) -> list[str]:
+    task_token_set = set(task_tokens)
+    task_norm = " ".join(task_tokens)
+    matched: list[str] = []
+    for raw in keywords:
+        keyword = norm_keyword(raw)
+        if not keyword:
+            continue
+        kw_tokens = keyword.split()
+        if not kw_tokens:
+            continue
+        if len(kw_tokens) == 1:
+            if kw_tokens[0] in task_token_set:
+                matched.append(keyword)
+            continue
+        if " ".join(kw_tokens) in task_norm:
+            matched.append(keyword)
+    return matched
+
+
+def norm_weights(raw: object) -> dict[str, int]:
+    if not isinstance(raw, dict):
+        return {}
+    out: dict[str, int] = {}
+    for key, value in raw.items():
+        keyword = norm_keyword(str(key))
+        if not keyword:
+            continue
+        try:
+            weight = int(value)
+        except (TypeError, ValueError):
+            continue
+        out[keyword] = max(1, min(weight, 100))
+    return out
+
+
+def weight_for(keyword: str, weights: dict[str, int]) -> int:
+    configured = weights.get(keyword)
+    if configured is not None:
+        return configured
+    return 2 if " " in keyword else 1
+
+
+def score_match(task_tokens: list[str], positives: list[str], negatives: list[str], weights: dict[str, int]):
+    pos = match_keywords(task_tokens, positives)
+    if not pos:
+        return None
+    neg = match_keywords(task_tokens, negatives)
+    score = sum(weight_for(k, weights) for k in pos) - sum(weight_for(k, weights) for k in neg)
+    if score <= 0:
+        return None
+    return score, len(pos), -len(neg)
+
+
+task_tokens = norm_tokens(task)
+manifest_candidates: list[tuple[int, int, int, int, str]] = []
 
 modules_root = repo_root / "modules"
 if modules_root.exists():
-    for module_dir in sorted([d for d in modules_root.iterdir() if d.is_dir() and not d.name.startswith(".")], key=lambda p: p.name):
+    module_dirs = sorted([d for d in modules_root.iterdir() if d.is_dir() and not d.name.startswith(".")], key=lambda p: p.name)
+    for idx, module_dir in enumerate(module_dirs):
         manifest = module_dir / "module.manifest.yaml"
         if not manifest.exists():
             continue
@@ -79,10 +148,21 @@ if modules_root.exists():
         keywords = data.get("routing", {}).get("keywords", [])
         if not isinstance(keywords, list):
             keywords = []
-        keywords = [str(k).strip().lower() for k in keywords if str(k).strip()]
-        if any(k in task for k in keywords):
-            print(module_dir.name)
-            raise SystemExit(0)
+        negatives = data.get("routing", {}).get("negative_keywords", [])
+        if isinstance(negatives, str):
+            negatives = [negatives]
+        if not isinstance(negatives, list):
+            negatives = []
+        weights = norm_weights(data.get("routing", {}).get("keyword_weights"))
+
+        hit = score_match(task_tokens, keywords, negatives, weights)
+        if hit:
+            score, pos_count, neg_count = hit
+            manifest_candidates.append((score, pos_count, neg_count, -idx, module_dir.name))
+
+if manifest_candidates:
+    print(max(manifest_candidates)[4])
+    raise SystemExit(0)
 
 cfg_path = repo_root / "orchestrator/config/routes.json"
 if cfg_path.exists():
@@ -92,12 +172,20 @@ if cfg_path.exists():
         routes = [r for r in data.get("routes", []) if isinstance(r, dict)]
     except json.JSONDecodeError:
         routes = []
-    for rule in routes:
+    route_candidates: list[tuple[int, int, int, int, str]] = []
+    for idx, rule in enumerate(routes):
         module = str(rule.get("module", "")).strip()
         keywords = [str(k).lower().strip() for k in rule.get("keywords", [])]
-        if any(k and k in task for k in keywords):
-            print(module)
-            raise SystemExit(0)
+        negatives = [str(k).lower().strip() for k in rule.get("negative_keywords", [])]
+        weights = norm_weights(rule.get("keyword_weights"))
+        hit = score_match(task_tokens, keywords, negatives, weights)
+        if hit and module:
+            score, pos_count, neg_count = hit
+            route_candidates.append((score, pos_count, neg_count, -idx, module))
+
+    if route_candidates:
+        print(max(route_candidates)[4])
+        raise SystemExit(0)
 
 print(default_module)
 PY

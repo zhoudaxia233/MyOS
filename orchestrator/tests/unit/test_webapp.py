@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import shutil
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -114,6 +115,11 @@ def test_api_inspect_and_run_writes_output() -> None:
         assert output_meta["prompt_tokens"] > 0
         assert output_meta["count_method"] in {"tiktoken", "estimate_utf8"}
 
+        runs_path = root / "orchestrator/logs/runs.jsonl"
+        run_lines = runs_path.read_text(encoding="utf-8").splitlines()
+        run_record = json.loads(run_lines[-1])
+        assert "|s=" in str(run_record["route_reason"])
+
 
 def test_api_action_validate_metrics_and_schedule() -> None:
     with TemporaryDirectory() as td:
@@ -181,6 +187,10 @@ def test_api_output_rejects_non_output_and_escape_paths() -> None:
             api_output(root, "core/ROUTER.md")
         with pytest.raises(ValueError):
             api_output(root, "../README.md")
+        with pytest.raises(ValueError):
+            api_output(root, "modules/decision/outputs/../../../README.md")
+        with pytest.raises(ValueError):
+            api_output_meta(root, "modules/decision/outputs/../../../README.md")
 
 
 def test_api_run_rejects_unknown_module() -> None:

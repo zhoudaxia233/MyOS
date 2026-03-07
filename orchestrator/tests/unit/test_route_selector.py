@@ -84,6 +84,7 @@ def test_select_route_uses_llm_when_api_key_exists(monkeypatch) -> None:
         assert called["ok"] is True
         assert trace["module"] == "content"
         assert trace["reason"].startswith("llm_model_route")
+        assert trace["scoring"]["strategy"] == "llm_model_route"
 
 
 def test_select_route_falls_back_when_llm_router_fails(monkeypatch) -> None:
@@ -119,6 +120,7 @@ def test_select_route_falls_back_when_llm_router_fails(monkeypatch) -> None:
         trace = route_selector.select_route("write a post", None, root)
         assert trace["module"] == "content"
         assert trace["reason"].startswith("llm_route_fallback:RuntimeError:")
+        assert trace["scoring"]["strategy"] == "weighted_keyword"
 
 
 def test_select_route_rejects_unknown_forced_module() -> None:

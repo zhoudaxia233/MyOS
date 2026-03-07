@@ -5,6 +5,7 @@ import re
 from datetime import datetime, timezone
 from pathlib import Path
 
+from idgen import next_id_for_path
 from validators import append_jsonl
 
 MEMORY_EVENTS_SCHEMA = {
@@ -53,33 +54,6 @@ def _clip(text: str, limit: int = 260) -> str:
     if len(clean) <= limit:
         return clean
     return clean[: max(0, limit - 3)] + "..."
-
-
-def _next_id(path: Path, prefix: str) -> str:
-    date = datetime.now(timezone.utc).strftime("%Y%m%d")
-    max_seq = 0
-
-    if path.exists() and path.is_file():
-        for i, raw in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
-            line = raw.strip()
-            if not line:
-                continue
-            if i == 1 and '"_schema"' in line:
-                continue
-            try:
-                obj = json.loads(line)
-            except json.JSONDecodeError:
-                continue
-            if not isinstance(obj, dict):
-                continue
-            rec_id = str(obj.get("id", ""))
-            if not rec_id.startswith(f"{prefix}_{date}_"):
-                continue
-            tail = rec_id.rsplit("_", 1)[-1]
-            if tail.isdigit():
-                max_seq = max(max_seq, int(tail))
-
-    return f"{prefix}_{date}_{max_seq + 1:03d}"
 
 
 def _load_input_text(input_path: Path) -> tuple[str, str]:
@@ -220,7 +194,7 @@ def _ingest_learning_content(
     events_log = repo_root / "modules" / "memory" / "logs" / "memory_events.jsonl"
     insights_log = repo_root / "modules" / "memory" / "logs" / "memory_insights.jsonl"
 
-    event_id = _next_id(events_log, "me")
+    event_id = next_id_for_path(events_log, "me")
     event_record = {
         "id": event_id,
         "created_at": now,
@@ -232,7 +206,7 @@ def _ingest_learning_content(
         "source_refs": [],
     }
 
-    insight_id = _next_id(insights_log, "mi")
+    insight_id = next_id_for_path(insights_log, "mi")
     insight_record = {
         "id": insight_id,
         "created_at": now,

@@ -3,11 +3,21 @@
   "routes": [
     {
       "module": "content",
-      "keywords": ["write", "publish", "thread", "tone", "edit", "post", "draft", "message"]
+      "keywords": ["write", "publish", "thread", "tone", "edit", "post", "draft", "message"],
+      "negative_keywords": ["postmortem", "post-mortem"],
+      "keyword_weights": {
+        "post": 1
+      }
     },
     {
       "module": "decision",
-      "keywords": ["decision", "priority", "review", "failure", "risk", "audit", "tradeoff", "plan"]
+      "keywords": ["decision", "priority", "review", "failure", "risk", "audit", "tradeoff", "plan", "postmortem", "post-mortem"],
+      "keyword_weights": {
+        "postmortem": 3,
+        "post-mortem": 3,
+        "audit": 2,
+        "risk": 2
+      }
     },
     {
       "module": "profile",

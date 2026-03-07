@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import argparse
 import hashlib
-import json
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -10,6 +9,7 @@ from decision_gate import evaluate_decision_entry_gate
 from config import load_runtime_config
 from chat_ingest import ingest_chat_export
 from guardrails import evaluate_guardrail, load_domain_guardrails
+from idgen import next_id_for_rel_path
 from learning_ingest import ingest_learning_asset
 from loader import load_context_bundle
 from metrics import compute_drift_metrics, render_metrics_report
@@ -44,34 +44,6 @@ def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
-def _next_id(root: Path, prefix: str, log_rel_path: str) -> str:
-    date = datetime.now(timezone.utc).strftime("%Y%m%d")
-    path = root / log_rel_path
-    max_seq = 0
-
-    if path.exists() and path.is_file():
-        for i, raw in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
-            line = raw.strip()
-            if not line:
-                continue
-            if i == 1 and '"_schema"' in line:
-                continue
-            try:
-                obj = json.loads(line)
-            except json.JSONDecodeError:
-                continue
-            if not isinstance(obj, dict):
-                continue
-            rec_id = str(obj.get("id", ""))
-            if not rec_id.startswith(f"{prefix}_{date}_"):
-                continue
-            tail = rec_id.rsplit("_", 1)[-1]
-            if tail.isdigit():
-                max_seq = max(max_seq, int(tail))
-
-    return f"{prefix}_{date}_{max_seq + 1:03d}"
-
-
 def _root_relative(path: Path, root: Path) -> str:
     try:
         return str(path.relative_to(root))
@@ -85,6 +57,61 @@ def _root_relative(path: Path, root: Path) -> str:
 def _normalize_optional_str(value: str | None) -> str | None:
     text = str(value or "").strip()
     return text or None
+
+
+def _route_reason_for_log(route: dict) -> str:
+    base_reason = str(route.get("reason", "fallback_default"))
+    scoring = route.get("scoring")
+    if not isinstance(scoring, dict):
+        return base_reason
+
+    candidates: list[dict] = []
+    manifest_candidates = scoring.get("manifest_candidates")
+    routes_candidates = scoring.get("routes_candidates")
+    if isinstance(manifest_candidates, list) and manifest_candidates:
+        candidates = [c for c in manifest_candidates if isinstance(c, dict)]
+    elif isinstance(routes_candidates, list) and routes_candidates:
+        candidates = [c for c in routes_candidates if isinstance(c, dict)]
+
+    if not candidates:
+        return base_reason
+
+    module = str(route.get("module", ""))
+    selected = next((c for c in candidates if str(c.get("module", "")) == module), candidates[0])
+
+    score = int(selected.get("score", 0))
+    positive = int(selected.get("positive_hits", 0))
+    negative = int(selected.get("negative_hits", 0))
+    return f"{base_reason}|s={score}|p={positive}|n={negative}"
+
+
+def _print_route_scoring(route: dict) -> None:
+    scoring = route.get("scoring")
+    if not isinstance(scoring, dict):
+        return
+
+    manifest_candidates = scoring.get("manifest_candidates")
+    if isinstance(manifest_candidates, list) and manifest_candidates:
+        print("Route scoring (manifest):")
+        for candidate in manifest_candidates[:3]:
+            module = str(candidate.get("module", ""))
+            score = candidate.get("score", 0)
+            positive = candidate.get("positive_hits", 0)
+            negative = candidate.get("negative_hits", 0)
+            matched = candidate.get("matched_keywords", [])
+            print(f"- {module}: score={score} (+{positive}/-{negative}) matched={matched}")
+        return
+
+    route_candidates = scoring.get("routes_candidates")
+    if isinstance(route_candidates, list) and route_candidates:
+        print("Route scoring (routes):")
+        for candidate in route_candidates[:3]:
+            module = str(candidate.get("module", ""))
+            score = candidate.get("score", 0)
+            positive = candidate.get("positive_hits", 0)
+            negative = candidate.get("negative_hits", 0)
+            matched = candidate.get("matched_keywords", [])
+            print(f"- {module}: score={score} (+{positive}/-{negative}) matched={matched}")
 
 
 def _retrieval_hits(root: Path, query: str, module: str | None, top_k: int) -> list[dict]:
@@ -111,7 +138,7 @@ def _bundle_with_hits(bundle: dict, hits: list[dict]) -> dict:
 def _log_retrieval(root: Path, query: str, module: str | None, top_k: int, result_count: int) -> None:
     cfg = load_retrieval_config(root)
     rec = {
-        "id": _next_id(root, "rq", cfg["query_log_path"]),
+        "id": next_id_for_rel_path(root, "rq", cfg["query_log_path"]),
         "created_at": _utc_now(),
         "status": "active",
         "query": query,
@@ -151,14 +178,14 @@ def execute_task(
     output_hash = hashlib.sha256(content.encode("utf-8")).hexdigest()
 
     run_record = {
-        "id": _next_id(root, "run", "orchestrator/logs/runs.jsonl"),
+        "id": next_id_for_rel_path(root, "run", "orchestrator/logs/runs.jsonl"),
         "created_at": _utc_now(),
         "status": "active",
         "task": task,
         "module": module,
         "provider": provider,
         "skill": plan["skill"],
-        "route_reason": route["reason"],
+        "route_reason": _route_reason_for_log(route),
         "matched_keywords": route["matched_keywords"],
         "loaded_files": [f["path"] for f in bundle["files"]],
         "result_path": _root_relative(out, root),
@@ -197,6 +224,7 @@ def cmd_inspect(args: argparse.Namespace) -> int:
     print(f"Route reason: {route['reason']}")
     if route["matched_keywords"]:
         print(f"Matched keywords: {route['matched_keywords']}")
+    _print_route_scoring(route)
     print(f"Skill: {plan['skill']}")
     print(f"Output path: {plan['output_path']}")
     print("Files:")
@@ -226,6 +254,7 @@ def cmd_run(args: argparse.Namespace) -> int:
     print(f"Route reason: {result['route']['reason']}")
     if result["route"]["matched_keywords"]:
         print(f"Matched keywords: {result['route']['matched_keywords']}")
+    _print_route_scoring(result["route"])
     print("Loaded files:")
     for path in result["loaded_files"]:
         print(f"- {path}")
@@ -336,7 +365,7 @@ def cmd_guardrail_check(args: argparse.Namespace) -> int:
 
     if result["status"] == "override_accepted":
         record = {
-            "id": _next_id(root, "go", "modules/decision/logs/guardrail_overrides.jsonl"),
+            "id": next_id_for_rel_path(root, "go", "modules/decision/logs/guardrail_overrides.jsonl"),
             "created_at": _utc_now(),
             "status": "active",
             "domain": args.domain.lower(),
@@ -393,7 +422,7 @@ def cmd_log_decision(args: argparse.Namespace) -> int:
     )
 
     gate_record = {
-        "id": _next_id(root, "dgc", "modules/decision/logs/decision_gate_checks.jsonl"),
+        "id": next_id_for_rel_path(root, "dgc", "modules/decision/logs/decision_gate_checks.jsonl"),
         "created_at": _utc_now(),
         "status": "active",
         "domain": gate["domain"],
@@ -413,7 +442,7 @@ def cmd_log_decision(args: argparse.Namespace) -> int:
         details = ", ".join(gate["violations"]) if gate["violations"] else "unspecified"
         raise RuntimeError(f"Decision gate blocked; no decision was logged. Violations: {details}")
 
-    decision_id = _next_id(root, "dc", "modules/decision/logs/decisions.jsonl")
+    decision_id = next_id_for_rel_path(root, "dc", "modules/decision/logs/decisions.jsonl")
     decision_record = {
         "id": decision_id,
         "created_at": _utc_now(),
@@ -434,7 +463,7 @@ def cmd_log_decision(args: argparse.Namespace) -> int:
 
     if gate["gate_status"] == "override_accepted":
         override_record = {
-            "id": _next_id(root, "go", "modules/decision/logs/guardrail_overrides.jsonl"),
+            "id": next_id_for_rel_path(root, "go", "modules/decision/logs/guardrail_overrides.jsonl"),
             "created_at": _utc_now(),
             "status": "active",
             "domain": gate["domain"],
@@ -470,7 +499,7 @@ def cmd_metrics(args: argparse.Namespace) -> int:
 
     summary = {k: v["status"] for k, v in snapshot["metrics"].items()}
     record = {
-        "id": _next_id(root, "mt", "orchestrator/logs/metrics_snapshots.jsonl"),
+        "id": next_id_for_rel_path(root, "mt", "orchestrator/logs/metrics_snapshots.jsonl"),
         "created_at": _utc_now(),
         "status": "active",
         "window_days": args.window,
@@ -500,7 +529,7 @@ def cmd_owner_report(args: argparse.Namespace) -> int:
 
     summary = {k: v["status"] for k, v in snapshot["metrics"]["metrics"].items()}
     record = {
-        "id": _next_id(root, "or", "orchestrator/logs/owner_reports.jsonl"),
+        "id": next_id_for_rel_path(root, "or", "orchestrator/logs/owner_reports.jsonl"),
         "created_at": _utc_now(),
         "status": "active",
         "window_days": args.window,
@@ -551,7 +580,7 @@ def cmd_schedule_run(args: argparse.Namespace) -> int:
         )
 
         schedule_record = {
-            "id": _next_id(root, "sr", "orchestrator/logs/schedule_runs.jsonl"),
+            "id": next_id_for_rel_path(root, "sr", "orchestrator/logs/schedule_runs.jsonl"),
             "created_at": _utc_now(),
             "status": "active",
             "cycle": args.cycle,
@@ -574,7 +603,7 @@ def cmd_schedule_run(args: argparse.Namespace) -> int:
         out_rel = _root_relative(out, root)
 
         owner_record = {
-            "id": _next_id(root, "or", "orchestrator/logs/owner_reports.jsonl"),
+            "id": next_id_for_rel_path(root, "or", "orchestrator/logs/owner_reports.jsonl"),
             "created_at": _utc_now(),
             "status": "active",
             "window_days": args.owner_window,
@@ -585,7 +614,7 @@ def cmd_schedule_run(args: argparse.Namespace) -> int:
         log_owner_report(root, owner_record)
 
         schedule_record = {
-            "id": _next_id(root, "sr", "orchestrator/logs/schedule_runs.jsonl"),
+            "id": next_id_for_rel_path(root, "sr", "orchestrator/logs/schedule_runs.jsonl"),
             "created_at": _utc_now(),
             "status": "active",
             "cycle": args.cycle,

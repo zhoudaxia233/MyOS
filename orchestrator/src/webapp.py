@@ -11,6 +11,7 @@ from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 from config import load_runtime_config
+from idgen import next_id_for_rel_path
 from loader import load_context_bundle
 from learning_ingest import ingest_learning_text
 from manifests import discover_module_manifests
@@ -41,34 +42,6 @@ def repo_root() -> Path:
 
 def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-
-
-def _next_id(root: Path, prefix: str, log_rel_path: str) -> str:
-    date = datetime.now(timezone.utc).strftime("%Y%m%d")
-    path = root / log_rel_path
-    max_seq = 0
-
-    if path.exists() and path.is_file():
-        for i, raw in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
-            line = raw.strip()
-            if not line:
-                continue
-            if i == 1 and '"_schema"' in line:
-                continue
-            try:
-                obj = json.loads(line)
-            except json.JSONDecodeError:
-                continue
-            if not isinstance(obj, dict):
-                continue
-            rec_id = str(obj.get("id", ""))
-            if not rec_id.startswith(f"{prefix}_{date}_"):
-                continue
-            tail = rec_id.rsplit("_", 1)[-1]
-            if tail.isdigit():
-                max_seq = max(max_seq, int(tail))
-
-    return f"{prefix}_{date}_{max_seq + 1:03d}"
 
 
 def _root_relative(path: Path, root: Path) -> str:
@@ -106,6 +79,32 @@ def _coerce_bool(value: Any, *, default: bool = False) -> bool:
 def _normalize_optional_str(value: Any) -> str | None:
     text = str(value).strip() if value is not None else ""
     return text or None
+
+
+def _route_reason_for_log(route: dict) -> str:
+    base_reason = str(route.get("reason", "fallback_default"))
+    scoring = route.get("scoring")
+    if not isinstance(scoring, dict):
+        return base_reason
+
+    candidates: list[dict] = []
+    manifest_candidates = scoring.get("manifest_candidates")
+    routes_candidates = scoring.get("routes_candidates")
+    if isinstance(manifest_candidates, list) and manifest_candidates:
+        candidates = [c for c in manifest_candidates if isinstance(c, dict)]
+    elif isinstance(routes_candidates, list) and routes_candidates:
+        candidates = [c for c in routes_candidates if isinstance(c, dict)]
+
+    if not candidates:
+        return base_reason
+
+    module = str(route.get("module", ""))
+    selected = next((c for c in candidates if str(c.get("module", "")) == module), candidates[0])
+
+    score = int(selected.get("score", 0))
+    positive = int(selected.get("positive_hits", 0))
+    negative = int(selected.get("negative_hits", 0))
+    return f"{base_reason}|s={score}|p={positive}|n={negative}"
 
 
 def _coerce_tags(value: Any) -> list[str]:
@@ -148,7 +147,7 @@ def _bundle_with_hits(bundle: dict, hits: list[dict]) -> dict:
 def _log_retrieval(root: Path, query: str, module: str | None, top_k: int, result_count: int) -> None:
     cfg = load_retrieval_config(root)
     rec = {
-        "id": _next_id(root, "rq", cfg["query_log_path"]),
+        "id": next_id_for_rel_path(root, "rq", cfg["query_log_path"]),
         "created_at": _utc_now(),
         "status": "active",
         "query": query,
@@ -170,14 +169,16 @@ def _safe_output_file(root: Path, rel_path: str) -> Path:
     if not rel:
         raise ValueError("path is required")
 
-    rel_norm = rel.replace("\\", "/")
-    if "/outputs/" not in rel_norm:
-        raise ValueError("path must point to an outputs file")
-
     root_abs = root.resolve()
     target = (root / rel).resolve()
     if not target.is_relative_to(root_abs):
         raise ValueError("path escapes repository root")
+
+    rel_target = target.relative_to(root_abs)
+    parts = rel_target.parts
+    if len(parts) < 4 or parts[0] != "modules" or parts[2] != "outputs":
+        raise ValueError("path must point to an outputs file")
+
     if not target.exists() or not target.is_file():
         raise ValueError("output file not found")
     return target
@@ -261,14 +262,14 @@ def _execute_task(
     output_hash = hashlib.sha256(content.encode("utf-8")).hexdigest()
 
     run_record = {
-        "id": _next_id(root, "run", "orchestrator/logs/runs.jsonl"),
+        "id": next_id_for_rel_path(root, "run", "orchestrator/logs/runs.jsonl"),
         "created_at": _utc_now(),
         "status": "active",
         "task": task,
         "module": module,
         "provider": provider,
         "skill": plan["skill"],
-        "route_reason": route["reason"],
+        "route_reason": _route_reason_for_log(route),
         "matched_keywords": route["matched_keywords"],
         "loaded_files": [f["path"] for f in bundle["files"]],
         "result_path": _root_relative(out, root),
@@ -307,7 +308,7 @@ def _run_metrics(root: Path, window_days: int, output_rel: str | None) -> dict:
 
     summary = {k: v["status"] for k, v in snapshot["metrics"].items()}
     record = {
-        "id": _next_id(root, "mt", "orchestrator/logs/metrics_snapshots.jsonl"),
+        "id": next_id_for_rel_path(root, "mt", "orchestrator/logs/metrics_snapshots.jsonl"),
         "created_at": _utc_now(),
         "status": "active",
         "window_days": window_days,
@@ -339,7 +340,7 @@ def _run_owner_report(root: Path, window_days: int, output_rel: str | None) -> d
 
     summary = {k: v["status"] for k, v in snapshot["metrics"]["metrics"].items()}
     record = {
-        "id": _next_id(root, "or", "orchestrator/logs/owner_reports.jsonl"),
+        "id": next_id_for_rel_path(root, "or", "orchestrator/logs/owner_reports.jsonl"),
         "created_at": _utc_now(),
         "status": "active",
         "window_days": window_days,
@@ -390,7 +391,7 @@ def _run_schedule_cycle(
         )
 
         schedule_record = {
-            "id": _next_id(root, "sr", "orchestrator/logs/schedule_runs.jsonl"),
+            "id": next_id_for_rel_path(root, "sr", "orchestrator/logs/schedule_runs.jsonl"),
             "created_at": _utc_now(),
             "status": "active",
             "cycle": cycle,
@@ -416,7 +417,7 @@ def _run_schedule_cycle(
     if cycle == "weekly" and not no_owner_report:
         owner_output = _run_owner_report(root, window_days=owner_window, output_rel=None)
         schedule_record = {
-            "id": _next_id(root, "sr", "orchestrator/logs/schedule_runs.jsonl"),
+            "id": next_id_for_rel_path(root, "sr", "orchestrator/logs/schedule_runs.jsonl"),
             "created_at": _utc_now(),
             "status": "active",
             "cycle": cycle,

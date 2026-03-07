@@ -1,7 +1,13 @@
 {
   "module": "decision",
   "routing": {
-    "keywords": ["decision", "priority", "review", "failure", "risk", "audit", "tradeoff", "plan"]
+    "keywords": ["decision", "priority", "review", "failure", "risk", "audit", "tradeoff", "plan", "postmortem", "post-mortem"],
+    "keyword_weights": {
+      "postmortem": 3,
+      "post-mortem": 3,
+      "audit": 2,
+      "risk": 2
+    }
   },
   "planning": {
     "default_skill": "MODULE",

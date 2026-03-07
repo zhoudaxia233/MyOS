@@ -5,6 +5,7 @@ import re
 from datetime import datetime, timezone
 from pathlib import Path
 
+from idgen import next_id_for_path
 from validators import append_jsonl
 
 MEMORY_EVENTS_SCHEMA = {
@@ -53,33 +54,6 @@ def _normalize_time(value: object) -> str | None:
         return dt.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
     except ValueError:
         return None
-
-
-def _next_id(path: Path, prefix: str = "me") -> str:
-    date = datetime.now(timezone.utc).strftime("%Y%m%d")
-    max_seq = 0
-
-    if path.exists() and path.is_file():
-        for i, raw in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
-            line = raw.strip()
-            if not line:
-                continue
-            if i == 1 and '"_schema"' in line:
-                continue
-            try:
-                obj = json.loads(line)
-            except json.JSONDecodeError:
-                continue
-            if not isinstance(obj, dict):
-                continue
-            rid = str(obj.get("id", ""))
-            if not rid.startswith(f"{prefix}_{date}_"):
-                continue
-            tail = rid.rsplit("_", 1)[-1]
-            if tail.isdigit():
-                max_seq = max(max_seq, int(tail))
-
-    return f"{prefix}_{date}_{max_seq + 1:03d}"
 
 
 def _normalize_content(value: object) -> str:
@@ -321,7 +295,7 @@ def ingest_chat_export(
 
     for event in events:
         record = dict(event)
-        record["id"] = _next_id(memory_log, "me")
+        record["id"] = next_id_for_path(memory_log, "me")
         record_ids.append(record["id"])
         preview.append(
             {

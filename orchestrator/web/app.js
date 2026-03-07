@@ -85,12 +85,51 @@ function renderLoadedFiles(files) {
   }
 }
 
+function formatRouteScoring(route) {
+  if (!route || typeof route !== "object") {
+    return [];
+  }
+  const scoring = route.scoring;
+  if (!scoring || typeof scoring !== "object") {
+    return [];
+  }
+
+  const asLine = (candidate) => {
+    const module = candidate.module || "?";
+    const score = typeof candidate.score === "number" ? candidate.score : 0;
+    const positive = typeof candidate.positive_hits === "number" ? candidate.positive_hits : 0;
+    const negative = typeof candidate.negative_hits === "number" ? candidate.negative_hits : 0;
+    const matched = Array.isArray(candidate.matched_keywords) ? candidate.matched_keywords.join(", ") : "-";
+    return `  ${module}: s=${score} (+${positive}/-${negative}) [${matched || "-"}]`;
+  };
+
+  if (Array.isArray(scoring.manifest_candidates) && scoring.manifest_candidates.length > 0) {
+    const lines = ["manifest_candidates:"];
+    for (const candidate of scoring.manifest_candidates.slice(0, 3)) {
+      lines.push(asLine(candidate));
+    }
+    return lines;
+  }
+
+  if (Array.isArray(scoring.routes_candidates) && scoring.routes_candidates.length > 0) {
+    const lines = ["routes_candidates:"];
+    for (const candidate of scoring.routes_candidates.slice(0, 3)) {
+      lines.push(asLine(candidate));
+    }
+    return lines;
+  }
+
+  return [];
+}
+
 function renderInspectResult(data) {
-  routeTrace.textContent = [
+  const routeLines = [
     `module: ${data.module}`,
     `reason: ${data.route.reason}`,
     `keywords: ${(data.route.matched_keywords || []).join(", ") || "-"}`,
-  ].join("\n");
+  ];
+  routeLines.push(...formatRouteScoring(data.route));
+  routeTrace.textContent = routeLines.join("\n");
 
   planTrace.textContent = [
     `skill: ${data.plan.skill}`,
