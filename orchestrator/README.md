@@ -17,6 +17,7 @@ It reads kernel/module protocols, builds minimal context bundles, optionally ret
 - `router.py`: map task intent to module
 - `loader.py`: load minimal context bundle from selected skill required files
 - `planner.py`: pick skill + output target
+- `prompting.py`: execution instruction builder with schema-debugger prompts
 - `retrieval.py`: build/search lexical index for JSONL histories
 - `scheduling.py`: load cadence routines and build cycle tasks
 - `metrics.py`: compute drift dashboard metrics from logs

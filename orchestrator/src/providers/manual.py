@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from prompting import execution_instruction
+
 
 def run_manual(task: str, module: str, plan: dict, bundle: dict) -> str:
     lines = []
@@ -15,5 +17,7 @@ def run_manual(task: str, module: str, plan: dict, bundle: dict) -> str:
         lines.append(f"- {f['path']}")
     lines.append("")
     lines.append("## Instruction")
-    lines.append("Execute the skill using the loaded files, then write the final output to the output path above.")
+    lines.append(execution_instruction(task, module))
+    lines.append("")
+    lines.append("Return only the final content for the required output path.")
     return "\n".join(lines) + "\n"

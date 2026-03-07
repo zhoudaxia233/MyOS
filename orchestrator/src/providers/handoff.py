@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from prompting import execution_instruction
+
 
 def _sanitize_fence(text: str) -> str:
     # Avoid breaking markdown fence when users paste into external chat UIs.
@@ -24,6 +26,9 @@ def run_handoff(task: str, module: str, plan: dict, bundle: dict) -> str:
     lines.append("")
     lines.append("Required output path:")
     lines.append(plan["output_path"])
+    lines.append("")
+    lines.append("Execution instruction:")
+    lines.append(execution_instruction(task, module))
     lines.append("")
     lines.append("Context files:")
 

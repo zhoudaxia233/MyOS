@@ -1,0 +1,75 @@
+from __future__ import annotations
+
+import re
+
+TOKEN_RE = re.compile(r"[a-z0-9]+")
+
+SCHEMA_DEBUGGER_MODULES = {"decision", "profile", "memory", "cognition"}
+SCHEMA_DEBUGGER_KEYWORDS = {
+    "schema",
+    "mental model",
+    "cognition",
+    "assimilation",
+    "accommodation",
+    "disequilibrium",
+    "equilibration",
+    "contradiction",
+    "mismatch",
+    "invalidation",
+}
+
+BASE_EXECUTION_INSTRUCTION = (
+    "Follow progressive disclosure and use only the provided context. "
+    "Separate observations from inferences, and mark uncertainty when evidence is thin."
+)
+
+
+def _norm(text: str) -> str:
+    return " ".join(TOKEN_RE.findall(str(text).lower()))
+
+
+def schema_debugger_enabled(module: str, task: str) -> bool:
+    mod = str(module).strip().lower()
+    if mod in SCHEMA_DEBUGGER_MODULES:
+        return True
+
+    norm = _norm(task)
+    if not norm:
+        return False
+    return any(keyword in norm for keyword in SCHEMA_DEBUGGER_KEYWORDS)
+
+
+def schema_debugger_questions(module: str, task: str) -> list[str]:
+    if not schema_debugger_enabled(module, task):
+        return []
+
+    questions = [
+        "What schema is being used to interpret this input right now?",
+        "Which assumption is doing hidden work in that interpretation?",
+        "What evidence does not fit and why?",
+        "What would need to be true for the current model to be wrong?",
+        "Is this confusion a lack of information or a structural mismatch?",
+        "What new distinction or higher-order synthesis may be emerging?",
+    ]
+
+    mod = str(module).strip().lower()
+    if mod == "decision":
+        questions.append("Which decision rule should be revised if this conflict repeats?")
+    if mod == "profile":
+        questions.append("Which trigger-response pattern indicates schema drift in self-model?")
+    if mod == "memory":
+        questions.append("Which repeated note pattern indicates unresolved disequilibrium?")
+    if mod == "cognition":
+        questions.append("Which accommodation operator best fits this mismatch (weaken/replace/split/merge/refine)?")
+    return questions
+
+
+def execution_instruction(task: str, module: str) -> str:
+    lines = [BASE_EXECUTION_INSTRUCTION]
+    prompts = schema_debugger_questions(module, task)
+    if prompts:
+        lines.append("")
+        lines.append("Schema debugger prompts (answer explicitly when relevant):")
+        for i, prompt in enumerate(prompts, start=1):
+            lines.append(f"{i}. {prompt}")
+    return "\n".join(lines)

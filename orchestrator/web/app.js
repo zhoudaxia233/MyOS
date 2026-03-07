@@ -131,11 +131,18 @@ function renderInspectResult(data) {
   routeLines.push(...formatRouteScoring(data.route));
   routeTrace.textContent = routeLines.join("\n");
 
-  planTrace.textContent = [
+  const planLines = [
     `skill: ${data.plan.skill}`,
     `output_path: ${data.plan.output_path}`,
     `retrieval_hits: ${data.retrieval_hits}`,
-  ].join("\n");
+  ];
+  if (Array.isArray(data.debug_prompts) && data.debug_prompts.length > 0) {
+    planLines.push("schema_debugger_prompts:");
+    data.debug_prompts.forEach((prompt, idx) => {
+      planLines.push(`  ${idx + 1}. ${prompt}`);
+    });
+  }
+  planTrace.textContent = planLines.join("\n");
 
   renderLoadedFiles(data.loaded_files || []);
   if (!data.output_preview) {

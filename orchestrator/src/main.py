@@ -24,6 +24,7 @@ from metrics import compute_drift_metrics, render_metrics_report
 from owner_report import build_owner_snapshot, render_owner_report
 from planner import plan_task
 from plugin_contract import validate_repo
+from prompting import schema_debugger_questions
 from retrieval import build_index, format_hits, load_retrieval_config, search_index
 from route_selector import select_route
 from runner import run_with_provider
@@ -204,6 +205,7 @@ def execute_task(
     if with_retrieval:
         _log_retrieval(root, task, module, retrieval_top_k, len(hits))
 
+    debug_prompts = schema_debugger_questions(module, task)
     return {
         "module": module,
         "provider": provider,
@@ -213,6 +215,7 @@ def execute_task(
         "output_hash": output_hash,
         "retrieval_hits": len(hits),
         "loaded_files": [f["path"] for f in bundle["files"]],
+        "debug_prompts": debug_prompts,
     }
 
 
@@ -235,6 +238,11 @@ def cmd_inspect(args: argparse.Namespace) -> int:
     _print_route_scoring(route)
     print(f"Skill: {plan['skill']}")
     print(f"Output path: {plan['output_path']}")
+    debug_prompts = schema_debugger_questions(module, args.task)
+    if debug_prompts:
+        print("Schema debugger prompts:")
+        for i, prompt in enumerate(debug_prompts, start=1):
+            print(f"{i}. {prompt}")
     print("Files:")
     for f in bundle["files"]:
         print(f"- {f['path']}")
@@ -263,6 +271,10 @@ def cmd_run(args: argparse.Namespace) -> int:
     if result["route"]["matched_keywords"]:
         print(f"Matched keywords: {result['route']['matched_keywords']}")
     _print_route_scoring(result["route"])
+    if result["debug_prompts"]:
+        print("Schema debugger prompts:")
+        for i, prompt in enumerate(result["debug_prompts"], start=1):
+            print(f"{i}. {prompt}")
     print("Loaded files:")
     for path in result["loaded_files"]:
         print(f"- {path}")

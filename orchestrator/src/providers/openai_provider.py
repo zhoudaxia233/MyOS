@@ -4,6 +4,8 @@ import json
 import os
 from urllib import request
 
+from prompting import execution_instruction
+
 
 def run_openai(task: str, module: str, plan: dict, bundle: dict, model: str) -> str:
     api_key = os.getenv("OPENAI_API_KEY")
@@ -19,7 +21,9 @@ def run_openai(task: str, module: str, plan: dict, bundle: dict, model: str) -> 
         f"Module: {module}\n"
         f"Skill file: {plan['skill']}\n"
         f"Required output path: {plan['output_path']}\n"
-        "Follow progressive disclosure and produce final output content only."
+        "Execution instruction:\n"
+        f"{execution_instruction(task, module)}\n"
+        "Return only final output content for the required output path."
         "\n\nContext:\n" + "\n".join(context_lines)
     )
 
