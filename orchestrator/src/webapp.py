@@ -24,6 +24,7 @@ from manifests import discover_module_manifests
 from metrics import compute_cognition_trend, compute_drift_metrics, render_metrics_report
 from owner_report import (
     build_owner_snapshot,
+    list_open_owner_todos,
     render_owner_report,
     render_owner_todos,
     resolve_owner_todo,
@@ -601,6 +602,7 @@ def api_status(root: Path) -> dict:
         "has_openai_api_key": bool(get_openai_api_key(root)),
         "modules": modules,
         "cognition_cards": cognition_cards,
+        "owner_todos": list_open_owner_todos(root),
     }
 
 
@@ -715,7 +717,7 @@ def api_action(root: Path, payload: dict[str, Any]) -> dict:
         window_days = _coerce_int(payload.get("window_days"), default=7, minimum=1, maximum=365)
         output_rel = _normalize_optional_str(payload.get("output"))
         result = _run_owner_report(root, window_days, output_rel)
-        return {"ok": True, "action": action, **result}
+        return {"ok": True, "action": action, **result, "owner_todos": list_open_owner_todos(root)}
 
     if action == "resolve_owner_todo":
         todo_id = str(payload.get("todo_id", "")).strip()
@@ -730,7 +732,13 @@ def api_action(root: Path, payload: dict[str, Any]) -> dict:
             note=note,
             owner_report_ref=_normalize_optional_str(payload.get("owner_report_ref")),
         )
-        return {"ok": True, "action": action, "resolution_record_id": record["id"], "resolved_todo": record["resolution_of"]}
+        return {
+            "ok": True,
+            "action": action,
+            "resolution_record_id": record["id"],
+            "resolved_todo": record["resolution_of"],
+            "owner_todos": list_open_owner_todos(root),
+        }
 
     if action == "schedule_cycle":
         cycle = str(payload.get("cycle", "weekly")).strip().lower()

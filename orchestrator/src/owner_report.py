@@ -459,6 +459,26 @@ def _open_owner_todos(repo_root: Path) -> dict[str, dict]:
     return active
 
 
+def list_open_owner_todos(repo_root: Path) -> list[dict]:
+    open_map = _open_owner_todos(repo_root)
+    rows = list(open_map.values())
+    rows.sort(key=lambda row: str(row.get("created_at", "")), reverse=True)
+    out: list[dict] = []
+    for row in rows:
+        out.append(
+            {
+                "id": str(row.get("id", "")).strip(),
+                "metric": str(row.get("metric", "")).strip(),
+                "priority": str(row.get("priority", "red")).strip().lower() or "red",
+                "reason": str(row.get("reason", "")).strip(),
+                "action": str(row.get("action", "")).strip(),
+                "created_at": str(row.get("created_at", "")).strip(),
+                "owner_report_ref": str(row.get("owner_report_ref", "")).strip() or None,
+            }
+        )
+    return out
+
+
 def sync_owner_todos(
     repo_root: Path,
     snapshot: dict,

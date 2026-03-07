@@ -20,6 +20,7 @@ const resultTrace = document.getElementById("resultTrace");
 const outputPreview = document.getElementById("outputPreview");
 const outputTokenMeta = document.getElementById("outputTokenMeta");
 const cognitionCards = document.getElementById("cognitionCards");
+const ownerTodos = document.getElementById("ownerTodos");
 const settingsModal = document.getElementById("settingsModal");
 const settingsClose = document.getElementById("settingsClose");
 const settingsSave = document.getElementById("settingsSave");
@@ -122,6 +123,54 @@ function renderCognitionCards(cards) {
     card.appendChild(value);
     card.appendChild(meta);
     cognitionCards.appendChild(card);
+  }
+}
+
+function renderOwnerTodos(items) {
+  ownerTodos.innerHTML = "";
+  if (!Array.isArray(items) || items.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "todo-item";
+    empty.innerHTML = "<div class=\"todo-head\"><span class=\"todo-metric\">No open todos</span></div><div class=\"todo-action\">No unresolved escalation items.</div>";
+    ownerTodos.appendChild(empty);
+    return;
+  }
+
+  for (const item of items) {
+    const wrap = document.createElement("div");
+    const priority = (item.priority || "red").toLowerCase();
+    wrap.className = `todo-item priority-${priority}`;
+
+    const head = document.createElement("div");
+    head.className = "todo-head";
+    const metric = document.createElement("span");
+    metric.className = "todo-metric";
+    metric.textContent = item.metric || "unknown_metric";
+    const reason = document.createElement("span");
+    reason.className = "todo-reason";
+    reason.textContent = item.reason || "";
+    head.appendChild(metric);
+    head.appendChild(reason);
+
+    const action = document.createElement("div");
+    action.className = "todo-action";
+    action.textContent = item.action || "-";
+
+    const actions = document.createElement("div");
+    actions.className = "todo-actions";
+    const btn = document.createElement("button");
+    btn.className = "todo-resolve-btn";
+    btn.type = "button";
+    btn.textContent = "Resolve";
+    btn.addEventListener("click", () => {
+      resolveOwnerTodo(item.id);
+    });
+    actions.appendChild(btn);
+
+    wrap.appendChild(head);
+    wrap.appendChild(action);
+    wrap.appendChild(actions);
+    ownerTodos.appendChild(wrap);
   }
 }
 
@@ -290,6 +339,9 @@ function renderActionResult(data) {
   if (Array.isArray(data.cognition_cards)) {
     renderCognitionCards(data.cognition_cards);
   }
+  if (Array.isArray(data.owner_todos)) {
+    renderOwnerTodos(data.owner_todos);
+  }
   setPreview("-");
   setOutputTokenMeta("-");
 }
@@ -378,6 +430,35 @@ async function copyLatestOutput() {
   }
 }
 
+async function resolveOwnerTodo(todoId) {
+  const id = String(todoId || "").trim();
+  if (!id) {
+    return;
+  }
+  const note = window.prompt("Resolution note (required):", "Completed and verified with log evidence.");
+  if (note === null) {
+    return;
+  }
+  const noteText = String(note).trim();
+  if (!noteText) {
+    addBubble("system", "Resolve skipped: note is required.");
+    return;
+  }
+  try {
+    const data = await postJson("/api/action", {
+      action: "resolve_owner_todo",
+      todo_id: id,
+      note: noteText,
+    });
+    if (Array.isArray(data.owner_todos)) {
+      renderOwnerTodos(data.owner_todos);
+    }
+    addBubble("system", `Resolved owner todo: ${data.resolved_todo}`);
+  } catch (err) {
+    addBubble("system", `Resolve failed: ${err.message}`);
+  }
+}
+
 async function refreshOutputTokenMeta() {
   if (!latestOutputPath) {
     setOutputTokenMeta("-");
@@ -423,6 +504,7 @@ async function loadStatus() {
       modelInput.value = data.default_model;
     }
     renderCognitionCards(data.cognition_cards || []);
+    renderOwnerTodos(data.owner_todos || []);
 
     setStatus("Connected", "ok");
     addBubble("system", `Connected to ${data.repo_root}`);

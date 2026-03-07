@@ -485,6 +485,71 @@ body {
   color: var(--muted);
 }
 
+.todo-list {
+  display: grid;
+  gap: 8px;
+}
+
+.todo-item {
+  border: 1px solid color-mix(in srgb, var(--border) 78%, white);
+  border-radius: 10px;
+  padding: 8px;
+  background: color-mix(in srgb, var(--card) 96%, white 4%);
+}
+
+.todo-item.priority-red {
+  border-color: color-mix(in srgb, var(--fail) 58%, white);
+  background: color-mix(in srgb, var(--fail) 10%, var(--card) 90%);
+}
+
+.todo-item.priority-amber {
+  border-color: color-mix(in srgb, var(--warn) 58%, white);
+  background: color-mix(in srgb, var(--warn) 12%, var(--card) 88%);
+}
+
+.todo-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.todo-metric {
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.todo-reason {
+  font-size: 0.74rem;
+  color: var(--muted);
+}
+
+.todo-action {
+  font-size: 0.78rem;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+.todo-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.todo-resolve-btn {
+  border: 1px solid color-mix(in srgb, var(--accent) 50%, white);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 12%, white);
+  color: var(--accent-ink);
+  font-size: 0.76rem;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+
+.todo-resolve-btn:hover {
+  border-color: var(--accent);
+}
+
 pre {
   margin: 0;
   font-family: "IBM Plex Mono", "Consolas", monospace;

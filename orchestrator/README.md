@@ -209,6 +209,7 @@ This opens a local chat-style control center where you can:
 - handoff output panel includes token usage for copy block (`tiktoken` exact if installed, else estimated)
 - use dedicated `Learning Capture` area (`Ingest To Memory`) for one-click memory ingestion
 - trigger validate, metrics, owner-report, and weekly cycle actions
+- review open owner escalation todos and resolve them from the UI
 - audit route reason, matched keywords, loaded files, and output hash
 
 API key handling:

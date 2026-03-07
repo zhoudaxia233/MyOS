@@ -149,6 +149,29 @@ def test_api_action_validate_metrics_and_schedule() -> None:
         assert "owner_todos" in owner_result["source_artifacts"]
         assert "owner_todo_queue" in owner_result
 
+        owner_todos_log = root / "modules/decision/logs/owner_todos.jsonl"
+        owner_todos_log.write_text(
+            "\n".join(
+                [
+                    '{"_schema":{"name":"owner_todos","version":"1.0","fields":["id","created_at","status","metric","priority","reason","action","owner_report_ref","todo_signature","resolution_of","note"],"notes":"append-only"}}',
+                    '{"id":"ot_20260307_001","created_at":"2026-03-07T10:00:00Z","status":"active","metric":"precommit_coverage","priority":"red","reason":"two_week_fail_precommit_coverage","action":"Enforce guardrail_check_id for every high-risk decision next week.","owner_report_ref":"or_20260307_001","todo_signature":"precommit_coverage|Enforce guardrail_check_id for every high-risk decision next week.","resolution_of":null,"note":null}',
+                ]
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        resolved = api_action(
+            root,
+            {
+                "action": "resolve_owner_todo",
+                "todo_id": "ot_20260307_001",
+                "note": "Guardrail check requirement applied.",
+            },
+        )
+        assert resolved["ok"] is True
+        assert resolved["resolved_todo"] == "ot_20260307_001"
+        assert isinstance(resolved["owner_todos"], list)
+
         with pytest.raises(ValueError):
             api_action(
                 root,
