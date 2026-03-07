@@ -30,3 +30,7 @@ routines:
       module: "profile"
       skill: "profile_snapshot"
       objective: "Review drift and update stabilizers"
+    - id: "rt_monthly_constitutional_audit"
+      module: "principles"
+      skill: "run_constitutional_audit"
+      objective: "Review amendment/exception drift and governance risks"

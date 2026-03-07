@@ -42,6 +42,7 @@ This module stores judgment memory for decisions, failures, meaningful experienc
 - `modules/decision/logs/precommit_checks.jsonl`: Guardrail checks before high-risk commitments
 - `modules/decision/logs/guardrail_overrides.jsonl`: Explicit override audit trail records
 - `modules/decision/logs/decision_gate_checks.jsonl`: Gate outcomes before decision append (pass/blocked/override)
+- `modules/decision/logs/decision_constitution_checks.jsonl`: Principle context checks (`principle_refs`/`exception_ref`) per decision gate
 - `modules/decision/logs/owner_todos.jsonl`: Owner escalation todo queue derived from repeated risk signals
 
 ### Outputs
@@ -62,17 +63,20 @@ This module stores judgment memory for decisions, failures, meaningful experienc
    - Validate domain policy in `domain_guardrails.yaml` before committing risky actions.
    - If blocked but overridden, append one record to `guardrail_overrides.jsonl`.
    - Always append one gate audit record to `decision_gate_checks.jsonl` before writing `decisions.jsonl`.
-5. Weekly review
+5. Principle context check
+   - For precommit-required domains, require `principle_refs` or an active `exception_ref`.
+   - Append one constitutional context record to `decision_constitution_checks.jsonl`.
+6. Weekly review
    - Read the last 7 days of logs.
    - Include precommit checks and guardrail overrides to spot policy drift.
    - Summarize patterns and propose heuristic updates.
-6. Decision audit
+7. Decision audit
    - Score recent behavior against `audit_rules.yaml`.
    - Produce owner-facing exception report with actions.
 
 ## Progressive Loading Rules (Required)
 
-- For decision logging: load `log_decision.md`, `precommit_checks.jsonl`, `domain_guardrails.yaml`, and `decisions.jsonl`.
+- For decision logging: load `log_decision.md`, `precommit_checks.jsonl`, `domain_guardrails.yaml`, `modules/principles/data/constitution.yaml` (when present), `modules/principles/logs/principle_exceptions.jsonl` (when exception is provided), and `decisions.jsonl`.
 - For precommit checks: load `precommit_check.md`, `impulse_guardrails.yaml`, and `precommit_checks.jsonl`.
 - For guardrail hardening: load `guardrail_override.md`, `domain_guardrails.yaml`, and `guardrail_overrides.jsonl`.
 - For weekly review: load `weekly_review.md`, recent log slices, `heuristics.yaml`, `precommit_checks.jsonl`, and `guardrail_overrides.jsonl`.
@@ -82,7 +86,9 @@ This module stores judgment memory for decisions, failures, meaningful experienc
 <instructions>
 - Never moralize; focus on tradeoffs, decision quality, and pattern extraction.
 - Always separate decision-time reasoning from post-hoc review.
+- Treat `heuristics.yaml` as tactical guidance; constitutional constraints are owned by `modules/principles/`.
 - For high-risk calls, require explicit downside, invalidation condition, and disconfirming signal.
+- For precommit-required domains, require explicit principle context (`principle_refs` or active `exception_ref`) before appending decisions.
 - Keep outputs audit-friendly: concise exceptions, metrics, and actions.
 - Preserve append-only integrity; never rewrite or delete history.
 - Use explicit uncertainty language when evidence is incomplete.

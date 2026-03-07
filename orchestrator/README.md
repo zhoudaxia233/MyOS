@@ -22,6 +22,7 @@ It reads kernel/module protocols, builds minimal context bundles, optionally ret
 - `scheduling.py`: load cadence routines and build cycle tasks
 - `metrics.py`: compute drift dashboard metrics from logs
 - `cognition.py`: schema-layer cognition events (assimilation, disequilibrium, accommodation, equilibration)
+- `plugin_contract.py`: module contract validation (including principles module checks)
 - `guardrails.py`: evaluate domain-specific hardening policies and override requirements
 - `owner_report.py`: build one-page owner report from metrics + exceptions + artifacts
 - `webapp.py`: local web control center API + static UI serving
@@ -158,10 +159,12 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py log-decision \
   --downside "Could lose up to 0.5R" \
   --invalidation-condition "Close below invalidation level" \
   --max-loss "0.5R" \
-  --disconfirming-signal "Volume collapse on breakout"
+  --disconfirming-signal "Volume collapse on breakout" \
+  --principle-ref pr_0001
 ```
 
 Each call appends one record to `modules/decision/logs/decision_gate_checks.jsonl`.  
+Each call also appends one principle-context record to `modules/decision/logs/decision_constitution_checks.jsonl`.  
 If gate status is `blocked`, no decision record is appended.
 
 ## Owner One-Pager
@@ -281,7 +284,7 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py index [--source-glob "modu
 python3 /Users/closears/MyOS/orchestrator/src/main.py search --query "..." [--module <name>] [--top-k 8]
 python3 /Users/closears/MyOS/orchestrator/src/main.py metrics [--window 7|30] [--output <path>]
 python3 /Users/closears/MyOS/orchestrator/src/main.py guardrail-check --domain <invest|project|content> [policy fields...]
-python3 /Users/closears/MyOS/orchestrator/src/main.py log-decision --domain <name> --decision "..." --option <value> --confidence <1-10> [gate fields...]
+python3 /Users/closears/MyOS/orchestrator/src/main.py log-decision --domain <name> --decision "..." --option <value> --confidence <1-10> [gate fields...] [--principle-ref pr_0001] [--exception-ref <pex_id>]
 python3 /Users/closears/MyOS/orchestrator/src/main.py owner-report [--window 7|30] [--output <path>]
 python3 /Users/closears/MyOS/orchestrator/src/main.py resolve-owner-todo --todo-id <ot_id> --note "..." [--owner-report-ref <or_id>]
 python3 /Users/closears/MyOS/orchestrator/src/main.py validate [--strict]

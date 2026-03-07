@@ -1,0 +1,46 @@
+{
+  "module": "principles",
+  "routing": {
+    "keywords": [
+      "constitution",
+      "constitutional",
+      "charter",
+      "enduring direction",
+      "non-negotiable",
+      "amendment",
+      "principle exception",
+      "governing constraint"
+    ],
+    "keyword_weights": {
+      "constitution": 5,
+      "principle exception": 4,
+      "amendment": 4,
+      "non-negotiable": 3,
+      "governing constraint": 3
+    }
+  },
+  "planning": {
+    "default_skill": "MODULE",
+    "default_output_prefix": "task",
+    "rules": [
+      {
+        "id": "constitutional_audit",
+        "match_any": ["constitutional audit", "principle drift", "exception digest"],
+        "skill": "run_constitutional_audit",
+        "output_prefix": "constitutional_audit"
+      },
+      {
+        "id": "propose_amendment",
+        "match_any": ["amend principle", "amend constitution", "update constitution"],
+        "skill": "propose_amendment",
+        "output_prefix": "principle_amendment"
+      },
+      {
+        "id": "log_principle_exception",
+        "match_any": ["principle exception", "constitutional exception", "override principle"],
+        "skill": "log_principle_exception",
+        "output_prefix": "principle_exception"
+      }
+    ]
+  }
+}

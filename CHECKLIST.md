@@ -5,7 +5,8 @@ Use this checklist before merging changes.
 ## Kernel and Routing
 
 - [ ] `core/ROUTER.md` defines two-hop loading: `ROUTER -> MODULE -> DATA`
-- [ ] Routing table covers `content`, `decision`, `profile`, and `memory`
+- [ ] `core/ONTOLOGY.md` and `core/BOUNDARY_RULES.md` define object boundaries and classification rules
+- [ ] Routing table covers `content`, `decision`, `profile`, `memory`, `cognition`, and `principles`
 - [ ] Every module has `module.manifest.yaml` with routing keywords and planning defaults
 - [ ] Runtime auto-routing resolves from module manifests (legacy `routes.json` optional)
 - [ ] `core/RULES.md` includes no-fabrication and append-only integrity rules
@@ -39,6 +40,8 @@ Use this checklist before merging changes.
 - [ ] `modules/decision/` includes precommit + weekly review + audit workflow
 - [ ] `modules/profile/` includes psych profile and snapshot workflow
 - [ ] `modules/memory/` includes chat pattern extraction workflow
+- [ ] `modules/cognition/` includes schema evolution and equilibration workflows
+- [ ] `modules/principles/` includes constitution, amendment, and exception workflows
 - [ ] `modules/_template/` remains usable as starter scaffold
 
 ## Cadence and Operations

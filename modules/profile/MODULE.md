@@ -6,7 +6,7 @@ This module is the personal identity and adaptation layer of Personal Core OS. I
 
 ## Scope
 
-- Maintain stable personal north star and values
+- Maintain stable owner traits and operating defaults aligned to constitutional direction
 - Record profile changes as append-only events
 - Track trigger patterns and mitigation quality
 - Maintain a non-clinical psych profile for operational self-regulation
@@ -65,7 +65,7 @@ This module is the personal identity and adaptation layer of Personal Core OS. I
 - Do not load content or decision logs unless cross-module synthesis is explicitly requested.
 
 <instructions>
-- Treat profile data as SSOT for personal direction and constraints.
+- Treat profile data as SSOT for owner traits/defaults; constitutional constraints belong in `modules/principles/`.
 - Keep psych profiling operational and non-clinical.
 - Never overwrite or delete historical log entries.
 - Keep changes specific: what changed, why, expected impact.

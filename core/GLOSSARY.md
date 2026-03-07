@@ -55,3 +55,18 @@ Use short entries with a stable definition and optional examples.
 
 - **Equilibration**: A temporary higher-order balance after schema revision and coherence testing.
   - Example: Track from/to schema stability in `modules/cognition/logs/equilibration_cycles.jsonl`.
+
+### Example Entry
+
+- **Constitutional Clause**: A governing, cross-domain constraint intended to resist short-term override.
+  - Example: Store in `modules/principles/data/constitution.yaml` and reference by `principle_id`.
+
+### Example Entry
+
+- **Principle Exception**: A time-bounded, explicitly approved deviation from a constitutional clause.
+  - Example: Append to `modules/principles/logs/principle_exceptions.jsonl` with owner confirmation and expiry.
+
+### Example Entry
+
+- **Boundary Classification**: Operational routing of a new record to memory/decision/profile/cognition/principles.
+  - Example: Apply `core/BOUNDARY_RULES.md` before appending new records.

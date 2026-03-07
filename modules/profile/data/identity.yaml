@@ -1,15 +1,15 @@
 profile:
   owner: "zdx"
-  north_star: "Build a stable personal operating center that separates execution from judgment."
+  direction_ref:
+    constitution_version: "1.0"
+    clause_refs:
+      - "pr_0001"
+      - "pr_0002"
+      - "pr_0003"
   long_term_goals:
     - "Act consistently with enduring priorities, not short-term noise."
     - "Compound high-quality decisions across projects and life domains."
     - "Scale execution through agents without losing strategic coherence."
-
-values:
-  - "Truth over convenience"
-  - "Compounding over immediacy"
-  - "Systems over heroics"
 
 strengths:
   - "Deep technical execution"

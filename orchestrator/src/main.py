@@ -42,6 +42,7 @@ from schedulers.manual import get_cycle
 from settings import apply_openai_api_key_env, load_settings
 from writer import (
     log_decision,
+    log_decision_constitution_check,
     log_decision_gate_check,
     log_guardrail_override,
     log_metrics_snapshot,
@@ -582,6 +583,8 @@ def cmd_log_decision(args: argparse.Namespace) -> int:
         raise ValueError("confidence must be in range 1..10")
 
     guardrail_check_id = _normalize_optional_str(args.guardrail_check_id)
+    principle_refs = [str(item).strip() for item in (getattr(args, "principle_ref", []) or []) if str(item).strip()]
+    exception_ref = _normalize_optional_str(getattr(args, "exception_ref", None))
     gate = evaluate_decision_entry_gate(
         root,
         domain=domain,
@@ -596,6 +599,8 @@ def cmd_log_decision(args: argparse.Namespace) -> int:
         override_requested=bool(args.override_requested),
         override_reason=_normalize_optional_str(args.override_reason),
         owner_confirmation=_normalize_optional_str(args.owner_confirmation),
+        principle_refs=principle_refs,
+        exception_ref=exception_ref,
     )
 
     gate_record = {
@@ -615,7 +620,23 @@ def cmd_log_decision(args: argparse.Namespace) -> int:
     }
     log_decision_gate_check(root, gate_record)
 
+    constitution_record = {
+        "id": next_id_for_rel_path(root, "dcc", "modules/decision/logs/decision_constitution_checks.jsonl"),
+        "created_at": _utc_now(),
+        "status": "active",
+        "decision_gate_check_id": gate_record["id"],
+        "decision_ref": None,
+        "domain": gate["domain"],
+        "decision": decision_text,
+        "principle_refs": gate["principle_refs"],
+        "exception_ref": gate["exception_ref"],
+        "context_status": gate["principle_context_status"],
+        "violations": gate["principle_violations"],
+        "source_refs": gate["principle_source_refs"],
+    }
+
     if gate["gate_status"] == "blocked":
+        log_decision_constitution_check(root, constitution_record)
         details = ", ".join(gate["violations"]) if gate["violations"] else "unspecified"
         raise RuntimeError(f"Decision gate blocked; no decision was logged. Violations: {details}")
 
@@ -638,6 +659,9 @@ def cmd_log_decision(args: argparse.Namespace) -> int:
     }
     log_decision(root, decision_record)
 
+    constitution_record["decision_ref"] = decision_id
+    log_decision_constitution_check(root, constitution_record)
+
     if gate["gate_status"] == "override_accepted":
         override_record = {
             "id": next_id_for_rel_path(root, "go", "modules/decision/logs/guardrail_overrides.jsonl"),
@@ -657,6 +681,7 @@ def cmd_log_decision(args: argparse.Namespace) -> int:
     print(f"Gate status: {gate['gate_status']}")
     print(f"Precommit status: {gate['precommit_status']}")
     print(f"Guardrail status: {gate['guardrail_status']}")
+    print(f"Principle context: {gate['principle_context_status']}")
     return 0
 
 
@@ -1040,6 +1065,8 @@ def build_parser() -> argparse.ArgumentParser:
     sp_log_decision.add_argument("--override-requested", action="store_true")
     sp_log_decision.add_argument("--override-reason", default=None)
     sp_log_decision.add_argument("--owner-confirmation", default=None)
+    sp_log_decision.add_argument("--principle-ref", action="append", default=[])
+    sp_log_decision.add_argument("--exception-ref", default=None)
     sp_log_decision.add_argument("--follow-up-date", default=None)
     sp_log_decision.add_argument("--outcome", default=None)
     sp_log_decision.add_argument("--provider", default="dry-run")

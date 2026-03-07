@@ -1,0 +1,1 @@
+{"_schema": {"name": "decision_constitution_checks", "version": "1.1", "fields": ["id", "created_at", "status", "decision_gate_check_id", "decision_ref", "domain", "decision", "principle_refs", "exception_ref", "context_status", "violations", "source_refs", "object_type", "proposal_target"], "notes": "append-only"}}

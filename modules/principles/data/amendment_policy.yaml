@@ -1,0 +1,29 @@
+admission_criteria:
+  - "Cross-domain applicability"
+  - "Durable horizon (not a temporary tactic)"
+  - "Clear tradeoff and downside if violated"
+  - "Linked evidence from historical records"
+
+required_fields:
+  amendment_proposal:
+    - "principle_id"
+    - "change_type"
+    - "proposal_summary"
+    - "rationale"
+    - "evidence_refs"
+    - "approval_ref"
+
+approval_policy:
+  owner_confirmation_required: true
+  required_approval_ref_pattern: "^ap_[0-9]{8}_[0-9]{3}$"
+
+exception_policy:
+  owner_confirmation_required: true
+  must_include_expiry: true
+  must_include_risk_acknowledgement: true
+  default_max_days: 14
+
+quality_rules:
+  - "Do not encode one-off tactics as constitutional principles."
+  - "Every amendment must reference source evidence IDs."
+  - "Every exception must include closure or renewal decision."

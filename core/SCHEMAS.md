@@ -24,6 +24,9 @@ Examples:
 - `dq_20260307_001`
 - `ar_20260307_001`
 - `eq_20260307_001`
+- `pam_20260307_001`
+- `pex_20260307_001`
+- `ap_20260307_001`
 
 ## Timestamp Format
 
@@ -40,6 +43,8 @@ Use these when applicable:
 - `status` (`active` or `archived`)
 - `tags` (array of strings)
 - `source_refs` (array of IDs)
+- `object_type` (`memory` / `decision` / `profile` / `cognition` / `principle` / `content` / `system`)
+- `approval_ref` (ID, required when an owner approval is required by policy)
 
 ## Cross-Module References (SSOT)
 

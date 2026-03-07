@@ -17,6 +17,7 @@ This file defines the default operational rhythm so the system acts like a pract
 ## Monthly
 
 - Profile snapshot: drift risks, stabilizer quality, profile adjustments
+- Constitutional audit: amendment/exception trend and unresolved governance risk
 
 ## Owner Role
 

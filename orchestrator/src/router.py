@@ -41,6 +41,19 @@ DEFAULT_RULES = {
                 "model mismatch",
             ],
         },
+        {
+            "module": "principles",
+            "keywords": [
+                "constitution",
+                "constitutional",
+                "charter",
+                "enduring direction",
+                "non-negotiable",
+                "amendment",
+                "principle exception",
+                "governing constraint",
+            ],
+        },
     ],
 }
 

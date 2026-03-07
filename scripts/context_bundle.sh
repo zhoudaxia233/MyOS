@@ -4,7 +4,7 @@ set -euo pipefail
 usage() {
   cat <<'USAGE'
 Usage:
-  scripts/context_bundle.sh --task "<request text>" [--module <content|decision|profile|memory>]
+  scripts/context_bundle.sh --task "<request text>" [--module <content|decision|profile|memory|cognition|principles>]
 
 What it does:
   - Suggests a target module (if --module is not provided)
@@ -239,6 +239,23 @@ LIST
 - modules/memory/data/pattern_taxonomy.yaml (for pattern extraction)
 - modules/memory/skills/ingest_memory.md or extract_chat_patterns.md or distill_weekly.md
 - modules/memory/logs/memory_events.jsonl (plus memory_insights.jsonl / chat_patterns.jsonl when needed)
+LIST
+    ;;
+  cognition)
+    cat <<'LIST'
+- modules/cognition/data/schema_policy.yaml
+- modules/cognition/data/conflict_taxonomy.yaml
+- modules/cognition/data/revision_operators.yaml
+- modules/cognition/skills/log_schema.md or detect_disequilibrium.md or log_accommodation.md or run_equilibration_review.md
+- modules/cognition/logs/schema_versions.jsonl (plus assimilation/disequilibrium/accommodation/equilibration logs when needed)
+LIST
+    ;;
+  principles)
+    cat <<'LIST'
+- modules/principles/data/constitution.yaml
+- modules/principles/data/amendment_policy.yaml
+- modules/principles/skills/propose_amendment.md or log_principle_exception.md or run_constitutional_audit.md
+- modules/principles/logs/principle_amendments.jsonl (plus principle_exceptions.jsonl when needed)
 LIST
     ;;
   *)

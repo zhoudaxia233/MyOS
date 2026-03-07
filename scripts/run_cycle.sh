@@ -53,6 +53,11 @@ Cycle: weekly
 - Skill: modules/decision/skills/audit_decision_system.md
 - Template: modules/decision/outputs/templates/decision_audit_report.md
 - Output: modules/decision/outputs/decision_audit_<YYYYMMDD>.md
+
+4) Equilibration review
+- Module: modules/cognition
+- Skill: modules/cognition/skills/run_equilibration_review.md
+- Output: modules/cognition/outputs/equilibration_review_<YYYYMMDD>.md
 OUT
     ;;
   monthly)
@@ -63,6 +68,11 @@ Cycle: monthly
 - Module: modules/profile
 - Skill: modules/profile/skills/profile_snapshot.md
 - Output: modules/profile/outputs/profile_snapshot_<YYYYMMDD>.md
+
+2) Constitutional audit
+- Module: modules/principles
+- Skill: modules/principles/skills/run_constitutional_audit.md
+- Output: modules/principles/outputs/constitutional_audit_<YYYYMMDD>.md
 OUT
     ;;
   *)

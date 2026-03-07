@@ -4,7 +4,7 @@ import re
 
 TOKEN_RE = re.compile(r"[a-z0-9]+")
 
-SCHEMA_DEBUGGER_MODULES = {"decision", "profile", "memory", "cognition"}
+SCHEMA_DEBUGGER_MODULES = {"decision", "profile", "memory", "cognition", "principles"}
 SCHEMA_DEBUGGER_KEYWORDS = {
     "schema",
     "mental model",
@@ -61,6 +61,8 @@ def schema_debugger_questions(module: str, task: str) -> list[str]:
         questions.append("Which repeated note pattern indicates unresolved disequilibrium?")
     if mod == "cognition":
         questions.append("Which accommodation operator best fits this mismatch (weaken/replace/split/merge/refine)?")
+    if mod == "principles":
+        questions.append("Which constitutional clause constrains this action, and does any time-bounded exception apply?")
     return questions
 
 
@@ -88,6 +90,8 @@ def schema_debugger_output_sections(module: str, task: str) -> list[str]:
         sections.append("Pattern Signal to Track")
     if mod == "cognition":
         sections.append("Equilibration Criteria")
+    if mod == "principles":
+        sections.append("Constitutional Constraint Check")
     return sections
 
 

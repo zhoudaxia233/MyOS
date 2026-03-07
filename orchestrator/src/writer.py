@@ -139,6 +139,28 @@ DECISION_GATE_CHECKS_SCHEMA = {
     }
 }
 
+DECISION_CONSTITUTION_CHECKS_SCHEMA = {
+    "_schema": {
+        "name": "decision_constitution_checks",
+        "version": "1.0",
+        "fields": [
+            "id",
+            "created_at",
+            "status",
+            "decision_gate_check_id",
+            "decision_ref",
+            "domain",
+            "decision",
+            "principle_refs",
+            "exception_ref",
+            "context_status",
+            "violations",
+            "source_refs",
+        ],
+        "notes": "append-only",
+    }
+}
+
 
 def _safe_repo_path(repo_root: Path, rel_path: str) -> Path:
     root = repo_root.resolve()
@@ -214,3 +236,8 @@ def log_decision(repo_root: Path, record: dict) -> None:
 def log_decision_gate_check(repo_root: Path, record: dict) -> None:
     path = _safe_repo_path(repo_root, "modules/decision/logs/decision_gate_checks.jsonl")
     append_jsonl(path, record, schema_header=DECISION_GATE_CHECKS_SCHEMA)
+
+
+def log_decision_constitution_check(repo_root: Path, record: dict) -> None:
+    path = _safe_repo_path(repo_root, "modules/decision/logs/decision_constitution_checks.jsonl")
+    append_jsonl(path, record, schema_header=DECISION_CONSTITUTION_CHECKS_SCHEMA)

@@ -10,7 +10,9 @@ from scheduling import load_cadence
 
 REF_RE = re.compile(r"(?:core|modules|routines|orchestrator)/[A-Za-z0-9_./-]+\.(?:md|yaml|yml|jsonl|json)")
 ID_RE = re.compile(r"^[a-z][a-z0-9]*_[0-9]{8}_[0-9]{3}$")
+PRINCIPLE_CLAUSE_RE = re.compile(r"^pr_[0-9]{4}$")
 VALID_STATUS = {"active", "archived"}
+VALID_OBJECT_TYPES = {"memory", "decision", "profile", "cognition", "principle", "content", "system"}
 
 
 def _error(code: str, path: str, message: str) -> dict:
@@ -207,6 +209,39 @@ def _validate_jsonl_records(
                     )
                 )
 
+        if "object_type" in obj:
+            object_type = obj.get("object_type")
+            if not isinstance(object_type, str) or object_type not in VALID_OBJECT_TYPES:
+                errors.append(
+                    _error(
+                        "jsonl.object_type_value",
+                        f"{path}:{i}",
+                        "Field 'object_type' must be one of: memory, decision, profile, cognition, principle, content, system.",
+                    )
+                )
+
+        if "proposal_target" in obj and obj.get("proposal_target") is not None:
+            proposal_target = obj.get("proposal_target")
+            if not isinstance(proposal_target, str) or proposal_target not in VALID_OBJECT_TYPES:
+                errors.append(
+                    _error(
+                        "jsonl.proposal_target_value",
+                        f"{path}:{i}",
+                        "Field 'proposal_target' must be one of the known object types when present.",
+                    )
+                )
+
+        if "approval_ref" in obj and obj.get("approval_ref") is not None:
+            approval_ref = obj.get("approval_ref")
+            if not isinstance(approval_ref, str) or not ID_RE.match(approval_ref):
+                errors.append(
+                    _error(
+                        "jsonl.approval_ref_format",
+                        f"{path}:{i}",
+                        "Field 'approval_ref' must match <prefix>_<YYYYMMDD>_<3-digit-seq> when present.",
+                    )
+                )
+
         if "source_refs" in obj:
             refs = obj.get("source_refs")
             if not isinstance(refs, list):
@@ -234,6 +269,56 @@ def _validate_jsonl_records(
                                 "jsonl.source_ref_unknown",
                                 f"{path}:{i}",
                                 f"source_refs contains unknown ID: {ref}",
+                            )
+                        )
+
+        if "evidence_refs" in obj:
+            refs = obj.get("evidence_refs")
+            if not isinstance(refs, list):
+                errors.append(
+                    _error(
+                        "jsonl.evidence_refs_type",
+                        f"{path}:{i}",
+                        "Field 'evidence_refs' must be an array of IDs.",
+                    )
+                )
+            else:
+                for ref in refs:
+                    if not isinstance(ref, str) or not ID_RE.match(ref):
+                        errors.append(
+                            _error(
+                                "jsonl.evidence_ref_format",
+                                f"{path}:{i}",
+                                f"Invalid evidence ref ID format: {ref}",
+                            )
+                        )
+                    elif ref not in known_ids:
+                        warnings.append(
+                            _warn(
+                                "jsonl.evidence_ref_unknown",
+                                f"{path}:{i}",
+                                f"evidence_refs contains unknown ID: {ref}",
+                            )
+                        )
+
+        if "principle_refs" in obj:
+            refs = obj.get("principle_refs")
+            if not isinstance(refs, list):
+                errors.append(
+                    _error(
+                        "jsonl.principle_refs_type",
+                        f"{path}:{i}",
+                        "Field 'principle_refs' must be an array of IDs.",
+                    )
+                )
+            else:
+                for ref in refs:
+                    if not isinstance(ref, str) or (not ID_RE.match(ref) and not PRINCIPLE_CLAUSE_RE.match(ref)):
+                        errors.append(
+                            _error(
+                                "jsonl.principle_ref_format",
+                                f"{path}:{i}",
+                                f"Invalid principle ref format: {ref}",
                             )
                         )
 

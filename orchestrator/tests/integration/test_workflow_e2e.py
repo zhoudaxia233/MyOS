@@ -385,6 +385,8 @@ def test_e2e_cli_command_chain(monkeypatch, capsys) -> None:
                 override_requested=False,
                 override_reason=None,
                 owner_confirmation=None,
+                principle_ref=["pr_0001"],
+                exception_ref=None,
                 follow_up_date=None,
                 outcome=None,
                 provider="dry-run",

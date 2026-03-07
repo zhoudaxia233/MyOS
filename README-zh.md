@@ -41,6 +41,7 @@
 4. SSOT：规范和知识各有唯一来源
 5. JSONL 只追加，保留完整历史
 6. 路由规则插件化：`modules/<name>/module.manifest.yaml`
+7. 本体与边界契约显式写在 `core/ONTOLOGY.md` 与 `core/BOUNDARY_RULES.md`
 
 ## 目录
 
@@ -61,6 +62,8 @@
     memory/
       module.manifest.yaml
     cognition/
+      module.manifest.yaml
+    principles/
       module.manifest.yaml
     _template/
       module.manifest.yaml
@@ -94,12 +97,13 @@
 ### `modules/decision`
 
 - 决策中枢 + 风控 + 审计视图
+- SSOT 偏向战术启发式与风险规则（宪制约束归 `principles`）
 - 高风险决策先 precommit，再落决策日志
 - 输出 owner 审计报告（你只看异常和偏航）
 
 ### `modules/profile`
 
-- 你的身份基线、偏好边界、心理稳定器
+- 你的运行模型（稳定特征、默认偏好、心理稳定器）
 - 新增 `psych_profile.yaml` 和 `psych_observations.jsonl`
 - 支持月度 profile snapshot
 
@@ -114,6 +118,12 @@
 - 认知结构演化引擎（同化/失衡/顺应/再平衡）
 - SSOT：schema 规则、冲突分类、修订操作符
 - 日志：schema 版本、assimilation、disequilibrium、accommodation、equilibration
+
+### `modules/principles`
+
+- 宪制治理层：沉淀长期方向约束与不可轻易覆盖的规则
+- SSOT：`constitution.yaml` 与 `amendment_policy.yaml`
+- 日志：`principle_amendments.jsonl`、`principle_exceptions.jsonl`
 
 ## 这套系统怎么跑
 
@@ -291,9 +301,10 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "run weekly dec
 
 1. 先做 `precommit_check.md`
 2. 通过强制门禁命令落决策：
-   - `python3 /Users/closears/MyOS/orchestrator/src/main.py log-decision --domain invest --decision "Open bounded-risk momentum position" --option "skip" --option "open small" --confidence 8 --guardrail-check-id pc_20260304_001 --downside "Could lose up to 0.5R" --invalidation-condition "Close below invalidation level" --max-loss "0.5R" --disconfirming-signal "Volume collapse on breakout"`
+   - `python3 /Users/closears/MyOS/orchestrator/src/main.py log-decision --domain invest --decision "Open bounded-risk momentum position" --option "skip" --option "open small" --confidence 8 --guardrail-check-id pc_20260304_001 --downside "Could lose up to 0.5R" --invalidation-condition "Close below invalidation level" --max-loss "0.5R" --disconfirming-signal "Volume collapse on breakout" --principle-ref pr_0001`
 3. 门禁结果会落到 `modules/decision/logs/decision_gate_checks.jsonl`
-4. 周复盘 + 审计报告
+4. 原则上下文检查会落到 `modules/decision/logs/decision_constitution_checks.jsonl`
+5. 周复盘 + 审计报告
 
 ### 10) 你的“第二大脑”流程
 

@@ -56,6 +56,40 @@ def _setup_repo(root: Path) -> None:
         )
         + "\n",
     )
+    _write(
+        root / "modules/principles/data/constitution.yaml",
+        "\n".join(
+            [
+                "constitution:",
+                "  version: \"1.0\"",
+                "clauses:",
+                "  - clause_id: \"pr_0001\"",
+                "    title: \"Long-term compounding\"",
+                "    statement: \"Prefer long-term compounding over short-term noise.\"",
+            ]
+        )
+        + "\n",
+    )
+    _write_jsonl(
+        root / "modules/principles/logs/principle_exceptions.jsonl",
+        "principle_exceptions",
+        [
+            "id",
+            "created_at",
+            "status",
+            "object_type",
+            "principle_id",
+            "request_context",
+            "exception_reason",
+            "risk_acknowledged",
+            "owner_confirmation",
+            "decision_ref",
+            "expires_at",
+            "resolution_status",
+            "source_refs",
+        ],
+        [],
+    )
 
     _write_jsonl(
         root / "modules/decision/logs/decisions.jsonl",
@@ -153,6 +187,8 @@ def test_cmd_log_decision_blocks_and_does_not_append_decision(monkeypatch) -> No
             override_requested=False,
             override_reason=None,
             owner_confirmation=None,
+            principle_ref=[],
+            exception_ref=None,
             follow_up_date=None,
             outcome=None,
             provider="dry-run",
@@ -199,6 +235,8 @@ def test_cmd_log_decision_appends_when_gate_passes(monkeypatch) -> None:
             override_requested=False,
             override_reason=None,
             owner_confirmation=None,
+            principle_ref=["pr_0001"],
+            exception_ref=None,
             follow_up_date=None,
             outcome=None,
             provider="dry-run",

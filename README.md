@@ -41,6 +41,7 @@ Roadmap details can evolve while this direction stays stable:
 4. SSOT in canonical YAML/MD files
 5. Append-only JSONL logs for historical integrity
 6. Route rules are plugin-driven from `modules/<name>/module.manifest.yaml`
+7. Boundary contracts are explicit in `core/ONTOLOGY.md` and `core/BOUNDARY_RULES.md`
 
 ## Repository Structure
 
@@ -55,6 +56,8 @@ Roadmap details can evolve while this direction stays stable:
     RULES.md
     SCHEMAS.md
     GLOSSARY.md
+    ONTOLOGY.md
+    BOUNDARY_RULES.md
   modules/
     content/
       module.manifest.yaml
@@ -65,6 +68,8 @@ Roadmap details can evolve while this direction stays stable:
     memory/
       module.manifest.yaml
     cognition/
+      module.manifest.yaml
+    principles/
       module.manifest.yaml
     _template/
       module.manifest.yaml
@@ -99,13 +104,13 @@ Roadmap details can evolve while this direction stays stable:
 ### `modules/decision`
 
 - Role: decision memory + risk governance + audit outputs
-- SSOT: heuristics, impulse guardrails, audit rules
+- SSOT: tactical heuristics, impulse guardrails, audit rules
 - Logs: decisions, failures, experiences, precommit checks
 - Owner-facing output: decision audit report
 
 ### `modules/profile`
 
-- Role: personal identity, operating preferences, psych stabilizers
+- Role: owner operating model, defaults, psych stabilizers
 - SSOT: identity, operating preferences, psych profile
 - Logs: profile changes, trigger events, psych observations
 
@@ -120,6 +125,13 @@ Roadmap details can evolve while this direction stays stable:
 - Role: schema evolution engine (assimilation, disequilibrium, accommodation, equilibration)
 - SSOT: schema policy, conflict taxonomy, revision operators
 - Logs: schema versions, assimilation events, disequilibrium events, accommodation revisions, equilibration cycles
+
+### `modules/principles`
+
+- Role: constitutional governance for enduring direction and strategic constraints
+- SSOT: constitution and amendment policy
+- Logs: principle amendments and principle exceptions
+- Owner-facing output: constitutional audit report
 
 ## Runtime Model
 
@@ -298,9 +310,10 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "run weekly dec
 
 1. Run precommit check (`modules/decision/skills/precommit_check.md`)
 2. Log decision through enforced gate:
-   - `python3 /Users/closears/MyOS/orchestrator/src/main.py log-decision --domain invest --decision "Open bounded-risk momentum position" --option "skip" --option "open small" --confidence 8 --guardrail-check-id pc_20260304_001 --downside "Could lose up to 0.5R" --invalidation-condition "Close below invalidation level" --max-loss "0.5R" --disconfirming-signal "Volume collapse on breakout"`
+   - `python3 /Users/closears/MyOS/orchestrator/src/main.py log-decision --domain invest --decision "Open bounded-risk momentum position" --option "skip" --option "open small" --confidence 8 --guardrail-check-id pc_20260304_001 --downside "Could lose up to 0.5R" --invalidation-condition "Close below invalidation level" --max-loss "0.5R" --disconfirming-signal "Volume collapse on breakout" --principle-ref pr_0001`
 3. Gate result is always appended to `modules/decision/logs/decision_gate_checks.jsonl`
-4. Include in weekly review and audit report
+4. Principle context check is appended to `modules/decision/logs/decision_constitution_checks.jsonl`
+5. Include in weekly review and audit report
 
 ### 10) Pattern extraction flow
 

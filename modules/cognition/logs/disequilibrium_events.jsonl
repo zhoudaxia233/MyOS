@@ -1,1 +1,1 @@
-{"_schema":{"name":"disequilibrium_events","version":"1.0","fields":["id","created_at","status","topic","schema_version_id","tension_score","signal_types","conflict_summary","unresolved_questions","source_refs","tags"],"notes":"append-only"}}
+{"_schema": {"name": "disequilibrium_events", "version": "1.1", "fields": ["id", "created_at", "status", "topic", "schema_version_id", "tension_score", "signal_types", "conflict_summary", "unresolved_questions", "source_refs", "tags", "object_type", "proposal_target"], "notes": "append-only"}}

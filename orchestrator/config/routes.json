@@ -38,6 +38,16 @@
         "schema": 3,
         "mental model": 3
       }
+    },
+    {
+      "module": "principles",
+      "keywords": ["constitution", "constitutional", "charter", "enduring direction", "non-negotiable", "amendment", "principle exception", "governing constraint"],
+      "keyword_weights": {
+        "constitution": 5,
+        "amendment": 4,
+        "principle exception": 4,
+        "non-negotiable": 3
+      }
     }
   ]
 }

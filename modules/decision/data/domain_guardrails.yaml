@@ -47,3 +47,5 @@ global:
   block_when_high_emotion_without_cooldown: true
   block_when_max_loss_exceeds_limit: true
   block_when_cooldown_hours_insufficient: true
+  require_principle_ref_when_precommit_required: true
+  allow_exception_ref_without_principle_ref: true

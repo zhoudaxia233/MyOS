@@ -216,12 +216,15 @@ The system is a stable, extensible operating center where:
      - project execution plugin
    - Keep as templates/examples, not hardcoded roadmap commitments
 
-## v0.8-principles-layer (Planned)
+## v0.8-principles-layer (In Progress)
 
-1. Cross-plugin synthesis (optional abstraction)
-   - Add optional `modules/principles/` after multiple domain plugins exist
-   - Aggregate stable principles from plugin outputs
-   - Keep principle IDs as references to source plugin records, never content duplication
+1. Constitutional governance layer
+   - Added `modules/principles/` with module manifest, skills, SSOT, outputs, and append-only logs
+   - Added constitutional SSOT files (`constitution.yaml`, `amendment_policy.yaml`)
+   - Added principle lifecycle logs (`principle_amendments.jsonl`, `principle_exceptions.jsonl`)
+2. Boundary refactor contracts
+   - Added kernel ontology and boundary standards (`core/ONTOLOGY.md`, `core/BOUNDARY_RULES.md`)
+   - Updated routing/docs/checklists/scripts to include `principles` as first-class module
 
 ## Existing Alignment (Already Present)
 

@@ -43,6 +43,8 @@ DEFAULT_POLICY = {
         "block_when_high_emotion_without_cooldown": True,
         "block_when_max_loss_exceeds_limit": True,
         "block_when_cooldown_hours_insufficient": True,
+        "require_principle_ref_when_precommit_required": True,
+        "allow_exception_ref_without_principle_ref": True,
     },
 }
 

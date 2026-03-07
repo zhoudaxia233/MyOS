@@ -1,0 +1,1 @@
+{"_schema": {"name": "principle_amendments", "version": "1.1", "fields": ["id", "created_at", "status", "object_type", "principle_id", "change_type", "proposal_summary", "rationale", "evidence_refs", "approval_ref", "effective_from", "source_refs", "proposal_target"], "notes": "append-only"}}

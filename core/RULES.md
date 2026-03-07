@@ -24,6 +24,7 @@ These rules apply across all modules and tasks.
 - When logging decisions or reviews, use the schemas and fields defined by the decision module and `core/SCHEMAS.md`.
 - For high-risk decisions, run decision precommit guardrails before commitment when the decision module provides that workflow.
 - For personal alignment-sensitive tasks, consult profile SSOT before final output.
+- For principle-sensitive tasks, consult constitutional clauses and exception policy before final output.
 - For cognition tasks, keep schema lineage explicit (`old -> conflict -> revision -> new`) with source references.
 - Keep psych profiling non-clinical and operational; do not present medical diagnosis claims.
 - If a required file is missing, stop and state the missing dependency instead of inventing it.

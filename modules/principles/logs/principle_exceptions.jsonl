@@ -1,0 +1,1 @@
+{"_schema": {"name": "principle_exceptions", "version": "1.1", "fields": ["id", "created_at", "status", "object_type", "principle_id", "request_context", "exception_reason", "risk_acknowledged", "owner_confirmation", "decision_ref", "expires_at", "resolution_status", "source_refs", "proposal_target"], "notes": "append-only"}}

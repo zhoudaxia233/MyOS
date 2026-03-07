@@ -6,8 +6,9 @@ This repository is a plugin-based Personal Core OS: a small stable kernel (`core
 
 - Separate execution from judgment while keeping both aligned over time.
 - Execution-heavy tasks route to domain modules (`content`, `memory` ingest workflows).
-- Judgment and direction tasks route to `decision` and `profile`.
-- Personal direction is anchored in profile SSOT; operational learning is accumulated in memory logs.
+- Judgment and direction tasks route to `decision`, `profile`, and `principles`.
+- Owner operating defaults are anchored in profile SSOT; operational learning is accumulated in memory logs.
+- Constitutional direction and override policy are anchored in principles SSOT.
 
 ## Progressive Disclosure Rules (Required)
 
@@ -41,6 +42,8 @@ Do not go beyond two hops unless the module explicitly instructs a necessary fil
 | chat pattern extraction, paradigm mining | `modules/memory` | Extract recurring patterns from chat events |
 | schema mapping, mental model versioning, cognitive conflict analysis | `modules/cognition` | Schema-layer cognitive adaptation workflows |
 | assimilation, accommodation, disequilibrium, equilibration tracking | `modules/cognition` | Structural cognition evolution over time |
+| constitution updates, enduring principles, strategic constraints | `modules/principles` | Governing charter and amendment protocol |
+| principle exceptions, constitutional audits, drift at governance layer | `modules/principles` | Exception trail and owner-facing constitutional review |
 
 ## Exact Routing Instructions (Required)
 
@@ -52,6 +55,7 @@ Do not go beyond two hops unless the module explicitly instructs a necessary fil
 ## Kernel Boundaries
 
 - Kernel files define routing, global rules, schemas, and shared terms.
+- Ontology and classification rules are defined in `core/ONTOLOGY.md` and `core/BOUNDARY_RULES.md`.
 - Modules own domain workflows, SSOT data, and append-only logs.
 - Cross-module references are ID-only (no content duplication).
 - Runtime keyword routing rules are discovered from `modules/<name>/module.manifest.yaml` (with optional legacy fallback from `orchestrator/config/routes.json`).

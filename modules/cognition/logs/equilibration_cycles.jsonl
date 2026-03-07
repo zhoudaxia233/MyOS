@@ -1,1 +1,1 @@
-{"_schema":{"name":"equilibration_cycles","version":"1.0","fields":["id","created_at","status","topic","from_schema_version_id","to_schema_version_id","stabilizing_tests","residual_tensions","coherence_score","source_refs","tags"],"notes":"append-only"}}
+{"_schema": {"name": "equilibration_cycles", "version": "1.1", "fields": ["id", "created_at", "status", "topic", "from_schema_version_id", "to_schema_version_id", "stabilizing_tests", "residual_tensions", "coherence_score", "source_refs", "tags", "object_type", "proposal_target"], "notes": "append-only"}}
