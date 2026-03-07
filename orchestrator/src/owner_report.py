@@ -162,6 +162,46 @@ def build_owner_snapshot(repo_root: Path, window_days: int, now: datetime | None
         if observed >= 3:
             consistency_alerts.append("weekly_review_conflict:sample_size_limitation_vs_nontrivial_record_count")
 
+    m = metrics["metrics"]
+    auto_triggers: list[dict] = []
+
+    if m["unresolved_disequilibrium_rate"]["status"] == "fail":
+        auto_triggers.append(
+            {
+                "id": "schema_revision_unresolved_tension",
+                "reason": "unresolved_disequilibrium_rate is fail",
+                "action": "Trigger schema revision cycle on top high-tension topic within 48h.",
+            }
+        )
+    if m["equilibration_quality_rate"]["status"] == "fail":
+        auto_triggers.append(
+            {
+                "id": "schema_revision_low_equilibration_quality",
+                "reason": "equilibration_quality_rate is fail",
+                "action": "Run accommodation + falsification design review before next high-risk decision.",
+            }
+        )
+    if m["schema_explicitness_rate"]["status"] == "fail":
+        auto_triggers.append(
+            {
+                "id": "schema_revision_low_explicitness",
+                "reason": "schema_explicitness_rate is fail",
+                "action": "Require schema_version_id in assimilation logs for next window.",
+            }
+        )
+    if (
+        m["unresolved_disequilibrium_rate"]["status"] in {"warn", "fail"}
+        and m["equilibration_quality_rate"]["status"] in {"warn", "fail"}
+        and metrics["counts"]["disequilibrium_events"] >= 3
+    ):
+        auto_triggers.append(
+            {
+                "id": "schema_revision_compound_signal",
+                "reason": "disequilibrium pressure + weak equilibration under non-trivial sample",
+                "action": "Escalate to owner-approved schema split/replace decision this week.",
+            }
+        )
+
     return {
         "generated_at": now.isoformat().replace("+00:00", "Z"),
         "window_days": window_days,
@@ -176,6 +216,7 @@ def build_owner_snapshot(repo_root: Path, window_days: int, now: datetime | None
             "cognition_timeline": cognition_timeline,
         },
         "consistency_alerts": consistency_alerts,
+        "auto_triggers": auto_triggers,
     }
 
 
@@ -227,6 +268,20 @@ def render_owner_report(snapshot: dict) -> str:
     if snapshot["consistency_alerts"]:
         for alert in snapshot["consistency_alerts"]:
             lines.append(f"- {alert}")
+    else:
+        lines.append("- none")
+
+    lines.extend(
+        [
+            "",
+            "## Auto Triggers",
+            "",
+        ]
+    )
+
+    if snapshot["auto_triggers"]:
+        for trigger in snapshot["auto_triggers"]:
+            lines.append(f"- [{trigger['id']}] {trigger['reason']} -> {trigger['action']}")
     else:
         lines.append("- none")
 

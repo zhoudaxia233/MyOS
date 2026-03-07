@@ -440,6 +440,51 @@ body {
   letter-spacing: 0.4px;
 }
 
+.metric-cards {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.metric-card {
+  border: 1px solid color-mix(in srgb, var(--border) 80%, white);
+  border-radius: 10px;
+  padding: 8px;
+  background: color-mix(in srgb, var(--card) 96%, white 4%);
+}
+
+.metric-card.status-pass {
+  border-color: color-mix(in srgb, var(--ok) 55%, white);
+  background: color-mix(in srgb, var(--ok) 12%, var(--card) 88%);
+}
+
+.metric-card.status-warn {
+  border-color: color-mix(in srgb, var(--warn) 55%, white);
+  background: color-mix(in srgb, var(--warn) 14%, var(--card) 86%);
+}
+
+.metric-card.status-fail {
+  border-color: color-mix(in srgb, var(--fail) 55%, white);
+  background: color-mix(in srgb, var(--fail) 14%, var(--card) 86%);
+}
+
+.metric-title {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+
+.metric-value {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.metric-meta {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
 pre {
   margin: 0;
   font-family: "IBM Plex Mono", "Consolas", monospace;

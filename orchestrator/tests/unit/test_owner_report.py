@@ -118,8 +118,10 @@ def test_owner_snapshot_and_render() -> None:
         assert any(a.startswith("metrics_mismatch:precommit_coverage:") for a in snapshot["consistency_alerts"])
         assert any(a.startswith("decision_audit_conflict:") for a in snapshot["consistency_alerts"])
         assert any(a.startswith("weekly_review_conflict:") for a in snapshot["consistency_alerts"])
+        assert isinstance(snapshot["auto_triggers"], list)
         assert "guardrail_overrides.invest" in report
         assert "Consistency Alerts" in report
+        assert "Auto Triggers" in report
         assert "Owner Report" in report
         assert "Executive Summary" in report
         assert "cognition_timeline" in report

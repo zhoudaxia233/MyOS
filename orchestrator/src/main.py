@@ -22,7 +22,7 @@ from guardrails import evaluate_guardrail, load_domain_guardrails
 from idgen import next_id_for_rel_path
 from learning_ingest import ingest_learning_asset
 from loader import load_context_bundle
-from metrics import compute_drift_metrics, render_metrics_report
+from metrics import compute_cognition_trend, compute_drift_metrics, render_metrics_report
 from owner_report import build_owner_snapshot, render_owner_report
 from planner import plan_task
 from plugin_contract import validate_repo
@@ -657,6 +657,7 @@ def cmd_log_decision(args: argparse.Namespace) -> int:
 def cmd_metrics(args: argparse.Namespace) -> int:
     root = repo_root()
     snapshot = compute_drift_metrics(root, args.window)
+    snapshot["cognitive_trend"] = compute_cognition_trend(root)
     report = render_metrics_report(snapshot)
 
     if args.output:

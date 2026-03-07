@@ -21,7 +21,7 @@ from idgen import next_id_for_rel_path
 from loader import load_context_bundle
 from learning_ingest import ingest_learning_text
 from manifests import discover_module_manifests
-from metrics import compute_drift_metrics, render_metrics_report
+from metrics import compute_cognition_trend, compute_drift_metrics, render_metrics_report
 from owner_report import build_owner_snapshot, render_owner_report
 from planner import plan_task
 from plugin_contract import validate_repo
@@ -171,6 +171,45 @@ def _preview_text(text: str, max_chars: int = 8000) -> str:
     return text[:max_chars] + "\n\n...[truncated]"
 
 
+def _pct(value: float) -> str:
+    return f"{(value * 100):.1f}%"
+
+
+def _cognition_cards(root: Path) -> list[dict]:
+    trend = compute_cognition_trend(root)
+    comparisons = {
+        str(item.get("key", "")): item for item in trend.get("comparisons", []) if isinstance(item, dict)
+    }
+    snapshot_7d = trend.get("windows", {}).get("7d", {})
+    metrics_7d = snapshot_7d.get("metrics", {}) if isinstance(snapshot_7d, dict) else {}
+
+    config = [
+        ("unresolved_disequilibrium_rate", "Unresolved Disequilibrium", "<="),
+        ("equilibration_quality_rate", "Equilibration Quality", ">="),
+        ("schema_explicitness_rate", "Schema Explicitness", ">="),
+    ]
+
+    cards: list[dict] = []
+    for key, label, operator in config:
+        metric = metrics_7d.get(key, {})
+        if not isinstance(metric, dict):
+            continue
+        cmp = comparisons.get(key, {})
+        cards.append(
+            {
+                "key": key,
+                "label": label,
+                "status": str(metric.get("status", "warn")),
+                "value": _pct(float(metric.get("value", 0.0))),
+                "threshold": _pct(float(metric.get("threshold", 0.0))),
+                "target_operator": operator,
+                "trend": str(cmp.get("trend", "stable")),
+                "delta_pp": round(float(cmp.get("delta", 0.0)) * 100.0, 1),
+            }
+        )
+    return cards
+
+
 def _safe_output_file(root: Path, rel_path: str) -> Path:
     rel = str(rel_path).strip()
     if not rel:
@@ -308,6 +347,8 @@ def _execute_task(
 
 def _run_metrics(root: Path, window_days: int, output_rel: str | None) -> dict:
     snapshot = compute_drift_metrics(root, window_days)
+    trend = compute_cognition_trend(root)
+    snapshot["cognitive_trend"] = trend
     report = render_metrics_report(snapshot)
 
     if output_rel:
@@ -335,6 +376,7 @@ def _run_metrics(root: Path, window_days: int, output_rel: str | None) -> dict:
         "summary": summary,
         "output_path": report_path,
         "output_preview": _preview_text(report),
+        "cognitive_trend": trend,
     }
 
 
@@ -518,6 +560,7 @@ def api_status(root: Path) -> dict:
     settings = load_settings(root)
     manifests = discover_module_manifests(root)
     modules = [m for m in sorted(manifests.keys()) if m != "_template"]
+    cognition_cards = _cognition_cards(root)
     return {
         "ok": True,
         "repo_root": str(root),
@@ -526,6 +569,7 @@ def api_status(root: Path) -> dict:
         "routing_model": settings["routing_model"],
         "has_openai_api_key": bool(get_openai_api_key(root)),
         "modules": modules,
+        "cognition_cards": cognition_cards,
     }
 
 
@@ -634,7 +678,7 @@ def api_action(root: Path, payload: dict[str, Any]) -> dict:
         window_days = _coerce_int(payload.get("window_days"), default=7, minimum=1, maximum=365)
         output_rel = _normalize_optional_str(payload.get("output"))
         result = _run_metrics(root, window_days, output_rel)
-        return {"ok": True, "action": action, **result}
+        return {"ok": True, "action": action, **result, "cognition_cards": _cognition_cards(root)}
 
     if action == "owner_report":
         window_days = _coerce_int(payload.get("window_days"), default=7, minimum=1, maximum=365)

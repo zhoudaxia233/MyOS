@@ -2,7 +2,7 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
-from metrics import compute_drift_metrics
+from metrics import compute_cognition_trend, compute_drift_metrics, render_metrics_report
 
 
 def _write_jsonl(path: Path, schema_name: str, fields: list[str], rows: list[dict]) -> None:
@@ -165,3 +165,12 @@ def test_compute_drift_metrics_windowed() -> None:
         assert snapshot["metrics"]["equilibration_quality_rate"]["status"] == "warn"
         assert snapshot["metrics"]["schema_explicitness_rate"]["value"] == 0.5
         assert snapshot["metrics"]["schema_explicitness_rate"]["status"] == "fail"
+
+        trend = compute_cognition_trend(root, now=now)
+        assert "7d" in trend["windows"]
+        assert "30d" in trend["windows"]
+        assert len(trend["comparisons"]) == 3
+
+        snapshot["cognitive_trend"] = trend
+        report = render_metrics_report(snapshot)
+        assert "Cognition Trend (7d vs 30d)" in report

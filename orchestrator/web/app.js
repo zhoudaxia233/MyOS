@@ -19,6 +19,7 @@ const loadedFiles = document.getElementById("loadedFiles");
 const resultTrace = document.getElementById("resultTrace");
 const outputPreview = document.getElementById("outputPreview");
 const outputTokenMeta = document.getElementById("outputTokenMeta");
+const cognitionCards = document.getElementById("cognitionCards");
 const settingsModal = document.getElementById("settingsModal");
 const settingsClose = document.getElementById("settingsClose");
 const settingsSave = document.getElementById("settingsSave");
@@ -82,6 +83,45 @@ function renderLoadedFiles(files) {
     const li = document.createElement("li");
     li.textContent = file;
     loadedFiles.appendChild(li);
+  }
+}
+
+function renderCognitionCards(cards) {
+  cognitionCards.innerHTML = "";
+  if (!Array.isArray(cards) || cards.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "metric-card status-warn";
+    empty.innerHTML = "<div class=\"metric-title\">No cognition metrics</div><div class=\"metric-value\">-</div><div class=\"metric-meta\">Run metrics first.</div>";
+    cognitionCards.appendChild(empty);
+    return;
+  }
+
+  for (const item of cards) {
+    const status = item.status || "warn";
+    const card = document.createElement("div");
+    card.className = `metric-card status-${status}`;
+
+    const trend = item.trend || "stable";
+    const delta = typeof item.delta_pp === "number" ? `${item.delta_pp >= 0 ? "+" : ""}${item.delta_pp.toFixed(1)}pp` : "-";
+
+    const title = document.createElement("div");
+    title.className = "metric-title";
+    title.textContent = item.label || item.key || "Metric";
+
+    const value = document.createElement("div");
+    value.className = "metric-value";
+    value.textContent = item.value || "-";
+
+    const meta = document.createElement("div");
+    meta.className = "metric-meta";
+    const op = item.target_operator || ">=";
+    const threshold = item.threshold || "-";
+    meta.textContent = `target ${op} ${threshold} | trend: ${trend} (${delta})`;
+
+    card.appendChild(title);
+    card.appendChild(value);
+    card.appendChild(meta);
+    cognitionCards.appendChild(card);
   }
 }
 
@@ -204,6 +244,9 @@ function renderActionResult(data) {
   if (data.event_id) {
     out.push(`event_id: ${data.event_id}`);
   }
+  if (data.cognitive_trend && data.cognitive_trend.windows) {
+    out.push("cognitive_trend: 7d_vs_30d");
+  }
   if (Array.isArray(data.record_ids) && data.record_ids.length > 0) {
     out.push(`record_ids: ${data.record_ids.join(", ")}`);
   }
@@ -243,6 +286,9 @@ function renderActionResult(data) {
     setPreview(previewLines.join("\n") || "-");
     setOutputTokenMeta("-");
     return;
+  }
+  if (Array.isArray(data.cognition_cards)) {
+    renderCognitionCards(data.cognition_cards);
   }
   setPreview("-");
   setOutputTokenMeta("-");
@@ -376,6 +422,7 @@ async function loadStatus() {
     if (data.default_model) {
       modelInput.value = data.default_model;
     }
+    renderCognitionCards(data.cognition_cards || []);
 
     setStatus("Connected", "ok");
     addBubble("system", `Connected to ${data.repo_root}`);

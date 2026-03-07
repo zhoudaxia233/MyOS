@@ -110,6 +110,7 @@ Dashboard metrics include:
 - unresolved disequilibrium rate
 - equilibration quality rate
 - schema explicitness rate
+- and a built-in cognition trend section comparing 7d vs 30d windows
 
 ## Guardrail Hardening
 
@@ -177,6 +178,7 @@ Weekly cadence integration:
 - Use `--owner-window` to control the report window.
 
 Owner report records are logged in `orchestrator/logs/owner_reports.jsonl`.
+Owner report includes auto-trigger suggestions when cognition metrics indicate schema revision pressure.
 
 ## Quick Start
 

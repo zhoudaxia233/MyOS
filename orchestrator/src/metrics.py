@@ -5,6 +5,12 @@ from collections import Counter
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+COGNITION_METRIC_DIRECTIONS = {
+    "unresolved_disequilibrium_rate": "lower",
+    "equilibration_quality_rate": "higher",
+    "schema_explicitness_rate": "higher",
+}
+
 
 def _now_utc() -> datetime:
     return datetime.now(timezone.utc)
@@ -102,6 +108,15 @@ def _status_higher_better_no_data_warn(value: float, threshold: float, denominat
     if denominator <= 0:
         return "warn"
     return _status_higher_better(value, threshold)
+
+
+def _trend_direction(*, direction: str, value_7d: float, value_30d: float, epsilon: float = 0.02) -> str:
+    delta = value_7d - value_30d
+    if abs(delta) <= epsilon:
+        return "stable"
+    if direction == "higher":
+        return "improving" if delta > 0 else "worsening"
+    return "improving" if delta < 0 else "worsening"
 
 
 def compute_drift_metrics(repo_root: Path, window_days: int, now: datetime | None = None) -> dict:
@@ -300,6 +315,40 @@ def compute_drift_metrics(repo_root: Path, window_days: int, now: datetime | Non
     }
 
 
+def compute_cognition_trend(repo_root: Path, now: datetime | None = None) -> dict:
+    now = now or _now_utc()
+    snap_7d = compute_drift_metrics(repo_root, window_days=7, now=now)
+    snap_30d = compute_drift_metrics(repo_root, window_days=30, now=now)
+
+    comparisons: list[dict] = []
+    for key, direction in COGNITION_METRIC_DIRECTIONS.items():
+        metric_7d = snap_7d["metrics"][key]
+        metric_30d = snap_30d["metrics"][key]
+        value_7d = float(metric_7d["value"])
+        value_30d = float(metric_30d["value"])
+        comparisons.append(
+            {
+                "key": key,
+                "direction": direction,
+                "value_7d": value_7d,
+                "status_7d": metric_7d["status"],
+                "value_30d": value_30d,
+                "status_30d": metric_30d["status"],
+                "delta": value_7d - value_30d,
+                "trend": _trend_direction(direction=direction, value_7d=value_7d, value_30d=value_30d),
+            }
+        )
+
+    return {
+        "generated_at": now.isoformat().replace("+00:00", "Z"),
+        "windows": {
+            "7d": snap_7d,
+            "30d": snap_30d,
+        },
+        "comparisons": comparisons,
+    }
+
+
 def _pct(value: float) -> str:
     return f"{(value * 100):.1f}%"
 
@@ -359,5 +408,32 @@ def render_metrics_report(snapshot: dict) -> str:
             "- This report is quantitative and should be paired with weekly/audit narrative outputs.",
         ]
     )
+
+    trend = snapshot.get("cognitive_trend")
+    if isinstance(trend, dict):
+        comparisons = trend.get("comparisons", [])
+        lines.extend(
+            [
+                "",
+                "## Cognition Trend (7d vs 30d)",
+                "",
+                "| Metric | 7d | 30d | Delta | Trend |",
+                "|---|---:|---:|---:|---|",
+            ]
+        )
+        labels = {
+            "unresolved_disequilibrium_rate": "Unresolved Disequilibrium",
+            "equilibration_quality_rate": "Equilibration Quality",
+            "schema_explicitness_rate": "Schema Explicitness",
+        }
+        for item in comparisons:
+            key = str(item.get("key", ""))
+            label = labels.get(key, key)
+            v7 = _pct(float(item.get("value_7d", 0.0)))
+            v30 = _pct(float(item.get("value_30d", 0.0)))
+            delta_pp = (float(item.get("delta", 0.0)) * 100.0)
+            delta_text = f"{delta_pp:+.1f}pp"
+            trend_text = str(item.get("trend", "stable"))
+            lines.append(f"| {label} | {v7} | {v30} | {delta_text} | {trend_text} |")
 
     return "\n".join(lines) + "\n"

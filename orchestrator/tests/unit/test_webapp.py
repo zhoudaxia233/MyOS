@@ -29,6 +29,7 @@ def test_api_status_lists_modules() -> None:
         assert data["ok"] is True
         assert "content" in data["modules"]
         assert "decision" in data["modules"]
+        assert isinstance(data["cognition_cards"], list)
 
 
 def test_api_status_reports_env_api_key(monkeypatch) -> None:
@@ -137,6 +138,8 @@ def test_api_action_validate_metrics_and_schedule() -> None:
         assert metrics_result["ok"] is True
         assert metrics_result["action"] == "metrics"
         assert isinstance(metrics_result["output_preview"], str)
+        assert "cognitive_trend" in metrics_result
+        assert isinstance(metrics_result["cognition_cards"], list)
         assert (root / metrics_result["output_path"]).exists()
 
         schedule_result = api_action(
