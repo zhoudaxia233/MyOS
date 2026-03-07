@@ -42,6 +42,7 @@ This module stores judgment memory for decisions, failures, meaningful experienc
 - `modules/decision/logs/precommit_checks.jsonl`: Guardrail checks before high-risk commitments
 - `modules/decision/logs/guardrail_overrides.jsonl`: Explicit override audit trail records
 - `modules/decision/logs/decision_gate_checks.jsonl`: Gate outcomes before decision append (pass/blocked/override)
+- `modules/decision/logs/owner_todos.jsonl`: Owner escalation todo queue derived from repeated risk signals
 
 ### Outputs
 

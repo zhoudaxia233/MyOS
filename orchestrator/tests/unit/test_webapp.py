@@ -147,6 +147,17 @@ def test_api_action_validate_metrics_and_schedule() -> None:
         assert owner_result["action"] == "owner_report"
         assert "source_artifacts" in owner_result
         assert "owner_todos" in owner_result["source_artifacts"]
+        assert "owner_todo_queue" in owner_result
+
+        with pytest.raises(ValueError):
+            api_action(
+                root,
+                {
+                    "action": "resolve_owner_todo",
+                    "todo_id": "ot_missing",
+                    "note": "test",
+                },
+            )
 
         schedule_result = api_action(
             root,

@@ -1,0 +1,1 @@
+{"_schema":{"name":"owner_todos","version":"1.0","fields":["id","created_at","status","metric","priority","reason","action","owner_report_ref","todo_signature","resolution_of","note"],"notes":"append-only"}}

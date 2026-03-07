@@ -5,7 +5,30 @@ from collections import Counter
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+from idgen import next_id_for_path
 from metrics import compute_drift_metrics
+from validators import append_jsonl
+
+OWNER_TODOS_SCHEMA = {
+    "_schema": {
+        "name": "owner_todos",
+        "version": "1.0",
+        "fields": [
+            "id",
+            "created_at",
+            "status",
+            "metric",
+            "priority",
+            "reason",
+            "action",
+            "owner_report_ref",
+            "todo_signature",
+            "resolution_of",
+            "note",
+        ],
+        "notes": "append-only",
+    }
+}
 
 
 def _parse_iso8601(ts: str) -> datetime | None:
@@ -405,6 +428,134 @@ def render_owner_report(snapshot: dict) -> str:
     )
 
     return "\n".join(lines) + "\n"
+
+
+def _owner_todos_path(repo_root: Path) -> Path:
+    return repo_root / "modules/decision/logs/owner_todos.jsonl"
+
+
+def _open_owner_todos(repo_root: Path) -> dict[str, dict]:
+    path = _owner_todos_path(repo_root)
+    rows = _load_jsonl(path)
+    closed_ids: set[str] = set()
+    active: dict[str, dict] = {}
+
+    for row in rows:
+        if str(row.get("status", "")).strip().lower() == "archived":
+            ref = str(row.get("resolution_of", "")).strip()
+            if ref:
+                closed_ids.add(ref)
+
+    for row in rows:
+        if str(row.get("status", "")).strip().lower() != "active":
+            continue
+        todo_id = str(row.get("id", "")).strip()
+        if not todo_id or todo_id in closed_ids:
+            continue
+        sig = str(row.get("todo_signature", "")).strip()
+        if not sig:
+            continue
+        active[sig] = row
+    return active
+
+
+def sync_owner_todos(
+    repo_root: Path,
+    snapshot: dict,
+    *,
+    owner_report_ref: str | None = None,
+) -> dict:
+    todos = snapshot.get("escalation_todos", [])
+    if not isinstance(todos, list) or not todos:
+        return {"appended_ids": [], "existing_ids": [], "all_ids": []}
+
+    path = _owner_todos_path(repo_root)
+    open_todos = _open_owner_todos(repo_root)
+    appended_ids: list[str] = []
+    existing_ids: list[str] = []
+    all_ids: list[str] = []
+
+    for item in todos:
+        metric = str(item.get("metric", "")).strip()
+        action = str(item.get("action", "")).strip()
+        reason = str(item.get("id", "")).strip() or "two_week_fail"
+        priority = str(item.get("priority", "red")).strip().lower() or "red"
+        if not metric or not action:
+            continue
+        signature = f"{metric}|{action}"
+
+        current = open_todos.get(signature)
+        if current:
+            tid = str(current.get("id", "")).strip()
+            if tid:
+                existing_ids.append(tid)
+                all_ids.append(tid)
+            continue
+
+        record = {
+            "id": next_id_for_path(path, "ot"),
+            "created_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+            "status": "active",
+            "metric": metric,
+            "priority": priority,
+            "reason": reason,
+            "action": action,
+            "owner_report_ref": str(owner_report_ref).strip() or None,
+            "todo_signature": signature,
+            "resolution_of": None,
+            "note": None,
+        }
+        append_jsonl(path, record, schema_header=OWNER_TODOS_SCHEMA)
+        appended_ids.append(record["id"])
+        all_ids.append(record["id"])
+        open_todos[signature] = record
+
+    return {
+        "appended_ids": appended_ids,
+        "existing_ids": existing_ids,
+        "all_ids": all_ids,
+    }
+
+
+def resolve_owner_todo(
+    repo_root: Path,
+    *,
+    todo_id: str,
+    note: str,
+    owner_report_ref: str | None = None,
+) -> dict:
+    target = str(todo_id).strip()
+    note_text = str(note).strip()
+    if not target:
+        raise ValueError("todo_id is required")
+    if not note_text:
+        raise ValueError("note is required")
+
+    open_todos = _open_owner_todos(repo_root)
+    active_row: dict | None = None
+    for row in open_todos.values():
+        if str(row.get("id", "")).strip() == target:
+            active_row = row
+            break
+    if active_row is None:
+        raise ValueError(f"active todo not found: {target}")
+
+    path = _owner_todos_path(repo_root)
+    record = {
+        "id": next_id_for_path(path, "ot"),
+        "created_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        "status": "archived",
+        "metric": str(active_row.get("metric", "")).strip(),
+        "priority": str(active_row.get("priority", "red")).strip().lower() or "red",
+        "reason": "resolved",
+        "action": str(active_row.get("action", "")).strip(),
+        "owner_report_ref": str(owner_report_ref).strip() or None,
+        "todo_signature": str(active_row.get("todo_signature", "")).strip(),
+        "resolution_of": target,
+        "note": note_text,
+    }
+    append_jsonl(path, record, schema_header=OWNER_TODOS_SCHEMA)
+    return record
 
 
 def render_owner_todos(snapshot: dict) -> str:

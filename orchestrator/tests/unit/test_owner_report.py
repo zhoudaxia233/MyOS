@@ -2,7 +2,13 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
-from owner_report import build_owner_snapshot, render_owner_report, render_owner_todos
+from owner_report import (
+    build_owner_snapshot,
+    render_owner_report,
+    render_owner_todos,
+    resolve_owner_todo,
+    sync_owner_todos,
+)
 
 
 def _write_jsonl(path: Path, schema_name: str, fields: list[str], rows: list[dict]) -> None:
@@ -156,3 +162,38 @@ def test_owner_snapshot_and_render() -> None:
         todos = render_owner_todos(snapshot)
         assert "Owner Escalation Todos" in todos
         assert "(RED) precommit_coverage" in todos
+
+
+def test_owner_todo_queue_sync_and_resolve() -> None:
+    from tempfile import TemporaryDirectory
+
+    with TemporaryDirectory() as td:
+        root = Path(td)
+        (root / "modules/decision/logs").mkdir(parents=True, exist_ok=True)
+        snapshot = {
+            "escalation_todos": [
+                {
+                    "id": "two_week_fail_precommit_coverage",
+                    "metric": "precommit_coverage",
+                    "priority": "red",
+                    "action": "Enforce guardrail_check_id for every high-risk decision next week.",
+                }
+            ]
+        }
+
+        first = sync_owner_todos(root, snapshot, owner_report_ref="or_20260307_001")
+        assert len(first["appended_ids"]) == 1
+        assert len(first["existing_ids"]) == 0
+
+        second = sync_owner_todos(root, snapshot, owner_report_ref="or_20260307_002")
+        assert len(second["appended_ids"]) == 0
+        assert len(second["existing_ids"]) == 1
+
+        resolved = resolve_owner_todo(
+            root,
+            todo_id=first["appended_ids"][0],
+            note="Guardrail check coverage enforcement merged.",
+            owner_report_ref="or_20260314_001",
+        )
+        assert resolved["status"] == "archived"
+        assert resolved["resolution_of"] == first["appended_ids"][0]

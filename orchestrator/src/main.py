@@ -23,7 +23,13 @@ from idgen import next_id_for_rel_path
 from learning_ingest import ingest_learning_asset
 from loader import load_context_bundle
 from metrics import compute_cognition_trend, compute_drift_metrics, render_metrics_report
-from owner_report import build_owner_snapshot, render_owner_report, render_owner_todos
+from owner_report import (
+    build_owner_snapshot,
+    render_owner_report,
+    render_owner_todos,
+    resolve_owner_todo,
+    sync_owner_todos,
+)
 from planner import plan_task
 from plugin_contract import validate_repo
 from prompting import schema_debugger_output_sections, schema_debugger_questions
@@ -708,8 +714,9 @@ def cmd_owner_report(args: argparse.Namespace) -> int:
         snapshot["source_artifacts"]["owner_todos"] = todos_path
 
     summary = {k: v["status"] for k, v in snapshot["metrics"]["metrics"].items()}
+    owner_report_id = next_id_for_rel_path(root, "or", "orchestrator/logs/owner_reports.jsonl")
     record = {
-        "id": next_id_for_rel_path(root, "or", "orchestrator/logs/owner_reports.jsonl"),
+        "id": owner_report_id,
         "created_at": _utc_now(),
         "status": "active",
         "window_days": args.window,
@@ -719,9 +726,13 @@ def cmd_owner_report(args: argparse.Namespace) -> int:
     }
     log_owner_report(root, record)
 
+    queue_sync = sync_owner_todos(root, snapshot, owner_report_ref=owner_report_id)
+
     print(f"Wrote: {out}")
     if todos_path:
         print(f"Wrote todos: {root / todos_path}")
+    if queue_sync["appended_ids"] or queue_sync["existing_ids"]:
+        print(f"Todo queue synced: {len(queue_sync['all_ids'])} active refs")
     print(f"Summary: {summary}")
     return 0
 
@@ -801,6 +812,7 @@ def cmd_schedule_run(args: argparse.Namespace) -> int:
             "source_artifacts": owner_snapshot["source_artifacts"],
         }
         log_owner_report(root, owner_record)
+        sync_owner_todos(root, owner_snapshot, owner_report_ref=owner_record["id"])
 
         schedule_record = {
             "id": next_id_for_rel_path(root, "sr", "orchestrator/logs/schedule_runs.jsonl"),
@@ -818,6 +830,19 @@ def cmd_schedule_run(args: argparse.Namespace) -> int:
         if todos_rel:
             print(f"- rt_weekly_owner_todos_auto -> {todos_rel}")
 
+    return 0
+
+
+def cmd_resolve_owner_todo(args: argparse.Namespace) -> int:
+    root = repo_root()
+    record = resolve_owner_todo(
+        root,
+        todo_id=args.todo_id,
+        note=args.note,
+        owner_report_ref=_normalize_optional_str(args.owner_report_ref),
+    )
+    print(f"Resolved todo: {record['resolution_of']}")
+    print(f"Resolution record ID: {record['id']}")
     return 0
 
 
@@ -1030,6 +1055,12 @@ def build_parser() -> argparse.ArgumentParser:
     sp_owner.add_argument("--window", type=int, default=7)
     sp_owner.add_argument("--output", default=None)
     sp_owner.set_defaults(func=cmd_owner_report)
+
+    sp_resolve_todo = sub.add_parser("resolve-owner-todo")
+    sp_resolve_todo.add_argument("--todo-id", required=True)
+    sp_resolve_todo.add_argument("--note", required=True)
+    sp_resolve_todo.add_argument("--owner-report-ref", default=None)
+    sp_resolve_todo.set_defaults(func=cmd_resolve_owner_todo)
 
     sp_schedule = sub.add_parser("schedule-run")
     sp_schedule.add_argument("--cycle", required=True, choices=["daily", "weekly", "monthly"])

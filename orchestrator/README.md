@@ -181,6 +181,7 @@ Owner report records are logged in `orchestrator/logs/owner_reports.jsonl`.
 Owner report includes auto-trigger suggestions when cognition metrics indicate schema revision pressure.
 If a metric is `fail` in two consecutive weekly owner windows, the report marks it as `fail [RED-2W]` and emits escalation todos.
 When escalation todos exist, an `owner_todos_*.md` artifact is generated under `modules/decision/outputs/`.
+Escalation todos are synchronized into `modules/decision/logs/owner_todos.jsonl` and can be resolved explicitly.
 
 ## Quick Start
 
@@ -281,6 +282,7 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py metrics [--window 7|30] [-
 python3 /Users/closears/MyOS/orchestrator/src/main.py guardrail-check --domain <invest|project|content> [policy fields...]
 python3 /Users/closears/MyOS/orchestrator/src/main.py log-decision --domain <name> --decision "..." --option <value> --confidence <1-10> [gate fields...]
 python3 /Users/closears/MyOS/orchestrator/src/main.py owner-report [--window 7|30] [--output <path>]
+python3 /Users/closears/MyOS/orchestrator/src/main.py resolve-owner-todo --todo-id <ot_id> --note "..." [--owner-report-ref <or_id>]
 python3 /Users/closears/MyOS/orchestrator/src/main.py validate [--strict]
 python3 /Users/closears/MyOS/orchestrator/src/main.py web [--host 127.0.0.1] [--port 8765] [--open-browser]
 ```

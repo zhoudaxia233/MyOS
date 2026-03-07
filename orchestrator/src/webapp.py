@@ -22,7 +22,13 @@ from loader import load_context_bundle
 from learning_ingest import ingest_learning_text
 from manifests import discover_module_manifests
 from metrics import compute_cognition_trend, compute_drift_metrics, render_metrics_report
-from owner_report import build_owner_snapshot, render_owner_report, render_owner_todos
+from owner_report import (
+    build_owner_snapshot,
+    render_owner_report,
+    render_owner_todos,
+    resolve_owner_todo,
+    sync_owner_todos,
+)
 from planner import plan_task
 from plugin_contract import validate_repo
 from prompting import schema_debugger_output_sections, schema_debugger_questions
@@ -402,8 +408,9 @@ def _run_owner_report(root: Path, window_days: int, output_rel: str | None) -> d
         snapshot["source_artifacts"]["owner_todos"] = todos_path
 
     summary = {k: v["status"] for k, v in snapshot["metrics"]["metrics"].items()}
+    owner_report_id = next_id_for_rel_path(root, "or", "orchestrator/logs/owner_reports.jsonl")
     record = {
-        "id": next_id_for_rel_path(root, "or", "orchestrator/logs/owner_reports.jsonl"),
+        "id": owner_report_id,
         "created_at": _utc_now(),
         "status": "active",
         "window_days": window_days,
@@ -412,6 +419,7 @@ def _run_owner_report(root: Path, window_days: int, output_rel: str | None) -> d
         "source_artifacts": snapshot["source_artifacts"],
     }
     log_owner_report(root, record)
+    queue_sync = sync_owner_todos(root, snapshot, owner_report_ref=owner_report_id)
 
     return {
         "window_days": window_days,
@@ -420,6 +428,7 @@ def _run_owner_report(root: Path, window_days: int, output_rel: str | None) -> d
         "output_preview": _preview_text(report),
         "source_artifacts": snapshot["source_artifacts"],
         "owner_todos_path": todos_path,
+        "owner_todo_queue": queue_sync,
     }
 
 
@@ -707,6 +716,21 @@ def api_action(root: Path, payload: dict[str, Any]) -> dict:
         output_rel = _normalize_optional_str(payload.get("output"))
         result = _run_owner_report(root, window_days, output_rel)
         return {"ok": True, "action": action, **result}
+
+    if action == "resolve_owner_todo":
+        todo_id = str(payload.get("todo_id", "")).strip()
+        note = str(payload.get("note", "")).strip()
+        if not todo_id:
+            raise ValueError("todo_id is required for resolve_owner_todo")
+        if not note:
+            raise ValueError("note is required for resolve_owner_todo")
+        record = resolve_owner_todo(
+            root,
+            todo_id=todo_id,
+            note=note,
+            owner_report_ref=_normalize_optional_str(payload.get("owner_report_ref")),
+        )
+        return {"ok": True, "action": action, "resolution_record_id": record["id"], "resolved_todo": record["resolution_of"]}
 
     if action == "schedule_cycle":
         cycle = str(payload.get("cycle", "weekly")).strip().lower()
