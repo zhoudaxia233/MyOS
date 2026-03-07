@@ -12,6 +12,7 @@ from urllib.parse import parse_qs, urlparse
 
 from config import load_runtime_config
 from loader import load_context_bundle
+from learning_ingest import ingest_learning_text
 from manifests import discover_module_manifests
 from metrics import compute_drift_metrics, render_metrics_report
 from owner_report import build_owner_snapshot, render_owner_report
@@ -105,6 +106,22 @@ def _coerce_bool(value: Any, *, default: bool = False) -> bool:
 def _normalize_optional_str(value: Any) -> str | None:
     text = str(value).strip() if value is not None else ""
     return text or None
+
+
+def _coerce_tags(value: Any) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return [str(item).strip() for item in value if str(item).strip()]
+    if isinstance(value, str):
+        text = value.strip()
+        if not text:
+            return []
+        if "," in text:
+            return [part.strip() for part in text.split(",") if part.strip()]
+        return [text]
+    text = str(value).strip()
+    return [text] if text else []
 
 
 def _retrieval_hits(root: Path, query: str, module: str | None, top_k: int) -> list[dict]:
@@ -586,6 +603,23 @@ def api_action(root: Path, payload: dict[str, Any]) -> dict:
             "doc_count": payload_out["doc_count"],
             "source_count": len(payload_out["sources"]),
         }
+
+    if action == "ingest_learning":
+        learning_text = str(payload.get("task", "")).strip()
+        if not learning_text:
+            raise ValueError("task is required for ingest_learning")
+
+        result = ingest_learning_text(
+            root,
+            learning_text,
+            title=_normalize_optional_str(payload.get("title")),
+            source_type=_normalize_optional_str(payload.get("source_type")) or "video",
+            max_points=_coerce_int(payload.get("max_points"), default=6, minimum=1, maximum=20),
+            confidence=_coerce_int(payload.get("confidence"), default=7, minimum=1, maximum=10),
+            dry_run=_coerce_bool(payload.get("dry_run"), default=False),
+            extra_tags=_coerce_tags(payload.get("tags")),
+        )
+        return {"ok": True, "action": action, **result}
 
     raise ValueError(f"unsupported action: {action}")
 

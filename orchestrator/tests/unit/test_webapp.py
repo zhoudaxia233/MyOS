@@ -146,6 +146,33 @@ def test_api_action_validate_metrics_and_schedule() -> None:
         assert isinstance(schedule_result["runs"][0]["output_preview"], str)
         assert (root / schedule_result["runs"][0]["output_path"]).exists()
 
+        events_path = root / "modules/memory/logs/memory_events.jsonl"
+        insights_path = root / "modules/memory/logs/memory_insights.jsonl"
+        events_before = len(events_path.read_text(encoding="utf-8").splitlines())
+        insights_before = len(insights_path.read_text(encoding="utf-8").splitlines())
+
+        ingest_result = api_action(
+            root,
+            {
+                "action": "ingest_learning",
+                "task": "Reverse thinking: when A/B fail, find option C. Align incentives with motives. Check value chain.",
+                "source_type": "video",
+                "max_points": 6,
+                "confidence": 8,
+                "tags": ["web_test"],
+            },
+        )
+        assert ingest_result["ok"] is True
+        assert ingest_result["action"] == "ingest_learning"
+        assert ingest_result["appended_events"] == 1
+        assert ingest_result["appended_insights"] == 1
+        assert len(ingest_result["record_ids"]) == 2
+
+        events_after = len(events_path.read_text(encoding="utf-8").splitlines())
+        insights_after = len(insights_path.read_text(encoding="utf-8").splitlines())
+        assert events_after == events_before + 1
+        assert insights_after == insights_before + 1
+
 
 def test_api_output_rejects_non_output_and_escape_paths() -> None:
     with TemporaryDirectory() as td:

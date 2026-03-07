@@ -200,6 +200,111 @@ def _build_insight(title: str, points: list[str]) -> str:
     return _clip(f"{title}: {'; '.join(points[:3])}", 260)
 
 
+def _ingest_learning_content(
+    repo_root: Path,
+    *,
+    input_ref: str,
+    text: str,
+    title: str,
+    source_type: str,
+    max_points: int,
+    confidence: int,
+    dry_run: bool,
+    extra_tags: list[str] | None,
+) -> dict:
+    points = _extract_points(text, max_points=max_points)
+    why_it_matters = _derive_why_it_matters(text, points)
+    tags = _derive_tags(text, source_type=source_type, extra_tags=extra_tags or [])
+    now = _utc_now()
+
+    events_log = repo_root / "modules" / "memory" / "logs" / "memory_events.jsonl"
+    insights_log = repo_root / "modules" / "memory" / "logs" / "memory_insights.jsonl"
+
+    event_id = _next_id(events_log, "me")
+    event_record = {
+        "id": event_id,
+        "created_at": now,
+        "status": "active",
+        "source_type": "external_observation",
+        "event": _clip(f"Learning asset [{source_type}] {title}: {'; '.join(points[:3])}", 260),
+        "why_it_matters": why_it_matters,
+        "tags": tags,
+        "source_refs": [],
+    }
+
+    insight_id = _next_id(insights_log, "mi")
+    insight_record = {
+        "id": insight_id,
+        "created_at": now,
+        "status": "active",
+        "insight": _build_insight(title, points),
+        "evidence": points[: max(1, min(5, len(points)))],
+        "source_refs": [event_id],
+        "confidence": confidence,
+        "tags": [tag for tag in tags if tag != "imported"][:8],
+    }
+
+    if not dry_run:
+        append_jsonl(events_log, event_record, schema_header=MEMORY_EVENTS_SCHEMA)
+        append_jsonl(insights_log, insight_record, schema_header=MEMORY_INSIGHTS_SCHEMA)
+
+    return {
+        "input_path": input_ref,
+        "title": title,
+        "source_type": source_type,
+        "core_points_count": len(points),
+        "event_count": 1,
+        "insight_count": 1,
+        "appended_events": 0 if dry_run else 1,
+        "appended_insights": 0 if dry_run else 1,
+        "record_ids": [event_id, insight_id],
+        "event_ids": [event_id],
+        "insight_ids": [insight_id],
+        "dry_run": dry_run,
+        "preview": {
+            "event": {"id": event_id, "event": event_record["event"], "tags": event_record["tags"]},
+            "insight": {"id": insight_id, "insight": insight_record["insight"], "confidence": confidence},
+        },
+    }
+
+
+def ingest_learning_text(
+    repo_root: Path,
+    learning_text: str,
+    *,
+    title: str | None = None,
+    source_type: str = "video",
+    max_points: int = 6,
+    confidence: int = 7,
+    dry_run: bool = False,
+    extra_tags: list[str] | None = None,
+) -> dict:
+    text = str(learning_text or "").strip()
+    if not text:
+        raise ValueError("learning_text is required")
+    if max_points <= 0:
+        raise ValueError("max_points must be > 0")
+    if confidence < 1 or confidence > 10:
+        raise ValueError("confidence must be in range 1..10")
+
+    final_title = str(title).strip() if title is not None else ""
+    if not final_title:
+        first_line = next((ln.strip() for ln in text.splitlines() if ln.strip()), "")
+        final_title = first_line.lstrip("#").strip()[:80] or "learning asset"
+
+    return _ingest_learning_content(
+        repo_root,
+        input_ref="<inline>",
+        text=text,
+        title=final_title,
+        source_type=source_type,
+        max_points=max_points,
+        confidence=confidence,
+        dry_run=dry_run,
+        extra_tags=extra_tags,
+    )
+
+
 def ingest_learning_asset(
     repo_root: Path,
     input_path: Path,
@@ -219,58 +324,14 @@ def ingest_learning_asset(
     inferred_title, text = _load_input_text(input_path)
     final_title = str(title).strip() if title is not None else ""
     final_title = final_title or inferred_title
-
-    points = _extract_points(text, max_points=max_points)
-    why_it_matters = _derive_why_it_matters(text, points)
-    tags = _derive_tags(text, source_type=source_type, extra_tags=extra_tags or [])
-    now = _utc_now()
-
-    events_log = repo_root / "modules" / "memory" / "logs" / "memory_events.jsonl"
-    insights_log = repo_root / "modules" / "memory" / "logs" / "memory_insights.jsonl"
-
-    event_id = _next_id(events_log, "me")
-    event_record = {
-        "id": event_id,
-        "created_at": now,
-        "status": "active",
-        "source_type": "external_observation",
-        "event": _clip(f"Learning asset [{source_type}] {final_title}: {'; '.join(points[:3])}", 260),
-        "why_it_matters": why_it_matters,
-        "tags": tags,
-        "source_refs": [],
-    }
-
-    insight_id = _next_id(insights_log, "mi")
-    insight_record = {
-        "id": insight_id,
-        "created_at": now,
-        "status": "active",
-        "insight": _build_insight(final_title, points),
-        "evidence": points[: max(1, min(5, len(points)))],
-        "source_refs": [event_id],
-        "confidence": confidence,
-        "tags": [tag for tag in tags if tag != "imported"][:8],
-    }
-
-    if not dry_run:
-        append_jsonl(events_log, event_record, schema_header=MEMORY_EVENTS_SCHEMA)
-        append_jsonl(insights_log, insight_record, schema_header=MEMORY_INSIGHTS_SCHEMA)
-
-    return {
-        "input_path": str(input_path),
-        "title": final_title,
-        "source_type": source_type,
-        "core_points_count": len(points),
-        "event_count": 1,
-        "insight_count": 1,
-        "appended_events": 0 if dry_run else 1,
-        "appended_insights": 0 if dry_run else 1,
-        "record_ids": [event_id, insight_id],
-        "event_ids": [event_id],
-        "insight_ids": [insight_id],
-        "dry_run": dry_run,
-        "preview": {
-            "event": {"id": event_id, "event": event_record["event"], "tags": event_record["tags"]},
-            "insight": {"id": insight_id, "insight": insight_record["insight"], "confidence": confidence},
-        },
-    }
+    return _ingest_learning_content(
+        repo_root,
+        input_ref=str(input_path),
+        text=text,
+        title=final_title,
+        source_type=source_type,
+        max_points=max_points,
+        confidence=confidence,
+        dry_run=dry_run,
+        extra_tags=extra_tags,
+    )

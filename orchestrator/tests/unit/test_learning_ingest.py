@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from learning_ingest import ingest_learning_asset
+from learning_ingest import ingest_learning_asset, ingest_learning_text
 
 
 def _now_prefix(prefix: str) -> str:
@@ -129,3 +129,25 @@ def test_ingest_learning_asset_reads_json_payload() -> None:
         assert result["title"] == "Negotiation Lessons"
         assert result["source_type"] == "article"
         assert result["core_points_count"] >= 2
+
+
+def test_ingest_learning_text_appends_from_inline_content() -> None:
+    with TemporaryDirectory() as td:
+        root = Path(td)
+        events_log, insights_log = _prepare_logs(root)
+
+        result = ingest_learning_text(
+            root,
+            "When A/B fail, try option C. Align motives. Inspect hidden value chain.",
+            title="Inline learning",
+            source_type="video",
+            confidence=7,
+            dry_run=False,
+            extra_tags=["inline"],
+        )
+        assert result["input_path"] == "<inline>"
+        assert result["title"] == "Inline learning"
+        assert result["appended_events"] == 1
+        assert result["appended_insights"] == 1
+        assert len(events_log.read_text(encoding="utf-8").splitlines()) == 2
+        assert len(insights_log.read_text(encoding="utf-8").splitlines()) == 2

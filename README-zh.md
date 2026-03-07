@@ -132,7 +132,7 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py web --open-browser
 - 当 Module = Auto route 且已配置 API key 时，模块选择会走模型路由
 - 若模型路由失败，会自动回退到 manifest/关键词路由并保留审计原因
 - `handoff` 模式下，Output Preview 会显示复制块的 token 消耗（有 `tiktoken` 时精确计数，否则估算）
-- 一键动作：validate、metrics、owner report、weekly cycle、retrieval index
+- 一键动作：validate、metrics、owner report、One-Click Ingest Learning、weekly cycle、retrieval index
 
 ### 1) 先拿最小上下文
 
@@ -273,6 +273,7 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "run weekly dec
 1. 先接入外部学习内容（视频/文章/书）：
    - `python3 /Users/closears/MyOS/orchestrator/src/main.py ingest-learning --input <learning_notes.md|txt|json> --source-type video --max-points 6 --confidence 7`
    - 使用 `modules/memory/skills/ingest_learning_asset.md`，把内容沉淀为 `memory_events` + `memory_insights`。
+   - UI 一键路径：把总结粘贴到 Task 输入框，点击 `One-Click Ingest Learning`。
 2. 再导入聊天导出（推荐）：
    - `python3 /Users/closears/MyOS/orchestrator/src/main.py ingest-chat --input <chat_export.json|jsonl|md|txt> --max-events 50`
 3. 需要时补充手工 memory event（`ingest_memory.md`）

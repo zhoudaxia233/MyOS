@@ -139,7 +139,7 @@ You get a local chat-like control center with:
 - with Module = Auto route, configured API key triggers model-based module selection
 - route selection auto-falls back to manifest/keyword routing if model routing fails
 - in `handoff` mode, Output Preview shows token usage for the copy block (`tiktoken` exact when available, otherwise estimate)
-- quick actions: validate, metrics, owner report, weekly cycle, retrieval index
+- quick actions: validate, metrics, owner report, one-click learning ingest, weekly cycle, retrieval index
 
 ### 1) Get a route and minimal context bundle
 
@@ -280,6 +280,7 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "run weekly dec
 1. Ingest external learning assets:
    - `python3 /Users/closears/MyOS/orchestrator/src/main.py ingest-learning --input <learning_notes.md|txt|json> --source-type video --max-points 6 --confidence 7`
    - Skill reference: `modules/memory/skills/ingest_learning_asset.md`
+   - UI one-click path: paste summary in Task box, then click `One-Click Ingest Learning`.
 2. Import chat export into memory events:
    - `python3 /Users/closears/MyOS/orchestrator/src/main.py ingest-chat --input <chat_export.json|jsonl|md|txt> --max-events 50`
 3. Ingest extra reflection events (`ingest_memory.md`) when needed

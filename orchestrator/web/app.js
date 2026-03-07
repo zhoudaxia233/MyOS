@@ -133,6 +133,15 @@ function renderActionResult(data) {
   if (data.summary) {
     out.push(`summary: ${JSON.stringify(data.summary)}`);
   }
+  if (typeof data.appended_events === "number") {
+    out.push(`appended_events: ${data.appended_events}`);
+  }
+  if (typeof data.appended_insights === "number") {
+    out.push(`appended_insights: ${data.appended_insights}`);
+  }
+  if (Array.isArray(data.record_ids) && data.record_ids.length > 0) {
+    out.push(`record_ids: ${data.record_ids.join(", ")}`);
+  }
   if (Array.isArray(data.errors) && data.errors.length > 0) {
     out.push(`errors: ${data.errors.length}`);
   }
@@ -154,6 +163,20 @@ function renderActionResult(data) {
     latestOutputProvider = providerSelect.value || latestOutputProvider;
     setPreview(data.runs[0].output_preview || "-");
     refreshOutputTokenMeta();
+    return;
+  }
+  if (data.action === "ingest_learning" && data.preview) {
+    const eventPreview = data.preview.event && data.preview.event.event ? data.preview.event.event : "";
+    const insightPreview = data.preview.insight && data.preview.insight.insight ? data.preview.insight.insight : "";
+    const previewLines = [];
+    if (eventPreview) {
+      previewLines.push(`event: ${eventPreview}`);
+    }
+    if (insightPreview) {
+      previewLines.push(`insight: ${insightPreview}`);
+    }
+    setPreview(previewLines.join("\n") || "-");
+    setOutputTokenMeta("-");
     return;
   }
   setPreview("-");
@@ -387,6 +410,7 @@ async function runTask() {
 }
 
 async function runAction(action) {
+  const taskText = taskInput.value.trim();
   const payload = {
     action,
     provider: providerSelect.value,
@@ -403,6 +427,19 @@ async function runAction(action) {
     payload.action = "schedule_cycle";
     payload.cycle = "weekly";
     payload.no_owner_report = false;
+  }
+
+  if (action === "ingest_learning") {
+    if (!taskText) {
+      addBubble("system", "Task text is required. Paste your learning summary first.");
+      return;
+    }
+    payload.task = taskText;
+    payload.source_type = "video";
+    payload.max_points = 6;
+    payload.confidence = 7;
+    payload.tags = ["ui_one_click"];
+    addUserTaskOnce(taskText);
   }
 
   addBubble("system", `Running action: ${payload.action}`);
