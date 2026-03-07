@@ -110,6 +110,30 @@ def test_owner_snapshot_and_render() -> None:
         (root / "modules/cognition/outputs/cognitive_timeline_20260302.md").write_text(
             "Cognitive Evolution Timeline", encoding="utf-8"
         )
+        _write_jsonl(
+            root / "orchestrator/logs/owner_reports.jsonl",
+            "owner_reports",
+            ["id", "created_at", "status", "window_days", "summary", "report_path", "source_artifacts"],
+            [
+                {
+                    "id": "or_20260224_001",
+                    "created_at": "2026-02-24T10:00:00Z",
+                    "status": "active",
+                    "window_days": 7,
+                    "summary": {
+                        "precommit_coverage": "fail",
+                        "cooldown_compliance": "pass",
+                        "repeat_failure_rate": "pass",
+                        "profile_drift_rate": "pass",
+                        "unresolved_disequilibrium_rate": "pass",
+                        "equilibration_quality_rate": "warn",
+                        "schema_explicitness_rate": "warn",
+                    },
+                    "report_path": "modules/decision/outputs/owner_report_20260224.md",
+                    "source_artifacts": {},
+                }
+            ],
+        )
 
         snapshot = build_owner_snapshot(root, window_days=7, now=now)
         report = render_owner_report(snapshot)
@@ -119,9 +143,13 @@ def test_owner_snapshot_and_render() -> None:
         assert any(a.startswith("decision_audit_conflict:") for a in snapshot["consistency_alerts"])
         assert any(a.startswith("weekly_review_conflict:") for a in snapshot["consistency_alerts"])
         assert isinstance(snapshot["auto_triggers"], list)
+        assert "precommit_coverage" in snapshot["consecutive_fail_metrics"]
+        assert len(snapshot["escalation_todos"]) >= 1
         assert "guardrail_overrides.invest" in report
         assert "Consistency Alerts" in report
         assert "Auto Triggers" in report
+        assert "Escalation Todos (2W Fail)" in report
+        assert "[RED-2W]" in report
         assert "Owner Report" in report
         assert "Executive Summary" in report
         assert "cognition_timeline" in report

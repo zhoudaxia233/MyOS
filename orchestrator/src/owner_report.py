@@ -90,9 +90,85 @@ def _parse_metrics_status_from_report(text: str) -> dict[str, str]:
     return out
 
 
+def _to_int(value, default: int = 0) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _select_previous_owner_summary(repo_root: Path, now: datetime, window_days: int) -> dict | None:
+    path = repo_root / "orchestrator/logs/owner_reports.jsonl"
+    rows = _load_jsonl(path)
+    if not rows:
+        return None
+
+    min_age_days = max(1.0, window_days * 0.7)
+    max_age_days = max(float(window_days) * 4.0, float(window_days) + 2.0)
+
+    candidates: list[tuple[datetime, dict]] = []
+    for row in rows:
+        if str(row.get("status", "active")).strip().lower() != "active":
+            continue
+        if _to_int(row.get("window_days"), -1) != int(window_days):
+            continue
+        created = _parse_iso8601(str(row.get("created_at", "")))
+        if created is None or created >= now:
+            continue
+
+        age_days = (now - created).total_seconds() / 86400.0
+        if age_days < min_age_days or age_days > max_age_days:
+            continue
+
+        summary = row.get("summary")
+        if not isinstance(summary, dict):
+            continue
+        candidates.append((created, summary))
+
+    if not candidates:
+        return None
+    candidates.sort(key=lambda item: item[0], reverse=True)
+    selected = candidates[0]
+    return {"created_at": selected[0].isoformat().replace("+00:00", "Z"), "summary": selected[1]}
+
+
+def _repeat_fail_todos(metric_keys: list[str]) -> list[dict]:
+    if not metric_keys:
+        return []
+
+    action_map = {
+        "precommit_coverage": "Enforce guardrail_check_id for every high-risk decision next week.",
+        "cooldown_compliance": "Block high-emotion decisions unless cooldown evidence is logged.",
+        "repeat_failure_rate": "Open one root-cause elimination task for repeated failure pattern.",
+        "profile_drift_rate": "Run profile stabilizer reset and verify mitigation logs daily.",
+        "unresolved_disequilibrium_rate": "Run schema revision cycle for top unresolved tension topic.",
+        "equilibration_quality_rate": "Design stricter falsification tests for revised schemas before reuse.",
+        "schema_explicitness_rate": "Require schema_version_id in assimilation entries before weekly close.",
+    }
+
+    todos: list[dict] = []
+    for key in metric_keys:
+        todos.append(
+            {
+                "id": f"two_week_fail_{key}",
+                "metric": key,
+                "priority": "red",
+                "action": action_map.get(key, "Assign owner and correction plan before next weekly cycle."),
+            }
+        )
+    return todos
+
+
+def _status_with_red_tag(metric_key: str, status: str, red_keys: set[str]) -> str:
+    if status == "fail" and metric_key in red_keys:
+        return "fail [RED-2W]"
+    return status
+
+
 def build_owner_snapshot(repo_root: Path, window_days: int, now: datetime | None = None) -> dict:
     now = now or datetime.now(timezone.utc)
     metrics = compute_drift_metrics(repo_root, window_days=window_days, now=now)
+    previous_summary = _select_previous_owner_summary(repo_root, now=now, window_days=window_days)
 
     overrides = _window_filter(
         _load_jsonl(repo_root / "modules/decision/logs/guardrail_overrides.jsonl"),
@@ -202,6 +278,17 @@ def build_owner_snapshot(repo_root: Path, window_days: int, now: datetime | None
             }
         )
 
+    consecutive_fail_metrics: list[str] = []
+    if previous_summary and isinstance(previous_summary.get("summary"), dict):
+        prev = previous_summary["summary"]
+        for key, item in m.items():
+            current_status = str(item.get("status", "")).strip().lower()
+            prev_status = str(prev.get(key, "")).strip().lower()
+            if current_status == "fail" and prev_status == "fail":
+                consecutive_fail_metrics.append(key)
+
+    escalation_todos = _repeat_fail_todos(consecutive_fail_metrics)
+
     return {
         "generated_at": now.isoformat().replace("+00:00", "Z"),
         "window_days": window_days,
@@ -217,11 +304,15 @@ def build_owner_snapshot(repo_root: Path, window_days: int, now: datetime | None
         },
         "consistency_alerts": consistency_alerts,
         "auto_triggers": auto_triggers,
+        "previous_summary": previous_summary,
+        "consecutive_fail_metrics": consecutive_fail_metrics,
+        "escalation_todos": escalation_todos,
     }
 
 
 def render_owner_report(snapshot: dict) -> str:
     metrics = snapshot["metrics"]["metrics"]
+    red_keys = set(snapshot.get("consecutive_fail_metrics", []))
 
     lines = [
         "# Owner Report",
@@ -231,13 +322,13 @@ def render_owner_report(snapshot: dict) -> str:
         "",
         "## Executive Summary",
         "",
-        f"- precommit_coverage: {metrics['precommit_coverage']['status']}",
-        f"- cooldown_compliance: {metrics['cooldown_compliance']['status']}",
-        f"- repeat_failure_rate: {metrics['repeat_failure_rate']['status']}",
-        f"- profile_drift_rate: {metrics['profile_drift_rate']['status']}",
-        f"- unresolved_disequilibrium_rate: {metrics['unresolved_disequilibrium_rate']['status']}",
-        f"- equilibration_quality_rate: {metrics['equilibration_quality_rate']['status']}",
-        f"- schema_explicitness_rate: {metrics['schema_explicitness_rate']['status']}",
+        f"- precommit_coverage: {_status_with_red_tag('precommit_coverage', metrics['precommit_coverage']['status'], red_keys)}",
+        f"- cooldown_compliance: {_status_with_red_tag('cooldown_compliance', metrics['cooldown_compliance']['status'], red_keys)}",
+        f"- repeat_failure_rate: {_status_with_red_tag('repeat_failure_rate', metrics['repeat_failure_rate']['status'], red_keys)}",
+        f"- profile_drift_rate: {_status_with_red_tag('profile_drift_rate', metrics['profile_drift_rate']['status'], red_keys)}",
+        f"- unresolved_disequilibrium_rate: {_status_with_red_tag('unresolved_disequilibrium_rate', metrics['unresolved_disequilibrium_rate']['status'], red_keys)}",
+        f"- equilibration_quality_rate: {_status_with_red_tag('equilibration_quality_rate', metrics['equilibration_quality_rate']['status'], red_keys)}",
+        f"- schema_explicitness_rate: {_status_with_red_tag('schema_explicitness_rate', metrics['schema_explicitness_rate']['status'], red_keys)}",
         f"- guardrail_override_count: {snapshot['override_count']}",
         "",
         "## Top Exceptions",
@@ -282,6 +373,21 @@ def render_owner_report(snapshot: dict) -> str:
     if snapshot["auto_triggers"]:
         for trigger in snapshot["auto_triggers"]:
             lines.append(f"- [{trigger['id']}] {trigger['reason']} -> {trigger['action']}")
+    else:
+        lines.append("- none")
+
+    lines.extend(
+        [
+            "",
+            "## Escalation Todos (2W Fail)",
+            "",
+        ]
+    )
+
+    escalation_todos = snapshot.get("escalation_todos", [])
+    if escalation_todos:
+        for todo in escalation_todos:
+            lines.append(f"- [{todo['priority'].upper()}] {todo['metric']}: {todo['action']}")
     else:
         lines.append("- none")
 

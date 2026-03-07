@@ -179,6 +179,7 @@ Weekly cadence integration:
 
 Owner report records are logged in `orchestrator/logs/owner_reports.jsonl`.
 Owner report includes auto-trigger suggestions when cognition metrics indicate schema revision pressure.
+If a metric is `fail` in two consecutive weekly owner windows, the report marks it as `fail [RED-2W]` and emits escalation todos.
 
 ## Quick Start
 
