@@ -25,10 +25,79 @@ The system is a stable, extensible operating center where:
 - From isolated tasks to cadence-driven operations (daily/weekly/monthly loops)
 - From scattered tools to a unified control center (orchestrator + UI)
 
-### Current Execution Next Steps
+### Current Execution Roadmap
 
-- See `NEXT_STEPS.md` for the stage-by-stage execution plan toward a transparent cyber-self suggestion mirror.
-- Keep the rollout evolutionary: preserve existing extraction/distillation pipelines as first-class upstream inputs.
+Keep rollout evolutionary: preserve existing extraction/distillation pipelines as first-class upstream inputs.
+
+#### Stage 1 - Transparent Suggestion Pipeline (Current)
+
+- Completed:
+  - structured suggestion records at `orchestrator/logs/suggestions.jsonl`
+  - `run` / web `api_run` return `suggestion_id`
+  - classification consistency for runtime logs (`object_type` / `proposal_target`)
+- Next:
+  - suggestion detail query API by `suggestion_id`
+  - web trace panel support for full suggestion detail view
+  - clearer `invoked_rules` / `invoked_traits` fields in suggestion records
+- Exit criteria:
+  - end-to-end trace from task input to suggestion, run record, output artifact, and loaded context
+  - owner can inspect why a recommendation was produced
+
+#### Stage 2 - Structured Owner Feedback Loop
+
+- New records:
+  - `orchestrator/logs/owner_verdicts.jsonl`
+  - `orchestrator/logs/owner_corrections.jsonl`
+- Required behavior:
+  - verdict: `accept | modify | reject`
+  - correction captures "unlike-me" reason, replacement judgment, and target layer
+  - web UI includes review controls and structured submit path
+- Exit criteria:
+  - every suggestion can be reviewed with explicit verdict + correction trail
+
+#### Stage 3 - Candidate Promotion Workflows
+
+- New candidate logs:
+  - `modules/decision/logs/rule_candidates.jsonl`
+  - `modules/decision/logs/skill_candidates.jsonl`
+  - `modules/profile/logs/profile_trait_candidates.jsonl`
+  - `modules/cognition/logs/schema_candidates.jsonl`
+  - `modules/principles/logs/principle_candidates.jsonl`
+- Required behavior:
+  - candidate lifecycle: `candidate -> reviewed -> promoted|rejected`
+  - promotion requires explicit `approval_ref`
+  - runtime uses promoted truths only, not raw candidates
+- Exit criteria:
+  - extraction outputs become governable candidates without directly mutating canonical state
+
+#### Stage 4 - Limited Delegation With Explicit Review
+
+- New records:
+  - `modules/decision/logs/delegated_action_proposals.jsonl`
+  - `modules/decision/logs/delegated_action_runs.jsonl`
+- Required behavior:
+  - low-risk whitelist scope only
+  - pre-approval by owner remains default
+  - full proposal/run/result audit chain
+- Exit criteria:
+  - limited delegated execution works with complete transparency and rollback path
+
+#### Stage 5 - Governed Higher Autonomy
+
+- Direction:
+  - gradually expand low-risk auto-execution after Stage 1-4 stability
+  - shift owner focus to audit, exception handling, and strategic correction
+  - continuous drift monitoring to prevent black-box behavior
+- Exit criteria:
+  - higher execution autonomy with unchanged or stronger auditability and governance
+
+#### Explicit Non-Goals
+
+- No greenfield rewrite
+- No removal of extraction/distillation pipelines
+- No collapse into generic note app or pure RAG assistant
+- No direct overwrite of long-term truths from noisy inputs
+- No high-risk autonomy without owner oversight
 
 ## Version Timeline
 

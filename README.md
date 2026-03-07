@@ -35,7 +35,7 @@ Roadmap details can evolve while this direction stays stable:
 
 Actionable stage-by-stage plan:
 
-- `NEXT_STEPS.md` (evolution path toward a transparent cyber-self suggestion mirror)
+- `ROADMAP.md` (includes staged evolution path toward a transparent cyber-self suggestion mirror)
 
 ## Core Architecture
 

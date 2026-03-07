@@ -35,7 +35,7 @@
 
 可执行阶段清单见：
 
-- `NEXT_STEPS.md`（Cyber-self suggestion mirror 渐进路线）
+- `ROADMAP.md`（已包含 Cyber-self suggestion mirror 渐进路线）
 
 ## 架构要点
 
