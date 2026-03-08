@@ -1,9 +1,24 @@
 from __future__ import annotations
 
-from pathlib import Path
+import json
 import re
+from datetime import datetime, timezone
+from pathlib import Path
+
+from learning_console import PROMOTION_MATURITY_HOURS
 
 PATH_RE = re.compile(r"(?:core|modules|routines|orchestrator)/[A-Za-z0-9_./-]+\.(?:md|yaml|yml|jsonl|json)")
+PROMOTED_CONTEXT_LIMIT = 12
+PROMOTED_CONTEXT_SINK_PATHS: dict[str, list[str]] = {
+    "memory": ["modules/memory/logs/insight_candidates.jsonl"],
+    "decision": [
+        "modules/decision/logs/rule_candidates.jsonl",
+        "modules/decision/logs/skill_candidates.jsonl",
+    ],
+    "profile": ["modules/profile/logs/profile_trait_candidates.jsonl"],
+    "cognition": ["modules/cognition/logs/schema_candidates.jsonl"],
+    "principles": ["modules/principles/logs/principle_candidates.jsonl"],
+}
 
 
 def _ordered_unique(items: list[str]) -> list[str]:
@@ -39,6 +54,106 @@ def _extract_paths_from_skill(text: str, module: str) -> list[str]:
     return _ordered_unique(out)
 
 
+def _read_jsonl(path: Path) -> list[dict]:
+    if not path.exists() or not path.is_file():
+        return []
+    out: list[dict] = []
+    for i, raw in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+        line = raw.strip()
+        if not line:
+            continue
+        if i == 1 and '"_schema"' in line:
+            continue
+        try:
+            payload = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(payload, dict):
+            out.append(payload)
+    return out
+
+
+def _parse_iso8601(ts: str) -> datetime | None:
+    text = str(ts or "").strip()
+    if not text:
+        return None
+    try:
+        return datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def _ready_promotion_refs(repo_root: Path, now: datetime, maturity_hours: int) -> set[str]:
+    path = repo_root / "modules/decision/logs/learning_candidate_promotions.jsonl"
+    rows = _read_jsonl(path)
+    ready_refs: set[str] = set()
+    for row in rows:
+        if str(row.get("status", "")).strip().lower() != "active":
+            continue
+        promotion_ref = str(row.get("id", "")).strip()
+        if not promotion_ref:
+            continue
+        created = _parse_iso8601(row.get("created_at", ""))
+        if created is None:
+            continue
+        age_hours = (now - created).total_seconds() / 3600.0
+        if age_hours >= maturity_hours:
+            ready_refs.add(promotion_ref)
+    return ready_refs
+
+
+def _clip(text: str, limit: int) -> str:
+    value = str(text or "").strip()
+    if not value:
+        return ""
+    if len(value) <= limit:
+        return value
+    return value[: max(0, limit - 3)] + "..."
+
+
+def _build_promoted_context(repo_root: Path, module: str, now: datetime) -> str:
+    sink_paths = PROMOTED_CONTEXT_SINK_PATHS.get(module, [])
+    if not sink_paths:
+        return ""
+
+    ready_refs = _ready_promotion_refs(repo_root, now, PROMOTION_MATURITY_HOURS)
+    if not ready_refs:
+        return ""
+
+    rows: list[dict] = []
+    for rel in sink_paths:
+        path = repo_root / rel
+        for row in _read_jsonl(path):
+            if str(row.get("status", "")).strip().lower() != "active":
+                continue
+            promotion_ref = str(row.get("promotion_ref", "")).strip()
+            if promotion_ref not in ready_refs:
+                continue
+            rows.append(row)
+
+    if not rows:
+        return ""
+
+    rows.sort(key=lambda row: str(row.get("created_at", "")), reverse=True)
+    lines = [
+        "# Promoted Candidates (Ready)",
+        "",
+        f"- module: {module}",
+        f"- maturity_hours: {PROMOTION_MATURITY_HOURS}",
+        f"- source_count: {len(rows)}",
+        "",
+    ]
+    for row in rows[:PROMOTED_CONTEXT_LIMIT]:
+        candidate_type = str(row.get("candidate_type", "")).strip() or "unknown"
+        title = _clip(str(row.get("title", "")).strip() or "candidate", 96)
+        statement = _clip(str(row.get("statement", "")).strip(), 280)
+        if statement:
+            lines.append(f"- [{candidate_type}] {title}: {statement}")
+        else:
+            lines.append(f"- [{candidate_type}] {title}")
+    return "\n".join(lines)
+
+
 def load_context_bundle(repo_root: Path, module: str, max_chars: int, skill_path: str | None = None) -> dict:
     module_file = f"modules/{module}/MODULE.md"
     files = ["core/ROUTER.md", module_file]
@@ -66,5 +181,13 @@ def load_context_bundle(repo_root: Path, module: str, max_chars: int, skill_path
         bundle.append({"path": rel, "content": text})
         if budget <= 0:
             break
+
+    if budget > 0:
+        promoted_text = _build_promoted_context(repo_root, module, now=datetime.now(timezone.utc))
+        if promoted_text:
+            if len(promoted_text) > budget:
+                promoted_text = promoted_text[: max(0, budget)]
+            if promoted_text:
+                bundle.append({"path": "orchestrator://promoted_candidates_ready", "content": promoted_text})
 
     return {"module": module, "files": bundle}

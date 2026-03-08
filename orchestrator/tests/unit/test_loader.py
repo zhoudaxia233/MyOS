@@ -1,7 +1,17 @@
+import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from loader import load_context_bundle
+
+
+def _write_jsonl(path: Path, schema_name: str, fields: list[str], rows: list[dict]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    schema = {"_schema": {"name": schema_name, "version": "1.0", "fields": fields, "notes": "append-only"}}
+    with path.open("w", encoding="utf-8") as handle:
+        handle.write(json.dumps(schema) + "\n")
+        for row in rows:
+            handle.write(json.dumps(row) + "\n")
 
 
 def test_load_context_bundle_from_skill_required_files() -> None:
@@ -52,3 +62,81 @@ def test_load_context_bundle_from_skill_required_files() -> None:
         assert "modules/decision/logs/decisions.jsonl" in paths
         assert "modules/content/data/voice.yaml" not in paths
         assert "modules/decision/logs/failures.jsonl" not in paths
+
+
+def test_load_context_bundle_includes_only_ready_promoted_candidates() -> None:
+    with TemporaryDirectory() as td:
+        root = Path(td)
+        (root / "core").mkdir(parents=True, exist_ok=True)
+        (root / "core/ROUTER.md").write_text("router", encoding="utf-8")
+
+        (root / "modules/decision").mkdir(parents=True, exist_ok=True)
+        (root / "modules/decision/MODULE.md").write_text("decision module", encoding="utf-8")
+
+        _write_jsonl(
+            root / "modules/decision/logs/learning_candidate_promotions.jsonl",
+            "learning_candidate_promotions",
+            ["id", "created_at", "status", "candidate_ref", "promotion_target"],
+            [
+                {
+                    "id": "lp_ready",
+                    "created_at": "2020-03-07T00:00:00Z",
+                    "status": "active",
+                    "candidate_ref": "lc_ready",
+                    "promotion_target": "decision",
+                },
+                {
+                    "id": "lp_cooling",
+                    "created_at": "2099-03-08T09:00:00Z",
+                    "status": "active",
+                    "candidate_ref": "lc_cooling",
+                    "promotion_target": "decision",
+                },
+            ],
+        )
+        _write_jsonl(
+            root / "modules/decision/logs/rule_candidates.jsonl",
+            "rule_candidates",
+            ["id", "created_at", "status", "candidate_type", "title", "statement", "promotion_ref"],
+            [
+                {
+                    "id": "rc_ready",
+                    "created_at": "2020-03-07T00:05:00Z",
+                    "status": "active",
+                    "candidate_type": "rule",
+                    "title": "Ready rule",
+                    "statement": "This one should be loaded.",
+                    "promotion_ref": "lp_ready",
+                },
+                {
+                    "id": "rc_cooling",
+                    "created_at": "2099-03-08T09:05:00Z",
+                    "status": "active",
+                    "candidate_type": "rule",
+                    "title": "Cooling rule",
+                    "statement": "This one should NOT be loaded yet.",
+                    "promotion_ref": "lp_cooling",
+                },
+            ],
+        )
+        _write_jsonl(
+            root / "modules/decision/logs/skill_candidates.jsonl",
+            "skill_candidates",
+            ["id", "created_at", "status", "candidate_type", "title", "statement", "promotion_ref"],
+            [],
+        )
+
+        bundle = load_context_bundle(
+            root,
+            module="decision",
+            max_chars=10000,
+            skill_path=None,
+        )
+        files = bundle["files"]
+        paths = [f["path"] for f in files]
+        assert "orchestrator://promoted_candidates_ready" in paths
+
+        promoted = next(f for f in files if f["path"] == "orchestrator://promoted_candidates_ready")
+        content = promoted["content"]
+        assert "Ready rule" in content
+        assert "Cooling rule" not in content

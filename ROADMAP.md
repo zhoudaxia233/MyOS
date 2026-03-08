@@ -141,6 +141,10 @@ Completed in this iteration:
   - pipeline summary now includes `promotion_readiness` (maturity window + ready/cooling counts)
   - owner report surfaces cooling backlog exceptions/auto-triggers for promotion governance
   - UI trace now shows promotion readiness by target
+- Added first consumption wiring for promoted artifacts:
+  - `load_context_bundle` now appends `orchestrator://promoted_candidates_ready`
+  - only promoted candidates past maturity window are injected into runtime context by module
+  - cooling (not-yet-ready) promoted items are excluded by default
 - Added minimal UI evolution toward three-entrypoint model:
   - Task Console / Learning Console / Audit Console selector
   - Learning Console direct ingest and handoff controls
@@ -151,14 +155,14 @@ Completed in this iteration:
 
 Remaining next:
 
-- Promotion consumption wiring: define how ready promoted candidate sinks are loaded/ranked in task suggestion context
+- Promotion consumption tuning: ranking and intent-aware filtering for loaded ready candidates
 - Dedicated Audit Console candidate-review panel (batch triage, filters by type/source/age)
 - Owner-tunable readiness policy (per-candidate-type maturity hours + explicit override path)
 
 Dependencies / blockers:
 
-- Need owner policy for when promoted candidates become suggestion-eligible by default
-- Need explicit retrieval/routing rule for whether promoted candidates are loaded by default or by task intent
+- Need owner policy for per-candidate-type maturity windows and explicit override/fast-track conditions
+- Need ranking/filtering policy so loaded promoted candidates stay high-signal under larger volumes
 
 Do not refactor yet:
 
