@@ -121,12 +121,128 @@ LEARNING_CANDIDATE_PROMOTIONS_SCHEMA = {
     }
 }
 
+MODULE_CANDIDATE_SCHEMA_FIELDS = [
+    "id",
+    "created_at",
+    "status",
+    "candidate_ref",
+    "candidate_type",
+    "title",
+    "statement",
+    "evidence",
+    "source_refs",
+    "approval_ref",
+    "promotion_ref",
+    "object_type",
+    "proposal_target",
+]
+
+INSIGHT_CANDIDATES_SCHEMA = {
+    "_schema": {
+        "name": "insight_candidates",
+        "version": "1.0",
+        "fields": MODULE_CANDIDATE_SCHEMA_FIELDS,
+        "notes": "append-only",
+    }
+}
+
+RULE_CANDIDATES_SCHEMA = {
+    "_schema": {
+        "name": "rule_candidates",
+        "version": "1.0",
+        "fields": MODULE_CANDIDATE_SCHEMA_FIELDS,
+        "notes": "append-only",
+    }
+}
+
+SKILL_CANDIDATES_SCHEMA = {
+    "_schema": {
+        "name": "skill_candidates",
+        "version": "1.0",
+        "fields": MODULE_CANDIDATE_SCHEMA_FIELDS,
+        "notes": "append-only",
+    }
+}
+
+PROFILE_TRAIT_CANDIDATES_SCHEMA = {
+    "_schema": {
+        "name": "profile_trait_candidates",
+        "version": "1.0",
+        "fields": MODULE_CANDIDATE_SCHEMA_FIELDS,
+        "notes": "append-only",
+    }
+}
+
+SCHEMA_CANDIDATES_SCHEMA = {
+    "_schema": {
+        "name": "schema_candidates",
+        "version": "1.0",
+        "fields": MODULE_CANDIDATE_SCHEMA_FIELDS,
+        "notes": "append-only",
+    }
+}
+
+PRINCIPLE_CANDIDATES_SCHEMA = {
+    "_schema": {
+        "name": "principle_candidates",
+        "version": "1.0",
+        "fields": MODULE_CANDIDATE_SCHEMA_FIELDS,
+        "notes": "append-only",
+    }
+}
+
+CANDIDATE_SINK_CONFIG: dict[str, dict[str, Any]] = {
+    "insight": {
+        "path": "modules/memory/logs/insight_candidates.jsonl",
+        "prefix": "ic",
+        "schema": INSIGHT_CANDIDATES_SCHEMA,
+        "object_type": "memory",
+        "proposal_target": "memory",
+    },
+    "rule": {
+        "path": "modules/decision/logs/rule_candidates.jsonl",
+        "prefix": "rc",
+        "schema": RULE_CANDIDATES_SCHEMA,
+        "object_type": "decision",
+        "proposal_target": "decision",
+    },
+    "skill": {
+        "path": "modules/decision/logs/skill_candidates.jsonl",
+        "prefix": "sc",
+        "schema": SKILL_CANDIDATES_SCHEMA,
+        "object_type": "decision",
+        "proposal_target": "decision",
+    },
+    "profile_trait": {
+        "path": "modules/profile/logs/profile_trait_candidates.jsonl",
+        "prefix": "ptc",
+        "schema": PROFILE_TRAIT_CANDIDATES_SCHEMA,
+        "object_type": "profile",
+        "proposal_target": "profile",
+    },
+    "cognition_revision": {
+        "path": "modules/cognition/logs/schema_candidates.jsonl",
+        "prefix": "cc",
+        "schema": SCHEMA_CANDIDATES_SCHEMA,
+        "object_type": "cognition",
+        "proposal_target": "cognition",
+    },
+    "principle": {
+        "path": "modules/principles/logs/principle_candidates.jsonl",
+        "prefix": "prc",
+        "schema": PRINCIPLE_CANDIDATES_SCHEMA,
+        "object_type": "principle",
+        "proposal_target": "principle",
+    },
+}
+
 FENCED_JSON_RE = re.compile(r"```(?:json)?\s*(\{[\s\S]*?\})\s*```", re.IGNORECASE)
 
 CANDIDATE_SECTION_KEYS = {
     "insight": ["insights", "insight_candidates"],
     "rule": ["rules", "rule_candidates"],
     "skill": ["skills", "skill_candidates"],
+    "profile_trait": ["profile_traits", "trait_candidates"],
     "principle": ["principles", "principle_candidates"],
     "cognition_revision": ["cognition_revisions", "schema_revisions", "schema_candidates"],
 }
@@ -134,7 +250,8 @@ CANDIDATE_SECTION_KEYS = {
 PROPOSAL_TARGET_BY_TYPE = {
     "insight": "memory",
     "rule": "decision",
-    "skill": "system",
+    "skill": "decision",
+    "profile_trait": "profile",
     "principle": "principle",
     "cognition_revision": "cognition",
 }
@@ -432,6 +549,14 @@ def build_learning_handoff_packet(
                     "confidence": 0.0,
                 }
             ],
+            "profile_traits": [
+                {
+                    "title": "<trait label>",
+                    "statement": "<candidate trait update>",
+                    "evidence": ["<evidence_1>", "<evidence_2>"],
+                    "confidence": 0.0,
+                }
+            ],
             "principles": [
                 {
                     "title": "<principle label>",
@@ -570,6 +695,7 @@ def ingest_learning_handoff_response(
         "insight": 0,
         "rule": 0,
         "skill": 0,
+        "profile_trait": 0,
         "principle": 0,
         "cognition_revision": 0,
     }
@@ -749,6 +875,39 @@ def _active_promotion_map(repo_root: Path) -> dict[str, dict[str, Any]]:
     return out
 
 
+def _append_module_candidate_sink(
+    repo_root: Path,
+    *,
+    candidate: dict[str, Any],
+    approval_id: str,
+    promotion_id: str,
+) -> tuple[str | None, str | None]:
+    candidate_type = str(candidate.get("candidate_type", "")).strip()
+    config = CANDIDATE_SINK_CONFIG.get(candidate_type)
+    if config is None:
+        return None, None
+
+    path_rel = str(config["path"])
+    sink_id = next_id_for_rel_path(repo_root, str(config["prefix"]), path_rel)
+    sink_record = {
+        "id": sink_id,
+        "created_at": _utc_now(),
+        "status": "active",
+        "candidate_ref": str(candidate.get("id", "")).strip(),
+        "candidate_type": candidate_type,
+        "title": _clip(candidate.get("title", ""), 96),
+        "statement": _clip(candidate.get("statement", ""), 320),
+        "evidence": candidate.get("evidence") if isinstance(candidate.get("evidence"), list) else [],
+        "source_refs": [str(candidate.get("id", "")).strip(), approval_id, promotion_id],
+        "approval_ref": approval_id,
+        "promotion_ref": promotion_id,
+        "object_type": str(config["object_type"]),
+        "proposal_target": str(config["proposal_target"]),
+    }
+    append_jsonl(repo_root / path_rel, sink_record, schema_header=config["schema"])
+    return sink_id, path_rel
+
+
 def promote_learning_candidate(
     repo_root: Path,
     *,
@@ -816,11 +975,20 @@ def promote_learning_candidate(
     }
     append_jsonl(promotion_path, promotion_record, schema_header=LEARNING_CANDIDATE_PROMOTIONS_SCHEMA)
 
+    sink_record_id, sink_path = _append_module_candidate_sink(
+        repo_root,
+        candidate=target,
+        approval_id=approval_id,
+        promotion_id=promotion_id,
+    )
+
     return {
         "approval_record_id": approval_id,
         "promotion_record_id": promotion_id,
         "candidate_ref": target_candidate_id,
         "promotion_target": promotion_record["promotion_target"],
+        "module_candidate_ref": sink_record_id,
+        "module_candidate_path": sink_path,
     }
 
 

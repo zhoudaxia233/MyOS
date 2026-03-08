@@ -123,6 +123,13 @@ Completed in this iteration:
   - append-only approval and promotion logs:
     - `modules/decision/logs/learning_candidate_approvals.jsonl`
     - `modules/decision/logs/learning_candidate_promotions.jsonl`
+- Added module-specific promotion sinks (append-only):
+  - `modules/memory/logs/insight_candidates.jsonl`
+  - `modules/decision/logs/rule_candidates.jsonl`
+  - `modules/decision/logs/skill_candidates.jsonl`
+  - `modules/profile/logs/profile_trait_candidates.jsonl`
+  - `modules/cognition/logs/schema_candidates.jsonl`
+  - `modules/principles/logs/principle_candidates.jsonl`
 - Added minimal UI evolution toward three-entrypoint model:
   - Task Console / Learning Console / Audit Console selector
   - Learning Console direct ingest and handoff controls
@@ -133,14 +140,13 @@ Completed in this iteration:
 
 Remaining next:
 
-- Module-specific promotion sinks (decision/profile/cognition/principles) with governance checks
 - Audit views for candidate drift and promotion quality over time
 - Promotion availability policy (when promoted items become suggestion-eligible by default)
 
 Dependencies / blockers:
 
-- Need schema contracts for promotion logs before wiring auto-availability in runtime suggestion
 - Need owner policy for when promoted candidates become suggestion-eligible by default
+- Need explicit retrieval/routing rule for whether promoted candidates are loaded by default or by task intent
 
 Do not refactor yet:
 

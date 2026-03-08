@@ -1,0 +1,1 @@
+{"_schema": {"name": "skill_candidates", "version": "1.0", "fields": ["id", "created_at", "status", "candidate_ref", "candidate_type", "title", "statement", "evidence", "source_refs", "approval_ref", "promotion_ref", "object_type", "proposal_target"], "notes": "append-only"}}

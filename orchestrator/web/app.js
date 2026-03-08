@@ -417,6 +417,12 @@ function renderActionResult(data) {
   if (data.promotion_target) {
     out.push(`promotion_target: ${data.promotion_target}`);
   }
+  if (data.module_candidate_ref) {
+    out.push(`module_candidate_ref: ${data.module_candidate_ref}`);
+  }
+  if (data.module_candidate_path) {
+    out.push(`module_candidate_path: ${data.module_candidate_path}`);
+  }
   if (typeof data.tension_score === "number") {
     out.push(`tension_score: ${data.tension_score}`);
   }

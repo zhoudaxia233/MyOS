@@ -377,6 +377,13 @@ Implemented components:
   - append-only approval/promotion trail:
     - `modules/decision/logs/learning_candidate_approvals.jsonl`
     - `modules/decision/logs/learning_candidate_promotions.jsonl`
+  - module-specific promotion sinks:
+    - `modules/memory/logs/insight_candidates.jsonl`
+    - `modules/decision/logs/rule_candidates.jsonl`
+    - `modules/decision/logs/skill_candidates.jsonl`
+    - `modules/profile/logs/profile_trait_candidates.jsonl`
+    - `modules/cognition/logs/schema_candidates.jsonl`
+    - `modules/principles/logs/principle_candidates.jsonl`
 - UI:
   - three-entrypoint selector
   - Learning Console direct ingest inputs
@@ -389,12 +396,8 @@ Implemented components:
 
 Next implementation slice should focus on:
 
-1. Module-specific promotion sinks
-- write promoted records into decision/profile/cognition/principles-specific candidate logs
-- keep approval linkage and append-only guarantees
-
-2. Audit integration
+1. Audit integration
 - show candidate drift / acceptance rates in owner report
 
-3. Safety guardrails
+2. Safety guardrails
 - enforce that pending candidates cannot overwrite canonical SSOT without explicit promotion.

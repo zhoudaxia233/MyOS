@@ -318,3 +318,5 @@ def test_promote_learning_candidate_requires_accept_and_creates_records() -> Non
         assert promotion["approval_record_id"].startswith("la_")
         assert promotion["promotion_record_id"].startswith("lp_")
         assert promotion["candidate_ref"] == candidate_id
+        assert promotion["module_candidate_ref"].startswith("ic_")
+        assert promotion["module_candidate_path"] == "modules/memory/logs/insight_candidates.jsonl"
