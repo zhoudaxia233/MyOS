@@ -12,6 +12,19 @@ const themeToggle = document.getElementById("themeToggle");
 const settingsToggle = document.getElementById("settingsToggle");
 const copyOutputBtn = document.getElementById("copyOutputBtn");
 const quickIngestBtn = document.getElementById("quickIngestBtn");
+const learningPacketBtn = document.getElementById("learningPacketBtn");
+const learningImportBtn = document.getElementById("learningImportBtn");
+const learningDirectInput = document.getElementById("learningDirectInput");
+const learningTitleInput = document.getElementById("learningTitleInput");
+const learningSourceType = document.getElementById("learningSourceType");
+const learningConfidence = document.getElementById("learningConfidence");
+const learningSourceInput = document.getElementById("learningSourceInput");
+const learningResponseInput = document.getElementById("learningResponseInput");
+const entrypointTabs = document.querySelectorAll(".entrypoint-tab");
+const entrypointHint = document.getElementById("entrypointHint");
+const taskConsolePanel = document.getElementById("taskConsolePanel");
+const learningConsolePanel = document.getElementById("learningConsolePanel");
+const auditConsolePanel = document.getElementById("auditConsolePanel");
 
 const routeTrace = document.getElementById("routeTrace");
 const planTrace = document.getElementById("planTrace");
@@ -21,6 +34,7 @@ const outputPreview = document.getElementById("outputPreview");
 const outputTokenMeta = document.getElementById("outputTokenMeta");
 const cognitionCards = document.getElementById("cognitionCards");
 const ownerTodos = document.getElementById("ownerTodos");
+const learningCandidates = document.getElementById("learningCandidates");
 const settingsModal = document.getElementById("settingsModal");
 const settingsClose = document.getElementById("settingsClose");
 const settingsSave = document.getElementById("settingsSave");
@@ -174,6 +188,62 @@ function renderOwnerTodos(items) {
   }
 }
 
+function renderLearningCandidates(items) {
+  learningCandidates.innerHTML = "";
+  if (!Array.isArray(items) || items.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "todo-item";
+    empty.innerHTML = "<div class=\"todo-head\"><span class=\"todo-metric\">No pending candidates</span></div><div class=\"todo-action\">Use Learning Handoff import to populate queue.</div>";
+    learningCandidates.appendChild(empty);
+    return;
+  }
+
+  for (const item of items) {
+    const wrap = document.createElement("div");
+    wrap.className = "todo-item";
+
+    const head = document.createElement("div");
+    head.className = "todo-head";
+    const metric = document.createElement("span");
+    metric.className = "todo-metric";
+    metric.textContent = item.candidate_type || "candidate";
+    const reason = document.createElement("span");
+    reason.className = "todo-reason";
+    reason.textContent = item.proposal_target ? `target: ${item.proposal_target}` : "";
+    head.appendChild(metric);
+    head.appendChild(reason);
+
+    const action = document.createElement("div");
+    action.className = "todo-action";
+    action.textContent = item.title || item.id || "-";
+
+    wrap.appendChild(head);
+    wrap.appendChild(action);
+    learningCandidates.appendChild(wrap);
+  }
+}
+
+function switchEntrypoint(entrypoint) {
+  const target = String(entrypoint || "task").trim().toLowerCase();
+  for (const tab of entrypointTabs) {
+    tab.classList.toggle("active", tab.getAttribute("data-entrypoint") === target);
+  }
+
+  taskConsolePanel.classList.toggle("active", target === "task");
+  learningConsolePanel.classList.toggle("active", target === "learning");
+  auditConsolePanel.classList.toggle("active", target === "audit");
+
+  if (target === "learning") {
+    entrypointHint.textContent = "Ingest material directly or run low-cost external handoff, then review candidates.";
+    return;
+  }
+  if (target === "audit") {
+    entrypointHint.textContent = "Review drift, reports, and candidate queues before promoting long-term changes.";
+    return;
+  }
+  entrypointHint.textContent = "Ask the system to do work, inspect route/plan first, then run.";
+}
+
 function formatRouteScoring(route) {
   if (!route || typeof route !== "object") {
     return [];
@@ -285,6 +355,15 @@ function renderActionResult(data) {
   if (typeof data.appended_insights === "number") {
     out.push(`appended_insights: ${data.appended_insights}`);
   }
+  if (typeof data.candidate_total === "number") {
+    out.push(`candidate_total: ${data.candidate_total}`);
+  }
+  if (data.candidate_counts) {
+    out.push(`candidate_counts: ${JSON.stringify(data.candidate_counts)}`);
+  }
+  if (data.import_record_id) {
+    out.push(`import_record_id: ${data.import_record_id}`);
+  }
   if (typeof data.tension_score === "number") {
     out.push(`tension_score: ${data.tension_score}`);
   }
@@ -340,11 +419,36 @@ function renderActionResult(data) {
     setOutputTokenMeta("-");
     return;
   }
+  if (data.action === "learning_handoff_packet" && data.packet_text) {
+    setPreview(data.packet_text);
+    setOutputTokenMeta("-");
+    return;
+  }
+  if (data.action === "learning_handoff_import" && data.preview) {
+    const previewLines = [];
+    if (data.preview.import) {
+      previewLines.push(`import: ${data.preview.import.id} (${data.preview.import.candidate_count} candidates)`);
+    }
+    if (Array.isArray(data.preview.candidates) && data.preview.candidates.length > 0) {
+      for (const item of data.preview.candidates.slice(0, 5)) {
+        previewLines.push(`- [${item.candidate_type}] ${item.title}`);
+      }
+    }
+    if (Array.isArray(data.learning_candidates)) {
+      renderLearningCandidates(data.learning_candidates);
+    }
+    setPreview(previewLines.join("\n") || "-");
+    setOutputTokenMeta("-");
+    return;
+  }
   if (Array.isArray(data.cognition_cards)) {
     renderCognitionCards(data.cognition_cards);
   }
   if (Array.isArray(data.owner_todos)) {
     renderOwnerTodos(data.owner_todos);
+  }
+  if (Array.isArray(data.learning_candidates)) {
+    renderLearningCandidates(data.learning_candidates);
   }
   setPreview("-");
   setOutputTokenMeta("-");
@@ -509,6 +613,7 @@ async function loadStatus() {
     }
     renderCognitionCards(data.cognition_cards || []);
     renderOwnerTodos(data.owner_todos || []);
+    renderLearningCandidates(data.learning_candidates || []);
 
     setStatus("Connected", "ok");
     addBubble("system", `Connected to ${data.repo_root}`);
@@ -609,6 +714,7 @@ async function runTask() {
 
 async function runAction(action) {
   const taskText = taskInput.value.trim();
+  const learningText = learningDirectInput ? learningDirectInput.value.trim() : "";
   const payload = {
     action,
     provider: providerSelect.value,
@@ -628,27 +734,33 @@ async function runAction(action) {
   }
 
   if (action === "ingest_learning") {
-    if (!taskText) {
-      addBubble("system", "Task text is required. Paste your learning summary first.");
+    if (!learningText) {
+      addBubble("system", "Learning text is required. Paste transcript/article/notes first.");
       return;
     }
-    payload.task = taskText;
-    payload.source_type = "video";
+    payload.task = learningText;
+    payload.title = learningTitleInput.value.trim() || null;
+    payload.source_type = learningSourceType.value || "video";
     payload.max_points = 6;
-    payload.confidence = 7;
+    payload.confidence = Number(learningConfidence.value || 7);
     payload.tags = ["ui_one_click"];
-    addUserTaskOnce(taskText);
+    addUserTaskOnce(payload.title || learningText.slice(0, 120));
   }
 
   if (action === "detect_disequilibrium") {
-    if (!taskText) {
-      addBubble("system", "Task text is required. Enter the topic to scan for mismatch.");
+    let topic = taskText;
+    if (!topic) {
+      const prompted = window.prompt("Topic for disequilibrium scan:", "decision quality");
+      topic = prompted ? prompted.trim() : "";
+    }
+    if (!topic) {
+      addBubble("system", "Topic is required for disequilibrium scan.");
       return;
     }
-    payload.task = taskText;
+    payload.task = topic;
     payload.window_days = 30;
     payload.tags = ["ui_quick_action"];
-    addUserTaskOnce(taskText);
+    addUserTaskOnce(topic);
   }
 
   if (action === "cognition_timeline") {
@@ -668,6 +780,58 @@ async function runAction(action) {
     addBubble("system", `Action complete: ${data.action}`);
   } catch (err) {
     addBubble("system", `Action failed: ${err.message}`);
+  }
+}
+
+async function generateLearningHandoffPacket() {
+  const sourceRef = learningSourceInput.value.trim();
+  if (!sourceRef) {
+    addBubble("system", "Source URL/reference is required for learning handoff packet.");
+    return;
+  }
+
+  const payload = {
+    action: "learning_handoff_packet",
+    source_ref: sourceRef,
+    title: learningTitleInput.value.trim() || null,
+    source_type: learningSourceType.value || "video",
+    max_candidates_per_type: 3,
+  };
+
+  addBubble("system", "Generating learning handoff packet...");
+  try {
+    const data = await postJson("/api/action", payload);
+    renderActionResult(data);
+    addBubble("system", "Learning handoff packet ready. Copy Output Preview and send to external model.");
+  } catch (err) {
+    addBubble("system", `Packet generation failed: ${err.message}`);
+  }
+}
+
+async function importLearningHandoffResponse() {
+  const responseText = learningResponseInput.value.trim();
+  if (!responseText) {
+    addBubble("system", "Paste external LLM JSON response first.");
+    return;
+  }
+
+  const payload = {
+    action: "learning_handoff_import",
+    response_text: responseText,
+    source_ref: learningSourceInput.value.trim() || null,
+    title: learningTitleInput.value.trim() || null,
+    source_type: learningSourceType.value || "video",
+    confidence: Number(learningConfidence.value || 7),
+    tags: ["ui_learning_handoff"],
+  };
+
+  addBubble("system", "Importing handoff response into memory + candidate queue...");
+  try {
+    const data = await postJson("/api/action", payload);
+    renderActionResult(data);
+    addBubble("system", `Imported learning handoff. Candidate queue +${data.candidate_total || 0}.`);
+  } catch (err) {
+    addBubble("system", `Handoff import failed: ${err.message}`);
   }
 }
 
@@ -695,6 +859,13 @@ for (const button of document.querySelectorAll(".chip.action")) {
       return;
     }
     runAction(action);
+  });
+}
+
+for (const tab of entrypointTabs) {
+  tab.addEventListener("click", () => {
+    const target = tab.getAttribute("data-entrypoint") || "task";
+    switchEntrypoint(target);
   });
 }
 
@@ -749,8 +920,15 @@ settingsModal.addEventListener("click", (event) => {
 quickIngestBtn.addEventListener("click", () => {
   runAction("ingest_learning");
 });
+learningPacketBtn.addEventListener("click", () => {
+  generateLearningHandoffPacket();
+});
+learningImportBtn.addEventListener("click", () => {
+  importLearningHandoffResponse();
+});
 
 initTheme();
+switchEntrypoint("task");
 loadStatus();
 loadSettings();
 setOutputTokenMeta("-");

@@ -30,6 +30,7 @@ def test_api_status_lists_modules() -> None:
         assert "content" in data["modules"]
         assert "decision" in data["modules"]
         assert isinstance(data["cognition_cards"], list)
+        assert isinstance(data["learning_candidates"], list)
 
 
 def test_api_status_reports_env_api_key(monkeypatch) -> None:
@@ -236,6 +237,71 @@ def test_api_action_validate_metrics_and_schedule() -> None:
         insights_after = len(insights_path.read_text(encoding="utf-8").splitlines())
         assert events_after == events_before + 1
         assert insights_after == insights_before + 1
+
+        packet_result = api_action(
+            root,
+            {
+                "action": "learning_handoff_packet",
+                "source_ref": "https://www.youtube.com/watch?v=abc123",
+                "title": "Interview ABC",
+                "source_type": "video",
+            },
+        )
+        assert packet_result["ok"] is True
+        assert packet_result["action"] == "learning_handoff_packet"
+        assert "candidate_artifacts" in packet_result["packet_text"]
+
+        handoff_response = json.dumps(
+            {
+                "source": {
+                    "title": "Interview ABC",
+                    "url": "https://www.youtube.com/watch?v=abc123",
+                    "source_type": "video",
+                },
+                "summary": "Extract stable judgment structures from long interview.",
+                "key_points": [
+                    "Always define downside and invalidation before commitment.",
+                    "Repeated mismatch is schema pressure.",
+                ],
+                "candidate_artifacts": {
+                    "insights": [
+                        {
+                            "title": "Downside-first",
+                            "statement": "High-risk commitments require downside + invalidation pair.",
+                            "evidence": ["Interview examples"],
+                            "confidence": 0.8,
+                        }
+                    ],
+                    "rules": [
+                        {
+                            "title": "Mismatch loop",
+                            "rule": "If mismatch repeats, trigger schema review within 48h.",
+                            "when_to_apply": "After second repeated contradiction",
+                            "evidence": ["Multiple stories from source"],
+                            "confidence": 0.7,
+                        }
+                    ],
+                },
+            }
+        )
+        handoff_import = api_action(
+            root,
+            {
+                "action": "learning_handoff_import",
+                "source_ref": "https://www.youtube.com/watch?v=abc123",
+                "response_text": handoff_response,
+                "source_type": "video",
+                "confidence": 8,
+                "tags": ["web_test"],
+            },
+        )
+        assert handoff_import["ok"] is True
+        assert handoff_import["action"] == "learning_handoff_import"
+        assert handoff_import["candidate_total"] == 2
+        assert handoff_import["import_record_id"].startswith("li_")
+        assert len(handoff_import["candidate_record_ids"]) == 2
+        assert isinstance(handoff_import["learning_candidates"], list)
+        assert len(handoff_import["learning_candidates"]) >= 1
 
         diseq_result = api_action(
             root,

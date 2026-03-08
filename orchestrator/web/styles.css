@@ -185,14 +185,16 @@ body {
 }
 
 .panel-chat {
-  display: grid;
-  grid-template-rows: minmax(180px, 1fr) auto auto;
+  display: flex;
+  flex-direction: column;
   gap: 12px;
   padding: 14px;
   min-height: 76vh;
 }
 
 .chat-log {
+  flex: 1 1 auto;
+  min-height: 220px;
   overflow: auto;
   padding: 8px;
   display: flex;
@@ -235,6 +237,50 @@ body {
   color: var(--muted);
 }
 
+.entrypoint-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.entrypoint-tab {
+  border: 1px solid color-mix(in srgb, var(--border) 82%, white);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--card) 96%, white 4%);
+  color: var(--accent-ink);
+  padding: 7px 12px;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.entrypoint-tab:hover {
+  border-color: color-mix(in srgb, var(--accent) 55%, white);
+}
+
+.entrypoint-tab.active {
+  background: color-mix(in srgb, var(--accent) 18%, white);
+  border-color: color-mix(in srgb, var(--accent) 66%, white);
+}
+
+.entrypoint-hint {
+  border: 1px solid color-mix(in srgb, var(--border) 80%, white);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--card) 96%, white 4%);
+  color: var(--muted);
+  font-size: 0.82rem;
+  padding: 9px 10px;
+}
+
+.console-panel {
+  display: none;
+}
+
+.console-panel.active {
+  display: block;
+}
+
 .composer textarea {
   width: 100%;
   margin-top: 4px;
@@ -246,6 +292,24 @@ body {
   font: inherit;
   color: var(--text);
   caret-color: var(--text);
+}
+
+#learningConsolePanel textarea {
+  width: 100%;
+  margin-top: 4px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--card) 96%, white 4%);
+  padding: 10px 12px;
+  resize: vertical;
+  font: inherit;
+  color: var(--text);
+  caret-color: var(--text);
+}
+
+#learningConsolePanel textarea::placeholder {
+  color: var(--muted);
+  opacity: 1;
 }
 
 .control-grid {
@@ -271,6 +335,10 @@ body {
   background: color-mix(in srgb, var(--card) 96%, white 4%);
   font: inherit;
   color: var(--text);
+}
+
+.learning-grid {
+  margin-top: 8px;
 }
 
 .composer textarea::placeholder,

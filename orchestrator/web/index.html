@@ -26,74 +26,136 @@
     <section class="card panel-chat">
       <div id="chatLog" class="chat-log"></div>
 
-      <form id="taskForm" class="composer">
-        <label class="label" for="taskInput">Task</label>
-        <textarea id="taskInput" rows="3" placeholder="Describe what you want to do..."></textarea>
-
-        <div class="control-grid">
-          <label class="control">
-            <span>Module</span>
-            <select id="moduleSelect">
-              <option value="">Auto route</option>
-            </select>
-          </label>
-
-          <label class="control">
-            <span>Provider</span>
-            <select id="providerSelect">
-              <option value="dry-run">dry-run</option>
-              <option value="handoff">handoff</option>
-              <option value="openai">openai</option>
-            </select>
-          </label>
-
-          <label class="control">
-            <span>Model</span>
-            <input id="modelInput" type="text" placeholder="gpt-4.1-mini">
-          </label>
-
-          <label class="control checkbox">
-            <input id="retrievalToggle" type="checkbox">
-            <span>Use retrieval</span>
-          </label>
-
-          <label class="control">
-            <span>Top K</span>
-            <input id="retrievalTopK" type="number" min="1" max="32" value="6">
-          </label>
-        </div>
-
-        <div class="action-row">
-          <button id="inspectBtn" type="button" class="btn secondary">Inspect</button>
-          <button id="runBtn" type="submit" class="btn primary">Run</button>
-        </div>
-      </form>
-
-      <section class="learning-capture" aria-label="Learning capture">
-        <div class="learning-copy">
-          <h2>Learning Capture</h2>
-          <p>Paste your summary in Task, then ingest directly into memory logs.</p>
-        </div>
-        <button id="quickIngestBtn" class="btn ingest-btn" type="button">Ingest To Memory</button>
+      <section class="entrypoint-tabs" aria-label="Operator entrypoints">
+        <button class="entrypoint-tab active" type="button" data-entrypoint="task">Task Console</button>
+        <button class="entrypoint-tab" type="button" data-entrypoint="learning">Learning / Evolution</button>
+        <button class="entrypoint-tab" type="button" data-entrypoint="audit">Audit Console</button>
       </section>
 
-      <div class="quick-actions">
-        <h2>Quick Actions</h2>
-        <div class="chips">
-          <button class="chip" data-task="run weekly decision review">Weekly Decision Review</button>
-          <button class="chip" data-task="extract chat patterns from this week">Extract Chat Patterns</button>
-          <button class="chip" data-task="write an after-meal story about BTC market regime">Write After-Meal Story</button>
+      <section id="entrypointHint" class="entrypoint-hint">
+        Ask the system to do work, inspect route/plan first, then run.
+      </section>
+
+      <section id="taskConsolePanel" class="console-panel active" data-console="task">
+        <form id="taskForm" class="composer">
+          <label class="label" for="taskInput">Task</label>
+          <textarea id="taskInput" rows="3" placeholder="Describe what you want to do..."></textarea>
+
+          <div class="control-grid">
+            <label class="control">
+              <span>Module</span>
+              <select id="moduleSelect">
+                <option value="">Auto route</option>
+              </select>
+            </label>
+
+            <label class="control">
+              <span>Provider</span>
+              <select id="providerSelect">
+                <option value="dry-run">dry-run</option>
+                <option value="handoff">handoff</option>
+                <option value="openai">openai</option>
+              </select>
+            </label>
+
+            <label class="control">
+              <span>Model</span>
+              <input id="modelInput" type="text" placeholder="gpt-4.1-mini">
+            </label>
+
+            <label class="control checkbox">
+              <input id="retrievalToggle" type="checkbox">
+              <span>Use retrieval</span>
+            </label>
+
+            <label class="control">
+              <span>Top K</span>
+              <input id="retrievalTopK" type="number" min="1" max="32" value="6">
+            </label>
+          </div>
+
+          <div class="action-row">
+            <button id="inspectBtn" type="button" class="btn secondary">Inspect</button>
+            <button id="runBtn" type="submit" class="btn primary">Run</button>
+          </div>
+        </form>
+
+        <div class="quick-actions">
+          <h2>Task Starters</h2>
+          <div class="chips">
+            <button class="chip" data-task="run weekly decision review">Weekly Decision Review</button>
+            <button class="chip" data-task="extract chat patterns from this week">Extract Chat Patterns</button>
+            <button class="chip" data-task="write an after-meal story about BTC market regime">Write After-Meal Story</button>
+          </div>
         </div>
-        <div class="chips">
-          <button class="chip action" data-action="validate">Validate</button>
-          <button class="chip action" data-action="metrics">Metrics 7D</button>
-          <button class="chip action" data-action="owner_report">Owner Report 7D</button>
-          <button class="chip action" data-action="detect_disequilibrium">Detect Disequilibrium</button>
-          <button class="chip action" data-action="cognition_timeline">Cognition Timeline</button>
-          <button class="chip action" data-action="schedule_weekly">Run Weekly Cycle</button>
-          <button class="chip action" data-action="build_index">Build Retrieval Index</button>
+      </section>
+
+      <section id="learningConsolePanel" class="console-panel" data-console="learning">
+        <div class="learning-capture" aria-label="Learning direct ingest">
+          <div class="learning-copy">
+            <h2>Direct Ingest</h2>
+            <p>Paste transcript/article/notes and append memory records directly.</p>
+          </div>
         </div>
-      </div>
+        <label class="label" for="learningDirectInput">Learning Text</label>
+        <textarea id="learningDirectInput" rows="5" placeholder="Paste transcript, article body, or your summary..."></textarea>
+        <div class="control-grid learning-grid">
+          <label class="control">
+            <span>Title (optional)</span>
+            <input id="learningTitleInput" type="text" placeholder="Source title">
+          </label>
+          <label class="control">
+            <span>Source Type</span>
+            <select id="learningSourceType">
+              <option value="video">video</option>
+              <option value="podcast">podcast</option>
+              <option value="article">article</option>
+              <option value="book">book</option>
+              <option value="conversation">conversation</option>
+              <option value="notes">notes</option>
+            </select>
+          </label>
+          <label class="control">
+            <span>Confidence</span>
+            <input id="learningConfidence" type="number" min="1" max="10" value="7">
+          </label>
+        </div>
+        <div class="action-row">
+          <button id="quickIngestBtn" class="btn ingest-btn" type="button">Ingest To Memory</button>
+        </div>
+
+        <div class="learning-capture" aria-label="Learning handoff">
+          <div class="learning-copy">
+            <h2>Learning Handoff</h2>
+            <p>Generate a low-cost packet for external LLM, then paste structured response back.</p>
+          </div>
+        </div>
+        <label class="label" for="learningSourceInput">Source URL / Reference</label>
+        <textarea id="learningSourceInput" rows="2" placeholder="YouTube URL, podcast URL, or source ref"></textarea>
+        <div class="action-row">
+          <button id="learningPacketBtn" type="button" class="btn secondary">Generate Handoff Packet</button>
+        </div>
+        <label class="label" for="learningResponseInput">External LLM JSON Response</label>
+        <textarea id="learningResponseInput" rows="5" placeholder="Paste external model JSON here..."></textarea>
+        <div class="action-row">
+          <button id="learningImportBtn" type="button" class="btn primary">Parse To Candidate Queue</button>
+        </div>
+      </section>
+
+      <section id="auditConsolePanel" class="console-panel" data-console="audit">
+        <div class="quick-actions">
+          <h2>Audit Actions</h2>
+          <div class="chips">
+            <button class="chip action" data-action="validate">Validate</button>
+            <button class="chip action" data-action="metrics">Metrics 7D</button>
+            <button class="chip action" data-action="owner_report">Owner Report 7D</button>
+            <button class="chip action" data-action="detect_disequilibrium">Detect Disequilibrium</button>
+            <button class="chip action" data-action="cognition_timeline">Cognition Timeline</button>
+            <button class="chip action" data-action="schedule_weekly">Run Weekly Cycle</button>
+            <button class="chip action" data-action="build_index">Build Retrieval Index</button>
+          </div>
+        </div>
+      </section>
     </section>
 
     <aside class="card panel-trace">
@@ -113,6 +175,18 @@
       <div class="trace-block">
         <h3>Owner Todos</h3>
         <div id="ownerTodos" class="todo-list">
+          <div class="todo-item">
+            <div class="todo-head">
+              <span class="todo-metric">Loading...</span>
+            </div>
+            <div class="todo-action">-</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="trace-block">
+        <h3>Learning Candidates</h3>
+        <div id="learningCandidates" class="todo-list">
           <div class="todo-item">
             <div class="todo-head">
               <span class="todo-metric">Loading...</span>

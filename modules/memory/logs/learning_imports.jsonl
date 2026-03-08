@@ -1,0 +1,1 @@
+{"_schema": {"name": "learning_imports", "version": "1.0", "fields": ["id", "created_at", "status", "ingest_mode", "source_type", "source_ref", "title", "summary", "key_points", "raw_payload_hash", "source_refs", "candidate_count", "object_type", "proposal_target"], "notes": "append-only"}}

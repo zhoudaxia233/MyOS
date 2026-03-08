@@ -36,6 +36,7 @@
 可执行阶段清单见：
 
 - `ROADMAP.md`（已包含 Cyber-self suggestion mirror 渐进路线）
+- `docs/OPERATOR_MODEL_THREE_CONSOLES.md`（三入口操作模型与 Learning Handoff 流程）
 
 ## 架构要点
 

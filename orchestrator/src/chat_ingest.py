@@ -11,8 +11,19 @@ from validators import append_jsonl
 MEMORY_EVENTS_SCHEMA = {
     "_schema": {
         "name": "memory_events",
-        "version": "1.0",
-        "fields": ["id", "created_at", "status", "source_type", "event", "why_it_matters", "tags", "source_refs"],
+        "version": "1.1",
+        "fields": [
+            "id",
+            "created_at",
+            "status",
+            "source_type",
+            "event",
+            "why_it_matters",
+            "tags",
+            "source_refs",
+            "object_type",
+            "proposal_target",
+        ],
         "notes": "append-only",
     }
 }
@@ -257,6 +268,8 @@ def normalize_messages_to_events(messages: list[dict], extra_tags: list[str]) ->
                 "why_it_matters": "Imported from chat export for downstream pattern extraction and weekly distillation.",
                 "tags": tags,
                 "source_refs": [],
+                "object_type": "memory",
+                "proposal_target": None,
             }
         )
         i = j if j > i else i + 1

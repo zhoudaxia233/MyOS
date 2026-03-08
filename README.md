@@ -36,6 +36,7 @@ Roadmap details can evolve while this direction stays stable:
 Actionable stage-by-stage plan:
 
 - `ROADMAP.md` (includes staged evolution path toward a transparent cyber-self suggestion mirror)
+- `docs/OPERATOR_MODEL_THREE_CONSOLES.md` (three-entrypoint operator model and learning handoff flow)
 
 ## Core Architecture
 

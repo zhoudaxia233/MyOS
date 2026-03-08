@@ -18,6 +18,11 @@ from cognition import (
 )
 from config import load_runtime_config
 from idgen import next_id_for_rel_path
+from learning_console import (
+    build_learning_handoff_packet,
+    ingest_learning_handoff_response,
+    list_recent_learning_candidates,
+)
 from loader import load_context_bundle
 from learning_ingest import ingest_learning_text
 from manifests import discover_module_manifests
@@ -639,6 +644,7 @@ def api_status(root: Path) -> dict:
         "modules": modules,
         "cognition_cards": cognition_cards,
         "owner_todos": list_open_owner_todos(root),
+        "learning_candidates": list_recent_learning_candidates(root, limit=8),
     }
 
 
@@ -861,6 +867,45 @@ def api_action(root: Path, payload: dict[str, Any]) -> dict:
             extra_tags=_coerce_tags(payload.get("tags")),
         )
         return {"ok": True, "action": action, **result}
+
+    if action == "learning_handoff_packet":
+        source_ref = str(payload.get("source_ref", "")).strip()
+        if not source_ref:
+            raise ValueError("source_ref is required for learning_handoff_packet")
+        result = build_learning_handoff_packet(
+            source_ref=source_ref,
+            title=_normalize_optional_str(payload.get("title")),
+            source_type=_normalize_optional_str(payload.get("source_type")),
+            owner_goal=_normalize_optional_str(payload.get("owner_goal")),
+            max_candidates_per_type=_coerce_int(
+                payload.get("max_candidates_per_type"),
+                default=3,
+                minimum=1,
+                maximum=8,
+            ),
+        )
+        return {"ok": True, "action": action, **result}
+
+    if action == "learning_handoff_import":
+        response_text = str(payload.get("response_text", "")).strip()
+        if not response_text:
+            raise ValueError("response_text is required for learning_handoff_import")
+        result = ingest_learning_handoff_response(
+            root,
+            response_text,
+            source_ref=_normalize_optional_str(payload.get("source_ref")),
+            title=_normalize_optional_str(payload.get("title")),
+            source_type=_normalize_optional_str(payload.get("source_type")),
+            confidence=_coerce_int(payload.get("confidence"), default=7, minimum=1, maximum=10),
+            dry_run=_coerce_bool(payload.get("dry_run"), default=False),
+            tags=_coerce_tags(payload.get("tags")),
+        )
+        return {
+            "ok": True,
+            "action": action,
+            **result,
+            "learning_candidates": list_recent_learning_candidates(root, limit=8),
+        }
 
     raise ValueError(f"unsupported action: {action}")
 

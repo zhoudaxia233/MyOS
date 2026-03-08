@@ -11,8 +11,19 @@ from validators import append_jsonl
 MEMORY_EVENTS_SCHEMA = {
     "_schema": {
         "name": "memory_events",
-        "version": "1.0",
-        "fields": ["id", "created_at", "status", "source_type", "event", "why_it_matters", "tags", "source_refs"],
+        "version": "1.1",
+        "fields": [
+            "id",
+            "created_at",
+            "status",
+            "source_type",
+            "event",
+            "why_it_matters",
+            "tags",
+            "source_refs",
+            "object_type",
+            "proposal_target",
+        ],
         "notes": "append-only",
     }
 }
@@ -20,8 +31,19 @@ MEMORY_EVENTS_SCHEMA = {
 MEMORY_INSIGHTS_SCHEMA = {
     "_schema": {
         "name": "memory_insights",
-        "version": "1.0",
-        "fields": ["id", "created_at", "status", "insight", "evidence", "source_refs", "confidence", "tags"],
+        "version": "1.1",
+        "fields": [
+            "id",
+            "created_at",
+            "status",
+            "insight",
+            "evidence",
+            "source_refs",
+            "confidence",
+            "tags",
+            "object_type",
+            "proposal_target",
+        ],
         "notes": "append-only",
     }
 }
@@ -204,6 +226,8 @@ def _ingest_learning_content(
         "why_it_matters": why_it_matters,
         "tags": tags,
         "source_refs": [],
+        "object_type": "memory",
+        "proposal_target": None,
     }
 
     insight_id = next_id_for_path(insights_log, "mi")
@@ -216,6 +240,8 @@ def _ingest_learning_content(
         "source_refs": [event_id],
         "confidence": confidence,
         "tags": [tag for tag in tags if tag != "imported"][:8],
+        "object_type": "memory",
+        "proposal_target": None,
     }
 
     if not dry_run:

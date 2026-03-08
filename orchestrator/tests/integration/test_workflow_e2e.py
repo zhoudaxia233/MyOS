@@ -243,7 +243,18 @@ def _build_repo(root: Path) -> None:
     _write_jsonl(
         root / "modules/memory/logs/memory_events.jsonl",
         "memory_events",
-        ["id", "created_at", "status", "source_type", "event", "why_it_matters", "tags", "source_refs"],
+        [
+            "id",
+            "created_at",
+            "status",
+            "source_type",
+            "event",
+            "why_it_matters",
+            "tags",
+            "source_refs",
+            "object_type",
+            "proposal_target",
+        ],
         [],
     )
     (root / "modules/memory/outputs").mkdir(parents=True, exist_ok=True)
