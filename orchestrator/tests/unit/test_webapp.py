@@ -32,6 +32,7 @@ def test_api_status_lists_modules() -> None:
         assert isinstance(data["cognition_cards"], list)
         assert isinstance(data["learning_candidates"], list)
         assert isinstance(data["candidate_pipeline_summary"], dict)
+        assert isinstance(data["candidate_pipeline_trend"], dict)
 
 
 def test_api_status_reports_env_api_key(monkeypatch) -> None:
@@ -161,6 +162,7 @@ def test_api_action_validate_metrics_and_schedule() -> None:
         assert "source_artifacts" in owner_result
         assert "owner_todos" in owner_result["source_artifacts"]
         assert "candidate_pipeline_summary" in owner_result
+        assert "candidate_pipeline_trend" in owner_result
         assert "owner_todo_queue" in owner_result
 
         owner_todos_log = root / "modules/decision/logs/owner_todos.jsonl"
@@ -304,6 +306,8 @@ def test_api_action_validate_metrics_and_schedule() -> None:
         assert len(handoff_import["candidate_record_ids"]) == 2
         assert isinstance(handoff_import["learning_candidates"], list)
         assert len(handoff_import["learning_candidates"]) >= 1
+        assert isinstance(handoff_import["candidate_pipeline_summary"], dict)
+        assert isinstance(handoff_import["candidate_pipeline_trend"], dict)
 
         review_result = api_action(
             root,
@@ -319,6 +323,8 @@ def test_api_action_validate_metrics_and_schedule() -> None:
         assert review_result["verdict"] == "accept"
         assert review_result["candidate_ref"] == handoff_import["candidate_record_ids"][0]
         assert isinstance(review_result["learning_candidates"], list)
+        assert isinstance(review_result["candidate_pipeline_summary"], dict)
+        assert isinstance(review_result["candidate_pipeline_trend"], dict)
 
         promote_result = api_action(
             root,
@@ -336,6 +342,8 @@ def test_api_action_validate_metrics_and_schedule() -> None:
         assert promote_result["module_candidate_ref"].startswith("ic_")
         assert promote_result["module_candidate_path"] == "modules/memory/logs/insight_candidates.jsonl"
         assert isinstance(promote_result["learning_candidates"], list)
+        assert isinstance(promote_result["candidate_pipeline_summary"], dict)
+        assert isinstance(promote_result["candidate_pipeline_trend"], dict)
 
         diseq_result = api_action(
             root,

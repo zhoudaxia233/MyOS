@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -10,6 +11,7 @@ from learning_console import (
     ingest_learning_handoff_response,
     list_recent_learning_candidates,
     promote_learning_candidate,
+    summarize_learning_pipeline_trend,
 )
 
 
@@ -59,6 +61,15 @@ def _prepare_memory_logs(root: Path) -> None:
 
     events.write_text(json.dumps(events_schema) + "\n", encoding="utf-8")
     insights.write_text(json.dumps(insights_schema) + "\n", encoding="utf-8")
+
+
+def _write_jsonl(path: Path, schema_name: str, fields: list[str], rows: list[dict]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    schema = {"_schema": {"name": schema_name, "version": "1.0", "fields": fields, "notes": "append-only"}}
+    with path.open("w", encoding="utf-8") as handle:
+        handle.write(json.dumps(schema) + "\n")
+        for row in rows:
+            handle.write(json.dumps(row) + "\n")
 
 
 def test_build_learning_handoff_packet_has_schema_block() -> None:
@@ -320,3 +331,102 @@ def test_promote_learning_candidate_requires_accept_and_creates_records() -> Non
         assert promotion["candidate_ref"] == candidate_id
         assert promotion["module_candidate_ref"].startswith("ic_")
         assert promotion["module_candidate_path"] == "modules/memory/logs/insight_candidates.jsonl"
+
+
+def test_summarize_learning_pipeline_trend_compares_7d_vs_30d() -> None:
+    with TemporaryDirectory() as td:
+        root = Path(td)
+        now = datetime(2026, 3, 8, 10, 0, tzinfo=timezone.utc)
+
+        _write_jsonl(
+            root / "orchestrator/logs/learning_candidates.jsonl",
+            "learning_candidates",
+            ["id", "created_at", "status", "candidate_type", "candidate_state", "proposal_target"],
+            [
+                {
+                    "id": "lc_1",
+                    "created_at": "2026-03-07T10:00:00Z",
+                    "status": "active",
+                    "candidate_type": "insight",
+                    "candidate_state": "pending_review",
+                    "proposal_target": "memory",
+                },
+                {
+                    "id": "lc_2",
+                    "created_at": "2026-03-05T10:00:00Z",
+                    "status": "active",
+                    "candidate_type": "rule",
+                    "candidate_state": "pending_review",
+                    "proposal_target": "decision",
+                },
+                {
+                    "id": "lc_3",
+                    "created_at": "2026-02-20T10:00:00Z",
+                    "status": "active",
+                    "candidate_type": "insight",
+                    "candidate_state": "pending_review",
+                    "proposal_target": "memory",
+                },
+                {
+                    "id": "lc_4",
+                    "created_at": "2026-02-16T10:00:00Z",
+                    "status": "active",
+                    "candidate_type": "principle",
+                    "candidate_state": "pending_review",
+                    "proposal_target": "principle",
+                },
+            ],
+        )
+        _write_jsonl(
+            root / "modules/decision/logs/learning_candidate_verdicts.jsonl",
+            "learning_candidate_verdicts",
+            ["id", "created_at", "status", "candidate_ref", "verdict"],
+            [
+                {
+                    "id": "lv_1",
+                    "created_at": "2026-03-07T11:00:00Z",
+                    "status": "active",
+                    "candidate_ref": "lc_1",
+                    "verdict": "reject",
+                },
+                {
+                    "id": "lv_2",
+                    "created_at": "2026-03-05T11:00:00Z",
+                    "status": "active",
+                    "candidate_ref": "lc_2",
+                    "verdict": "accept",
+                },
+                {
+                    "id": "lv_3",
+                    "created_at": "2026-02-20T11:00:00Z",
+                    "status": "active",
+                    "candidate_ref": "lc_3",
+                    "verdict": "accept",
+                },
+            ],
+        )
+        _write_jsonl(
+            root / "modules/decision/logs/learning_candidate_promotions.jsonl",
+            "learning_candidate_promotions",
+            ["id", "created_at", "status", "candidate_ref", "promotion_target"],
+            [
+                {
+                    "id": "lp_1",
+                    "created_at": "2026-02-20T12:00:00Z",
+                    "status": "active",
+                    "candidate_ref": "lc_3",
+                    "promotion_target": "memory",
+                }
+            ],
+        )
+
+        trend = summarize_learning_pipeline_trend(root, now=now)
+        assert trend["windows"]["7d"]["reviewed_total"] == 2
+        assert trend["windows"]["30d"]["reviewed_total"] == 3
+        assert trend["inflow"]["7d"] == 2
+        assert trend["inflow"]["30d"] == 4
+
+        comparisons = {item["key"]: item for item in trend["comparisons"]}
+        assert comparisons["reject_ratio"]["trend"] == "worsening"
+        assert comparisons["promotion_conversion_rate"]["trend"] == "worsening"
+        assert comparisons["backlog_pressure"]["trend"] == "improving"

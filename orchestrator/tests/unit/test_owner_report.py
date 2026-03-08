@@ -140,22 +140,98 @@ def test_owner_snapshot_and_render() -> None:
                 }
             ],
         )
+        _write_jsonl(
+            root / "orchestrator/logs/learning_candidates.jsonl",
+            "learning_candidates",
+            ["id", "created_at", "status", "candidate_type", "candidate_state", "proposal_target"],
+            [
+                {
+                    "id": "lc_1",
+                    "created_at": "2026-03-02T08:00:00Z",
+                    "status": "active",
+                    "candidate_type": "rule",
+                    "candidate_state": "pending_review",
+                    "proposal_target": "decision",
+                },
+                {
+                    "id": "lc_2",
+                    "created_at": "2026-03-01T08:00:00Z",
+                    "status": "active",
+                    "candidate_type": "insight",
+                    "candidate_state": "pending_review",
+                    "proposal_target": "memory",
+                },
+                {
+                    "id": "lc_3",
+                    "created_at": "2026-02-21T08:00:00Z",
+                    "status": "active",
+                    "candidate_type": "insight",
+                    "candidate_state": "pending_review",
+                    "proposal_target": "memory",
+                },
+            ],
+        )
+        _write_jsonl(
+            root / "modules/decision/logs/learning_candidate_verdicts.jsonl",
+            "learning_candidate_verdicts",
+            ["id", "created_at", "status", "candidate_ref", "verdict"],
+            [
+                {
+                    "id": "lv_1",
+                    "created_at": "2026-03-02T09:00:00Z",
+                    "status": "active",
+                    "candidate_ref": "lc_1",
+                    "verdict": "reject",
+                },
+                {
+                    "id": "lv_2",
+                    "created_at": "2026-03-01T09:00:00Z",
+                    "status": "active",
+                    "candidate_ref": "lc_2",
+                    "verdict": "accept",
+                },
+                {
+                    "id": "lv_3",
+                    "created_at": "2026-02-21T09:00:00Z",
+                    "status": "active",
+                    "candidate_ref": "lc_3",
+                    "verdict": "accept",
+                },
+            ],
+        )
+        _write_jsonl(
+            root / "modules/decision/logs/learning_candidate_promotions.jsonl",
+            "learning_candidate_promotions",
+            ["id", "created_at", "status", "candidate_ref", "promotion_target"],
+            [
+                {
+                    "id": "lp_1",
+                    "created_at": "2026-02-21T09:30:00Z",
+                    "status": "active",
+                    "candidate_ref": "lc_3",
+                    "promotion_target": "memory",
+                }
+            ],
+        )
 
         snapshot = build_owner_snapshot(root, window_days=7, now=now)
         report = render_owner_report(snapshot)
 
         assert snapshot["override_count"] == 1
         assert isinstance(snapshot["candidate_pipeline_summary"], dict)
+        assert isinstance(snapshot["candidate_pipeline_trend"], dict)
         assert any(a.startswith("metrics_mismatch:precommit_coverage:") for a in snapshot["consistency_alerts"])
         assert any(a.startswith("decision_audit_conflict:") for a in snapshot["consistency_alerts"])
         assert any(a.startswith("weekly_review_conflict:") for a in snapshot["consistency_alerts"])
         assert isinstance(snapshot["auto_triggers"], list)
         assert "precommit_coverage" in snapshot["consecutive_fail_metrics"]
+        assert any(e["type"] == "candidate_review_drift_trend" for e in snapshot["top_exceptions"])
         assert len(snapshot["escalation_todos"]) >= 1
         assert "guardrail_overrides.invest" in report
         assert "Consistency Alerts" in report
         assert "Auto Triggers" in report
         assert "Learning Candidate Pipeline" in report
+        assert "Learning Candidate Trend (7d vs 30d)" in report
         assert "Escalation Todos (2W Fail)" in report
         assert "[RED-2W]" in report
         assert "Owner Report" in report

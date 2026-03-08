@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from idgen import next_id_for_path
-from learning_console import summarize_learning_pipeline
+from learning_console import summarize_learning_pipeline, summarize_learning_pipeline_trend
 from metrics import compute_drift_metrics
 from validators import append_jsonl
 
@@ -121,6 +121,13 @@ def _to_int(value, default: int = 0) -> int:
         return default
 
 
+def _to_float(value, default: float = 0.0) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
 def _select_previous_owner_summary(repo_root: Path, now: datetime, window_days: int) -> dict | None:
     path = repo_root / "orchestrator/logs/owner_reports.jsonl"
     rows = _load_jsonl(path)
@@ -202,6 +209,7 @@ def build_owner_snapshot(repo_root: Path, window_days: int, now: datetime | None
 
     override_domains = Counter(str(o.get("domain", "unknown")).lower() for o in overrides)
     candidate_pipeline = summarize_learning_pipeline(repo_root, window_days=window_days, now=now)
+    candidate_pipeline_trend = summarize_learning_pipeline_trend(repo_root, now=now)
 
     failed_metrics = [k for k, v in metrics["metrics"].items() if v["status"] == "fail"]
     warned_metrics = [k for k, v in metrics["metrics"].items() if v["status"] == "warn"]
@@ -242,6 +250,36 @@ def build_owner_snapshot(repo_root: Path, window_days: int, now: datetime | None
     reviewed_total = int(candidate_pipeline.get("reviewed_total", 0))
     promoted_total = int(candidate_pipeline.get("promoted_total", 0))
 
+    trend_map: dict[str, dict] = {}
+    trend_comparisons = candidate_pipeline_trend.get("comparisons", [])
+    if isinstance(trend_comparisons, list):
+        for item in trend_comparisons:
+            if not isinstance(item, dict):
+                continue
+            key = str(item.get("key", "")).strip()
+            if key:
+                trend_map[key] = item
+
+    backlog_trend = trend_map.get("backlog_pressure", {})
+    reject_ratio_trend = trend_map.get("reject_ratio", {})
+    conversion_trend = trend_map.get("promotion_conversion_rate", {})
+
+    backlog_is_worsening = (
+        str(backlog_trend.get("trend", "")).strip().lower() == "worsening"
+        and _to_float(backlog_trend.get("value_7d"), 0.0) >= 2.0
+    )
+    reject_ratio_is_worsening = (
+        str(reject_ratio_trend.get("trend", "")).strip().lower() == "worsening"
+        and _to_float(reject_ratio_trend.get("value_7d"), 0.0) >= 0.5
+        and _to_int(candidate_pipeline_trend.get("windows", {}).get("7d", {}).get("reviewed_total"), 0) >= 2
+    )
+    conversion_is_worsening = (
+        str(conversion_trend.get("trend", "")).strip().lower() == "worsening"
+        and (_to_float(conversion_trend.get("value_30d"), 0.0) - _to_float(conversion_trend.get("value_7d"), 0.0))
+        >= 0.2
+        and _to_int(candidate_pipeline_trend.get("windows", {}).get("7d", {}).get("verdicts", {}).get("accept"), 0) >= 1
+    )
+
     if pending_total >= 10:
         top_exceptions.append(
             {
@@ -264,6 +302,39 @@ def build_owner_snapshot(repo_root: Path, window_days: int, now: datetime | None
                 "type": "candidate_promotion_gap",
                 "label": "learning_candidates.promotion_gap",
                 "detail": "accepted candidates exist but none promoted",
+            }
+        )
+    if backlog_is_worsening:
+        top_exceptions.append(
+            {
+                "type": "candidate_backlog_trend",
+                "label": "learning_candidates.backlog_pressure",
+                "detail": (
+                    f"7d={_to_float(backlog_trend.get('value_7d'), 0.0):.1f} vs "
+                    f"30d={_to_float(backlog_trend.get('value_30d'), 0.0):.1f} (worsening)"
+                ),
+            }
+        )
+    if reject_ratio_is_worsening:
+        top_exceptions.append(
+            {
+                "type": "candidate_review_drift_trend",
+                "label": "learning_candidates.reject_ratio",
+                "detail": (
+                    f"7d={_to_float(reject_ratio_trend.get('value_7d'), 0.0):.3f} vs "
+                    f"30d={_to_float(reject_ratio_trend.get('value_30d'), 0.0):.3f} (worsening)"
+                ),
+            }
+        )
+    if conversion_is_worsening:
+        top_exceptions.append(
+            {
+                "type": "candidate_promotion_slowdown",
+                "label": "learning_candidates.promotion_conversion",
+                "detail": (
+                    f"7d={_to_float(conversion_trend.get('value_7d'), 0.0):.3f} vs "
+                    f"30d={_to_float(conversion_trend.get('value_30d'), 0.0):.3f} (worsening)"
+                ),
             }
         )
 
@@ -334,6 +405,30 @@ def build_owner_snapshot(repo_root: Path, window_days: int, now: datetime | None
                 "action": "Escalate to owner-approved schema split/replace decision this week.",
             }
         )
+    if backlog_is_worsening:
+        auto_triggers.append(
+            {
+                "id": "learning_queue_triage_backlog_pressure",
+                "reason": "candidate backlog pressure worsened in 7d vs 30d",
+                "action": "Run learning candidate triage and clear highest-impact backlog within 72h.",
+            }
+        )
+    if reject_ratio_is_worsening:
+        auto_triggers.append(
+            {
+                "id": "learning_candidate_alignment_review",
+                "reason": "candidate reject ratio worsened in 7d vs 30d",
+                "action": "Audit external ingestion quality and tighten candidate extraction prompt constraints.",
+            }
+        )
+    if conversion_is_worsening:
+        auto_triggers.append(
+            {
+                "id": "learning_candidate_promotion_policy_review",
+                "reason": "promotion conversion worsened in 7d vs 30d",
+                "action": "Review promotion criteria and unblock accepted candidates pending promotion.",
+            }
+        )
 
     consecutive_fail_metrics: list[str] = []
     if previous_summary and isinstance(previous_summary.get("summary"), dict):
@@ -363,6 +458,7 @@ def build_owner_snapshot(repo_root: Path, window_days: int, now: datetime | None
         "consistency_alerts": consistency_alerts,
         "auto_triggers": auto_triggers,
         "candidate_pipeline_summary": candidate_pipeline,
+        "candidate_pipeline_trend": candidate_pipeline_trend,
         "previous_summary": previous_summary,
         "consecutive_fail_metrics": consecutive_fail_metrics,
         "escalation_todos": escalation_todos,
@@ -431,6 +527,36 @@ def render_owner_report(snapshot: dict) -> str:
                 lines.append(f"  - {key}: {int(promoted_by_target[key])}")
     else:
         lines.append("- no pipeline summary")
+
+    lines.extend(
+        [
+            "",
+            "## Learning Candidate Trend (7d vs 30d)",
+            "",
+        ]
+    )
+
+    trend = snapshot.get("candidate_pipeline_trend", {})
+    if isinstance(trend, dict):
+        inflow = trend.get("inflow", {})
+        if isinstance(inflow, dict):
+            lines.append(f"- inflow: 7d={int(inflow.get('7d', 0))} 30d={int(inflow.get('30d', 0))}")
+        comparisons = trend.get("comparisons", [])
+        if isinstance(comparisons, list) and comparisons:
+            for item in comparisons:
+                if not isinstance(item, dict):
+                    continue
+                lines.append(
+                    f"- {str(item.get('key', 'unknown'))}: "
+                    f"7d={_to_float(item.get('value_7d'), 0.0):.3f} "
+                    f"30d={_to_float(item.get('value_30d'), 0.0):.3f} "
+                    f"delta={_to_float(item.get('delta'), 0.0):.3f} "
+                    f"trend={str(item.get('trend', 'stable'))}"
+                )
+        else:
+            lines.append("- no trend comparisons")
+    else:
+        lines.append("- no trend summary")
 
     lines.extend(
         [

@@ -776,6 +776,21 @@ def _window_filter(rows: list[dict[str, Any]], now: datetime, window_days: int) 
     return out
 
 
+def _safe_ratio(num: int, den: int) -> float:
+    if den <= 0:
+        return 0.0
+    return num / den
+
+
+def _trend_direction(*, direction: str, value_7d: float, value_30d: float, epsilon: float = 0.02) -> str:
+    delta = value_7d - value_30d
+    if abs(delta) <= epsilon:
+        return "stable"
+    if direction == "higher":
+        return "improving" if delta > 0 else "worsening"
+    return "improving" if delta < 0 else "worsening"
+
+
 def _active_verdict_map(repo_root: Path) -> dict[str, dict[str, Any]]:
     path = repo_root / "modules" / "decision" / "logs" / "learning_candidate_verdicts.jsonl"
     rows = _read_jsonl(path)
@@ -1062,6 +1077,92 @@ def summarize_learning_pipeline(
         "promoted_total": promoted_total,
         "promoted_by_target": dict(promotion_by_target),
         "promotion_conversion_rate": round(promotion_conversion_rate, 3),
+    }
+
+
+def summarize_learning_pipeline_trend(
+    repo_root: Path,
+    *,
+    now: datetime | None = None,
+) -> dict[str, Any]:
+    now = now or datetime.now(timezone.utc)
+    snap_7d = summarize_learning_pipeline(repo_root, window_days=7, now=now)
+    snap_30d = summarize_learning_pipeline(repo_root, window_days=30, now=now)
+
+    candidate_path = repo_root / "orchestrator" / "logs" / "learning_candidates.jsonl"
+    candidates = [
+        row
+        for row in _read_jsonl(candidate_path)
+        if str(row.get("status", "")).strip().lower() == "active"
+    ]
+    inflow_7d = len(_window_filter(candidates, now, 7))
+    inflow_30d = len(_window_filter(candidates, now, 30))
+
+    verdicts_7d = snap_7d.get("verdicts", {})
+    verdicts_30d = snap_30d.get("verdicts", {})
+    reviewed_7d = int(snap_7d.get("reviewed_total", 0))
+    reviewed_30d = int(snap_30d.get("reviewed_total", 0))
+    reject_7d = int(verdicts_7d.get("reject", 0)) if isinstance(verdicts_7d, dict) else 0
+    reject_30d = int(verdicts_30d.get("reject", 0)) if isinstance(verdicts_30d, dict) else 0
+
+    backlog_pressure_7d = inflow_7d - reviewed_7d
+    backlog_pressure_30d = inflow_30d - reviewed_30d
+    reject_ratio_7d = _safe_ratio(reject_7d, reviewed_7d)
+    reject_ratio_30d = _safe_ratio(reject_30d, reviewed_30d)
+    conversion_7d = float(snap_7d.get("promotion_conversion_rate", 0.0))
+    conversion_30d = float(snap_30d.get("promotion_conversion_rate", 0.0))
+
+    comparisons = [
+        {
+            "key": "backlog_pressure",
+            "direction": "lower",
+            "value_7d": float(backlog_pressure_7d),
+            "value_30d": float(backlog_pressure_30d),
+            "delta": float(backlog_pressure_7d - backlog_pressure_30d),
+            "trend": _trend_direction(
+                direction="lower",
+                value_7d=float(backlog_pressure_7d),
+                value_30d=float(backlog_pressure_30d),
+                epsilon=0.1,
+            ),
+        },
+        {
+            "key": "reject_ratio",
+            "direction": "lower",
+            "value_7d": round(reject_ratio_7d, 3),
+            "value_30d": round(reject_ratio_30d, 3),
+            "delta": round(reject_ratio_7d - reject_ratio_30d, 3),
+            "trend": _trend_direction(
+                direction="lower",
+                value_7d=reject_ratio_7d,
+                value_30d=reject_ratio_30d,
+            ),
+        },
+        {
+            "key": "promotion_conversion_rate",
+            "direction": "higher",
+            "value_7d": round(conversion_7d, 3),
+            "value_30d": round(conversion_30d, 3),
+            "delta": round(conversion_7d - conversion_30d, 3),
+            "trend": _trend_direction(
+                direction="higher",
+                value_7d=conversion_7d,
+                value_30d=conversion_30d,
+            ),
+        },
+    ]
+
+    return {
+        "generated_at": now.isoformat().replace("+00:00", "Z"),
+        "windows": {
+            "7d": snap_7d,
+            "30d": snap_30d,
+        },
+        "inflow": {
+            "7d": inflow_7d,
+            "30d": inflow_30d,
+        },
+        "comparisons": comparisons,
     }
 
 

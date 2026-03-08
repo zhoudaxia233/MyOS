@@ -133,6 +133,10 @@ Completed in this iteration:
 - Added audit visibility for candidate pipeline quality:
   - owner report includes candidate pipeline summary (pending/reviewed/verdict/promoted/conversion)
   - web status/trace exposes `candidate_pipeline_summary` for Audit Console
+- Added candidate trend + drift visibility (7d vs 30d):
+  - new trend aggregation `summarize_learning_pipeline_trend` (backlog pressure / reject ratio / promotion conversion)
+  - owner report now includes trend section and candidate drift exceptions/auto-triggers
+  - web status/action payloads expose `candidate_pipeline_trend` and UI trace shows trend lines
 - Added minimal UI evolution toward three-entrypoint model:
   - Task Console / Learning Console / Audit Console selector
   - Learning Console direct ingest and handoff controls
@@ -143,8 +147,9 @@ Completed in this iteration:
 
 Remaining next:
 
-- Candidate trend visualization over rolling windows (7d/30d) and drift alerts
 - Promotion availability policy (when promoted items become suggestion-eligible by default)
+- Promotion consumption wiring: define how promoted candidate sinks are loaded/ranked in task suggestion context
+- Dedicated Audit Console candidate-review panel (batch triage, filters by type/source/age)
 
 Dependencies / blockers:
 

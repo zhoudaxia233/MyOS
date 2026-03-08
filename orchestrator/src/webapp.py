@@ -25,6 +25,7 @@ from learning_console import (
     list_recent_learning_candidates,
     promote_learning_candidate,
     summarize_learning_pipeline,
+    summarize_learning_pipeline_trend,
 )
 from loader import load_context_bundle
 from learning_ingest import ingest_learning_text
@@ -473,6 +474,7 @@ def _run_owner_report(root: Path, window_days: int, output_rel: str | None) -> d
         "output_preview": _preview_text(report),
         "source_artifacts": snapshot["source_artifacts"],
         "candidate_pipeline_summary": snapshot.get("candidate_pipeline_summary", {}),
+        "candidate_pipeline_trend": snapshot.get("candidate_pipeline_trend", {}),
         "owner_todos_path": todos_path,
         "owner_todo_queue": queue_sync,
     }
@@ -650,6 +652,7 @@ def api_status(root: Path) -> dict:
         "owner_todos": list_open_owner_todos(root),
         "learning_candidates": list_recent_learning_candidates(root, limit=8),
         "candidate_pipeline_summary": summarize_learning_pipeline(root, window_days=30),
+        "candidate_pipeline_trend": summarize_learning_pipeline_trend(root),
     }
 
 
@@ -910,6 +913,8 @@ def api_action(root: Path, payload: dict[str, Any]) -> dict:
             "action": action,
             **result,
             "learning_candidates": list_recent_learning_candidates(root, limit=8),
+            "candidate_pipeline_summary": summarize_learning_pipeline(root, window_days=30),
+            "candidate_pipeline_trend": summarize_learning_pipeline_trend(root),
         }
 
     if action == "review_learning_candidate":
@@ -929,6 +934,8 @@ def api_action(root: Path, payload: dict[str, Any]) -> dict:
             "action": action,
             **result,
             "learning_candidates": list_recent_learning_candidates(root, limit=8),
+            "candidate_pipeline_summary": summarize_learning_pipeline(root, window_days=30),
+            "candidate_pipeline_trend": summarize_learning_pipeline_trend(root),
         }
 
     if action == "promote_learning_candidate":
@@ -944,6 +951,8 @@ def api_action(root: Path, payload: dict[str, Any]) -> dict:
             "action": action,
             **result,
             "learning_candidates": list_recent_learning_candidates(root, limit=8),
+            "candidate_pipeline_summary": summarize_learning_pipeline(root, window_days=30),
+            "candidate_pipeline_trend": summarize_learning_pipeline_trend(root),
         }
 
     raise ValueError(f"unsupported action: {action}")

@@ -256,11 +256,12 @@ function renderLearningCandidates(items) {
   }
 }
 
-function renderCandidatePipelineSummary(summary) {
+function renderCandidatePipelineSummary(summary, trend = null) {
   if (!summary || typeof summary !== "object") {
     candidatePipeline.textContent = "-";
     return;
   }
+  const trendSummary = trend && typeof trend === "object" ? trend : null;
   const verdicts = summary.verdicts || {};
   const lines = [
     `window_days: ${summary.window_days || 30}`,
@@ -284,6 +285,23 @@ function renderCandidatePipelineSummary(summary) {
     lines.push("promoted_by_target:");
     for (const key of promotedKeys.sort()) {
       lines.push(`  ${key}: ${promotedByTarget[key]}`);
+    }
+  }
+  if (trendSummary && Array.isArray(trendSummary.comparisons)) {
+    lines.push("");
+    lines.push("trend_7d_vs_30d:");
+    const inflow = trendSummary.inflow || {};
+    lines.push(`  inflow: 7d=${Number(inflow["7d"] || 0)} 30d=${Number(inflow["30d"] || 0)}`);
+    for (const item of trendSummary.comparisons) {
+      if (!item || typeof item !== "object") {
+        continue;
+      }
+      const key = item.key || "unknown";
+      const value7 = Number(item.value_7d || 0).toFixed(3);
+      const value30 = Number(item.value_30d || 0).toFixed(3);
+      const delta = Number(item.delta || 0).toFixed(3);
+      const trendTag = String(item.trend || "stable");
+      lines.push(`  ${key}: 7d=${value7} 30d=${value30} delta=${delta} trend=${trendTag}`);
     }
   }
   candidatePipeline.textContent = lines.join("\n");
@@ -484,6 +502,19 @@ function renderActionResult(data) {
 
   resultTrace.textContent = out.join("\n");
 
+  if (Array.isArray(data.cognition_cards)) {
+    renderCognitionCards(data.cognition_cards);
+  }
+  if (Array.isArray(data.owner_todos)) {
+    renderOwnerTodos(data.owner_todos);
+  }
+  if (Array.isArray(data.learning_candidates)) {
+    renderLearningCandidates(data.learning_candidates);
+  }
+  if (data.candidate_pipeline_summary && typeof data.candidate_pipeline_summary === "object") {
+    renderCandidatePipelineSummary(data.candidate_pipeline_summary, data.candidate_pipeline_trend || null);
+  }
+
   if (data.output_preview) {
     latestOutputPath = data.output_path || latestOutputPath;
     latestOutputProvider = providerSelect.value || latestOutputProvider;
@@ -533,18 +564,6 @@ function renderActionResult(data) {
     setPreview(previewLines.join("\n") || "-");
     setOutputTokenMeta("-");
     return;
-  }
-  if (Array.isArray(data.cognition_cards)) {
-    renderCognitionCards(data.cognition_cards);
-  }
-  if (Array.isArray(data.owner_todos)) {
-    renderOwnerTodos(data.owner_todos);
-  }
-  if (Array.isArray(data.learning_candidates)) {
-    renderLearningCandidates(data.learning_candidates);
-  }
-  if (data.candidate_pipeline_summary && typeof data.candidate_pipeline_summary === "object") {
-    renderCandidatePipelineSummary(data.candidate_pipeline_summary);
   }
   setPreview("-");
   setOutputTokenMeta("-");
@@ -787,7 +806,7 @@ async function loadStatus() {
     renderCognitionCards(data.cognition_cards || []);
     renderOwnerTodos(data.owner_todos || []);
     renderLearningCandidates(data.learning_candidates || []);
-    renderCandidatePipelineSummary(data.candidate_pipeline_summary || {});
+    renderCandidatePipelineSummary(data.candidate_pipeline_summary || {}, data.candidate_pipeline_trend || null);
 
     setStatus("Connected", "ok");
     addBubble("system", `Connected to ${data.repo_root}`);
