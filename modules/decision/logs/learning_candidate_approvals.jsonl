@@ -1,0 +1,1 @@
+{"_schema": {"name": "learning_candidate_approvals", "version": "1.0", "fields": ["id", "created_at", "status", "candidate_ref", "approval_note", "source_refs", "object_type", "proposal_target"], "notes": "append-only"}}

@@ -1,0 +1,1 @@
+{"_schema": {"name": "learning_candidate_promotions", "version": "1.0", "fields": ["id", "created_at", "status", "candidate_ref", "candidate_type", "promotion_target", "approval_ref", "promotion_note", "source_refs", "object_type", "proposal_target"], "notes": "append-only"}}

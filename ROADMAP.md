@@ -118,6 +118,11 @@ Completed in this iteration:
   - append-only owner verdict trail:
     - `modules/decision/logs/learning_candidate_verdicts.jsonl`
   - `modify` creates replacement pending candidate for second-pass review
+- Added minimal promotion gate for accepted candidates:
+  - `promote_learning_candidate` requires prior `accept` verdict
+  - append-only approval and promotion logs:
+    - `modules/decision/logs/learning_candidate_approvals.jsonl`
+    - `modules/decision/logs/learning_candidate_promotions.jsonl`
 - Added minimal UI evolution toward three-entrypoint model:
   - Task Console / Learning Console / Audit Console selector
   - Learning Console direct ingest and handoff controls
@@ -128,14 +133,14 @@ Completed in this iteration:
 
 Remaining next:
 
-- Candidate promotion workflow with explicit `approval_ref`
 - Module-specific promotion sinks (decision/profile/cognition/principles) with governance checks
 - Audit views for candidate drift and promotion quality over time
+- Promotion availability policy (when promoted items become suggestion-eligible by default)
 
 Dependencies / blockers:
 
 - Need schema contracts for promotion logs before wiring auto-availability in runtime suggestion
-- Need owner policy for when accepted candidates become suggestion-eligible by default
+- Need owner policy for when promoted candidates become suggestion-eligible by default
 
 Do not refactor yet:
 

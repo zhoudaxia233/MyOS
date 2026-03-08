@@ -23,6 +23,7 @@ from learning_console import (
     build_learning_handoff_packet,
     ingest_learning_handoff_response,
     list_recent_learning_candidates,
+    promote_learning_candidate,
 )
 from loader import load_context_bundle
 from learning_ingest import ingest_learning_text
@@ -919,6 +920,21 @@ def api_action(root: Path, payload: dict[str, Any]) -> dict:
             verdict=verdict,
             owner_note=owner_note,
             modified_statement=modified_statement,
+        )
+        return {
+            "ok": True,
+            "action": action,
+            **result,
+            "learning_candidates": list_recent_learning_candidates(root, limit=8),
+        }
+
+    if action == "promote_learning_candidate":
+        candidate_id = str(payload.get("candidate_id", "")).strip()
+        approval_note = str(payload.get("approval_note", "")).strip()
+        result = promote_learning_candidate(
+            root,
+            candidate_id=candidate_id,
+            approval_note=approval_note,
         )
         return {
             "ok": True,

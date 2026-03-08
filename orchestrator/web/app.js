@@ -408,6 +408,15 @@ function renderActionResult(data) {
   if (data.replacement_candidate_ref) {
     out.push(`replacement_candidate_ref: ${data.replacement_candidate_ref}`);
   }
+  if (data.approval_record_id) {
+    out.push(`approval_record_id: ${data.approval_record_id}`);
+  }
+  if (data.promotion_record_id) {
+    out.push(`promotion_record_id: ${data.promotion_record_id}`);
+  }
+  if (data.promotion_target) {
+    out.push(`promotion_target: ${data.promotion_target}`);
+  }
   if (typeof data.tension_score === "number") {
     out.push(`tension_score: ${data.tension_score}`);
   }
@@ -652,8 +661,39 @@ async function reviewLearningCandidate(candidateId, verdict) {
     });
     renderActionResult(data);
     addBubble("system", `Candidate reviewed: ${id} -> ${choice}`);
+    if (choice === "accept") {
+      const doPromote = window.confirm("Promote this accepted candidate now?");
+      if (doPromote) {
+        await promoteLearningCandidate(id);
+      }
+    }
   } catch (err) {
     addBubble("system", `Candidate review failed: ${err.message}`);
+  }
+}
+
+async function promoteLearningCandidate(candidateId) {
+  const id = String(candidateId || "").trim();
+  if (!id) {
+    return;
+  }
+  const approvalNote = window.prompt("Promotion approval note:", "Approved for promotion after owner review.");
+  const note = approvalNote ? approvalNote.trim() : "";
+  if (!note) {
+    addBubble("system", "Promotion skipped: approval note is required.");
+    return;
+  }
+
+  try {
+    const data = await postJson("/api/action", {
+      action: "promote_learning_candidate",
+      candidate_id: id,
+      approval_note: note,
+    });
+    renderActionResult(data);
+    addBubble("system", `Candidate promoted: ${id} -> ${data.promotion_target}`);
+  } catch (err) {
+    addBubble("system", `Candidate promotion failed: ${err.message}`);
   }
 }
 

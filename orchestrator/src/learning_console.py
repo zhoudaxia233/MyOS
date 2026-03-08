@@ -82,6 +82,45 @@ LEARNING_CANDIDATE_VERDICTS_SCHEMA = {
     }
 }
 
+LEARNING_CANDIDATE_APPROVALS_SCHEMA = {
+    "_schema": {
+        "name": "learning_candidate_approvals",
+        "version": "1.0",
+        "fields": [
+            "id",
+            "created_at",
+            "status",
+            "candidate_ref",
+            "approval_note",
+            "source_refs",
+            "object_type",
+            "proposal_target",
+        ],
+        "notes": "append-only",
+    }
+}
+
+LEARNING_CANDIDATE_PROMOTIONS_SCHEMA = {
+    "_schema": {
+        "name": "learning_candidate_promotions",
+        "version": "1.0",
+        "fields": [
+            "id",
+            "created_at",
+            "status",
+            "candidate_ref",
+            "candidate_type",
+            "promotion_target",
+            "approval_ref",
+            "promotion_note",
+            "source_refs",
+            "object_type",
+            "proposal_target",
+        ],
+        "notes": "append-only",
+    }
+}
+
 FENCED_JSON_RE = re.compile(r"```(?:json)?\s*(\{[\s\S]*?\})\s*```", re.IGNORECASE)
 
 CANDIDATE_SECTION_KEYS = {
@@ -693,6 +732,95 @@ def apply_learning_candidate_verdict(
         "candidate_ref": target_candidate_id,
         "verdict": normalized_verdict,
         "replacement_candidate_ref": verdict_record["replacement_candidate_ref"],
+    }
+
+
+def _active_promotion_map(repo_root: Path) -> dict[str, dict[str, Any]]:
+    path = repo_root / "modules" / "decision" / "logs" / "learning_candidate_promotions.jsonl"
+    rows = _read_jsonl(path)
+    out: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        if str(row.get("status", "")).strip().lower() != "active":
+            continue
+        candidate_ref = str(row.get("candidate_ref", "")).strip()
+        if not candidate_ref:
+            continue
+        out[candidate_ref] = row
+    return out
+
+
+def promote_learning_candidate(
+    repo_root: Path,
+    *,
+    candidate_id: str,
+    approval_note: str,
+) -> dict[str, Any]:
+    target_candidate_id = str(candidate_id or "").strip()
+    if not target_candidate_id:
+        raise ValueError("candidate_id is required")
+
+    note = _clip(approval_note, 500)
+    if not note:
+        raise ValueError("approval_note is required")
+
+    candidate_path = repo_root / "orchestrator" / "logs" / "learning_candidates.jsonl"
+    candidates = _read_jsonl(candidate_path)
+    target: dict[str, Any] | None = None
+    for row in candidates:
+        if str(row.get("id", "")).strip() != target_candidate_id:
+            continue
+        if str(row.get("status", "")).strip().lower() != "active":
+            continue
+        target = row
+        break
+    if target is None:
+        raise ValueError(f"candidate not found: {target_candidate_id}")
+
+    verdict_row = _active_verdict_map(repo_root).get(target_candidate_id)
+    if verdict_row is None or str(verdict_row.get("verdict", "")).strip().lower() != "accept":
+        raise ValueError("candidate must be accepted before promotion")
+
+    promotion_map = _active_promotion_map(repo_root)
+    if target_candidate_id in promotion_map:
+        raise ValueError(f"candidate already promoted: {target_candidate_id}")
+
+    approval_path = repo_root / "modules" / "decision" / "logs" / "learning_candidate_approvals.jsonl"
+    promotion_path = repo_root / "modules" / "decision" / "logs" / "learning_candidate_promotions.jsonl"
+
+    approval_id = next_id_for_rel_path(repo_root, "la", "modules/decision/logs/learning_candidate_approvals.jsonl")
+    approval_record = {
+        "id": approval_id,
+        "created_at": _utc_now(),
+        "status": "active",
+        "candidate_ref": target_candidate_id,
+        "approval_note": note,
+        "source_refs": [target_candidate_id, str(verdict_row.get("id", "")).strip()],
+        "object_type": "decision",
+        "proposal_target": str(target.get("proposal_target", "")).strip() or "system",
+    }
+    append_jsonl(approval_path, approval_record, schema_header=LEARNING_CANDIDATE_APPROVALS_SCHEMA)
+
+    promotion_id = next_id_for_rel_path(repo_root, "lp", "modules/decision/logs/learning_candidate_promotions.jsonl")
+    promotion_record = {
+        "id": promotion_id,
+        "created_at": _utc_now(),
+        "status": "active",
+        "candidate_ref": target_candidate_id,
+        "candidate_type": str(target.get("candidate_type", "")).strip() or "insight",
+        "promotion_target": str(target.get("proposal_target", "")).strip() or "system",
+        "approval_ref": approval_id,
+        "promotion_note": note,
+        "source_refs": [target_candidate_id, approval_id],
+        "object_type": "decision",
+        "proposal_target": str(target.get("proposal_target", "")).strip() or "system",
+    }
+    append_jsonl(promotion_path, promotion_record, schema_header=LEARNING_CANDIDATE_PROMOTIONS_SCHEMA)
+
+    return {
+        "approval_record_id": approval_id,
+        "promotion_record_id": promotion_id,
+        "candidate_ref": target_candidate_id,
+        "promotion_target": promotion_record["promotion_target"],
     }
 
 

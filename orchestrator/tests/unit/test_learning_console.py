@@ -9,6 +9,7 @@ from learning_console import (
     build_learning_handoff_packet,
     ingest_learning_handoff_response,
     list_recent_learning_candidates,
+    promote_learning_candidate,
 )
 
 
@@ -278,3 +279,42 @@ def test_apply_learning_candidate_verdict_modify_creates_replacement() -> None:
         pending_ids = [item["id"] for item in pending]
         assert candidate_id not in pending_ids
         assert replacement_id in pending_ids
+
+
+def test_promote_learning_candidate_requires_accept_and_creates_records() -> None:
+    with TemporaryDirectory() as td:
+        root = Path(td)
+        _prepare_memory_logs(root)
+        result = ingest_learning_handoff_response(
+            root,
+            json.dumps(
+                {
+                    "source": {"title": "P", "url": "u3", "source_type": "video"},
+                    "summary": "s3",
+                    "key_points": ["p3"],
+                    "candidate_artifacts": {"insights": [{"statement": "candidate promo"}]},
+                }
+            ),
+        )
+        candidate_id = result["candidate_record_ids"][0]
+
+        try:
+            promote_learning_candidate(root, candidate_id=candidate_id, approval_note="try")
+            assert False, "promotion should require accepted verdict"
+        except ValueError as exc:
+            assert "accepted before promotion" in str(exc)
+
+        apply_learning_candidate_verdict(
+            root,
+            candidate_id=candidate_id,
+            verdict="accept",
+            owner_note="accept first",
+        )
+        promotion = promote_learning_candidate(
+            root,
+            candidate_id=candidate_id,
+            approval_note="approved for promotion",
+        )
+        assert promotion["approval_record_id"].startswith("la_")
+        assert promotion["promotion_record_id"].startswith("lp_")
+        assert promotion["candidate_ref"] == candidate_id

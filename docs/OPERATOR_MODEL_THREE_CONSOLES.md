@@ -372,6 +372,11 @@ Implemented components:
 - Candidate review action (minimal):
   - `review_learning_candidate` with `accept | modify | reject`
   - `modify` creates a replacement pending candidate for second-pass review
+- Candidate promotion action (minimal):
+  - `promote_learning_candidate` requires accepted verdict first
+  - append-only approval/promotion trail:
+    - `modules/decision/logs/learning_candidate_approvals.jsonl`
+    - `modules/decision/logs/learning_candidate_promotions.jsonl`
 - UI:
   - three-entrypoint selector
   - Learning Console direct ingest inputs
@@ -384,9 +389,9 @@ Implemented components:
 
 Next implementation slice should focus on:
 
-1. Promotion pipeline
-- explicit `approval_ref`
-- promotion writes into module-specific candidate/promotion logs
+1. Module-specific promotion sinks
+- write promoted records into decision/profile/cognition/principles-specific candidate logs
+- keep approval linkage and append-only guarantees
 
 2. Audit integration
 - show candidate drift / acceptance rates in owner report

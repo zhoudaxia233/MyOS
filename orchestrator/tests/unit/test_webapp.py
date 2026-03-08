@@ -318,6 +318,21 @@ def test_api_action_validate_metrics_and_schedule() -> None:
         assert review_result["candidate_ref"] == handoff_import["candidate_record_ids"][0]
         assert isinstance(review_result["learning_candidates"], list)
 
+        promote_result = api_action(
+            root,
+            {
+                "action": "promote_learning_candidate",
+                "candidate_id": handoff_import["candidate_record_ids"][0],
+                "approval_note": "Approved for promotion.",
+            },
+        )
+        assert promote_result["ok"] is True
+        assert promote_result["action"] == "promote_learning_candidate"
+        assert promote_result["candidate_ref"] == handoff_import["candidate_record_ids"][0]
+        assert promote_result["approval_record_id"].startswith("la_")
+        assert promote_result["promotion_record_id"].startswith("lp_")
+        assert isinstance(promote_result["learning_candidates"], list)
+
         diseq_result = api_action(
             root,
             {
