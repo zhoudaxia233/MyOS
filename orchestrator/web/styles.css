@@ -602,6 +602,8 @@ body {
 .todo-actions {
   display: flex;
   justify-content: flex-end;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
 .todo-resolve-btn {

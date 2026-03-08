@@ -113,25 +113,29 @@ Completed in this iteration:
   - raw import + candidate queue append-only logs:
     - `modules/memory/logs/learning_imports.jsonl`
     - `orchestrator/logs/learning_candidates.jsonl`
+- Added minimal owner review loop for learning candidates:
+  - `review_learning_candidate` supports `accept | modify | reject`
+  - append-only owner verdict trail:
+    - `modules/decision/logs/learning_candidate_verdicts.jsonl`
+  - `modify` creates replacement pending candidate for second-pass review
 - Added minimal UI evolution toward three-entrypoint model:
   - Task Console / Learning Console / Audit Console selector
   - Learning Console direct ingest and handoff controls
-  - candidate queue visibility in audit-side trace
+  - candidate queue visibility + review buttons in audit-side trace
 - Preserved continuity with extraction foundations:
   - memory/chat ingestion keeps append-only behavior
   - no direct mutation of canonical long-term truths from external imports
 
 Remaining next:
 
-- Candidate review controls (`accept | modify | reject`) and structured owner rationale logs
 - Candidate promotion workflow with explicit `approval_ref`
 - Module-specific promotion sinks (decision/profile/cognition/principles) with governance checks
 - Audit views for candidate drift and promotion quality over time
 
 Dependencies / blockers:
 
-- Need owner-facing decision model for candidate review verbs and promotion thresholds
 - Need schema contracts for promotion logs before wiring auto-availability in runtime suggestion
+- Need owner policy for when accepted candidates become suggestion-eligible by default
 
 Do not refactor yet:
 

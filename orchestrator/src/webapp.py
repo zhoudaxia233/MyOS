@@ -19,6 +19,7 @@ from cognition import (
 from config import load_runtime_config
 from idgen import next_id_for_rel_path
 from learning_console import (
+    apply_learning_candidate_verdict,
     build_learning_handoff_packet,
     ingest_learning_handoff_response,
     list_recent_learning_candidates,
@@ -899,6 +900,25 @@ def api_action(root: Path, payload: dict[str, Any]) -> dict:
             confidence=_coerce_int(payload.get("confidence"), default=7, minimum=1, maximum=10),
             dry_run=_coerce_bool(payload.get("dry_run"), default=False),
             tags=_coerce_tags(payload.get("tags")),
+        )
+        return {
+            "ok": True,
+            "action": action,
+            **result,
+            "learning_candidates": list_recent_learning_candidates(root, limit=8),
+        }
+
+    if action == "review_learning_candidate":
+        candidate_id = str(payload.get("candidate_id", "")).strip()
+        verdict = str(payload.get("verdict", "")).strip().lower()
+        owner_note = str(payload.get("owner_note", "")).strip()
+        modified_statement = _normalize_optional_str(payload.get("modified_statement"))
+        result = apply_learning_candidate_verdict(
+            root,
+            candidate_id=candidate_id,
+            verdict=verdict,
+            owner_note=owner_note,
+            modified_statement=modified_statement,
         )
         return {
             "ok": True,

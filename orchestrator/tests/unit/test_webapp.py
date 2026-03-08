@@ -303,6 +303,21 @@ def test_api_action_validate_metrics_and_schedule() -> None:
         assert isinstance(handoff_import["learning_candidates"], list)
         assert len(handoff_import["learning_candidates"]) >= 1
 
+        review_result = api_action(
+            root,
+            {
+                "action": "review_learning_candidate",
+                "candidate_id": handoff_import["candidate_record_ids"][0],
+                "verdict": "accept",
+                "owner_note": "Aligned and accepted.",
+            },
+        )
+        assert review_result["ok"] is True
+        assert review_result["action"] == "review_learning_candidate"
+        assert review_result["verdict"] == "accept"
+        assert review_result["candidate_ref"] == handoff_import["candidate_record_ids"][0]
+        assert isinstance(review_result["learning_candidates"], list)
+
         diseq_result = api_action(
             root,
             {

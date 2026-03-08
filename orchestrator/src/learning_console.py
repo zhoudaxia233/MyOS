@@ -61,6 +61,27 @@ LEARNING_CANDIDATES_SCHEMA = {
     }
 }
 
+LEARNING_CANDIDATE_VERDICTS_SCHEMA = {
+    "_schema": {
+        "name": "learning_candidate_verdicts",
+        "version": "1.0",
+        "fields": [
+            "id",
+            "created_at",
+            "status",
+            "candidate_ref",
+            "verdict",
+            "owner_note",
+            "modified_statement",
+            "replacement_candidate_ref",
+            "source_refs",
+            "object_type",
+            "proposal_target",
+        ],
+        "notes": "append-only",
+    }
+}
+
 FENCED_JSON_RE = re.compile(r"```(?:json)?\s*(\{[\s\S]*?\})\s*```", re.IGNORECASE)
 
 CANDIDATE_SECTION_KEYS = {
@@ -568,14 +589,123 @@ def _read_jsonl(path: Path) -> list[dict[str, Any]]:
     return rows
 
 
+def _active_verdict_map(repo_root: Path) -> dict[str, dict[str, Any]]:
+    path = repo_root / "modules" / "decision" / "logs" / "learning_candidate_verdicts.jsonl"
+    rows = _read_jsonl(path)
+    out: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        if str(row.get("status", "")).strip().lower() != "active":
+            continue
+        candidate_ref = str(row.get("candidate_ref", "")).strip()
+        if not candidate_ref:
+            continue
+        out[candidate_ref] = row
+    return out
+
+
+def apply_learning_candidate_verdict(
+    repo_root: Path,
+    *,
+    candidate_id: str,
+    verdict: str,
+    owner_note: str,
+    modified_statement: str | None = None,
+) -> dict[str, Any]:
+    target_candidate_id = str(candidate_id or "").strip()
+    if not target_candidate_id:
+        raise ValueError("candidate_id is required")
+
+    normalized_verdict = str(verdict or "").strip().lower()
+    if normalized_verdict not in {"accept", "modify", "reject"}:
+        raise ValueError("verdict must be one of: accept, modify, reject")
+
+    note = _clip(owner_note, 500)
+    if not note:
+        raise ValueError("owner_note is required")
+
+    candidate_path = repo_root / "orchestrator" / "logs" / "learning_candidates.jsonl"
+    candidates = _read_jsonl(candidate_path)
+    target: dict[str, Any] | None = None
+    for row in candidates:
+        if str(row.get("id", "")).strip() != target_candidate_id:
+            continue
+        if str(row.get("status", "")).strip().lower() != "active":
+            continue
+        target = row
+        break
+    if target is None:
+        raise ValueError(f"candidate not found: {target_candidate_id}")
+
+    verdict_map = _active_verdict_map(repo_root)
+    if target_candidate_id in verdict_map:
+        raise ValueError(f"candidate already reviewed: {target_candidate_id}")
+
+    modified_text = _clip(modified_statement, 320) if modified_statement is not None else ""
+    replacement_candidate: dict[str, Any] | None = None
+
+    verdict_path = repo_root / "modules" / "decision" / "logs" / "learning_candidate_verdicts.jsonl"
+    verdict_id = next_id_for_rel_path(repo_root, "lv", "modules/decision/logs/learning_candidate_verdicts.jsonl")
+    verdict_record = {
+        "id": verdict_id,
+        "created_at": _utc_now(),
+        "status": "active",
+        "candidate_ref": target_candidate_id,
+        "verdict": normalized_verdict,
+        "owner_note": note,
+        "modified_statement": None,
+        "replacement_candidate_ref": None,
+        "source_refs": [target_candidate_id],
+        "object_type": "decision",
+        "proposal_target": str(target.get("proposal_target", "")).strip() or "system",
+    }
+
+    if normalized_verdict == "modify":
+        if not modified_text:
+            raise ValueError("modified_statement is required for modify verdict")
+        replacement_id = next_id_for_rel_path(repo_root, "lc", "orchestrator/logs/learning_candidates.jsonl")
+        replacement_candidate = {
+            "id": replacement_id,
+            "created_at": _utc_now(),
+            "status": "active",
+            "candidate_type": str(target.get("candidate_type", "")).strip() or "insight",
+            "candidate_state": "pending_review",
+            "title": _clip(str(target.get("title", "")).strip() or "modified_candidate", 96),
+            "statement": modified_text,
+            "rationale": str(target.get("rationale")) if target.get("rationale") is not None else None,
+            "evidence": target.get("evidence") if isinstance(target.get("evidence"), list) else [],
+            "confidence": _coerce_confidence(target.get("confidence"), default=7),
+            "source_refs": list(target.get("source_refs", [])) + [target_candidate_id, verdict_id],
+            "source_material_ref": str(target.get("source_material_ref", "")).strip() or "<modified>",
+            "approval_ref": None,
+            "owner_decision": None,
+            "object_type": "system",
+            "proposal_target": str(target.get("proposal_target", "")).strip() or "system",
+        }
+        verdict_record["modified_statement"] = modified_text
+        verdict_record["replacement_candidate_ref"] = replacement_id
+
+    append_jsonl(verdict_path, verdict_record, schema_header=LEARNING_CANDIDATE_VERDICTS_SCHEMA)
+    if replacement_candidate is not None:
+        append_jsonl(candidate_path, replacement_candidate, schema_header=LEARNING_CANDIDATES_SCHEMA)
+
+    return {
+        "verdict_record_id": verdict_id,
+        "candidate_ref": target_candidate_id,
+        "verdict": normalized_verdict,
+        "replacement_candidate_ref": verdict_record["replacement_candidate_ref"],
+    }
+
+
 def list_recent_learning_candidates(repo_root: Path, *, limit: int = 20) -> list[dict[str, Any]]:
     path = repo_root / "orchestrator" / "logs" / "learning_candidates.jsonl"
     rows = _read_jsonl(path)
+    resolved = set(_active_verdict_map(repo_root).keys())
     filtered = [
         row
         for row in rows
         if str(row.get("status", "")).strip().lower() == "active"
         and str(row.get("candidate_state", "")).strip().lower() == "pending_review"
+        and str(row.get("id", "")).strip() not in resolved
     ]
     filtered.sort(key=lambda row: str(row.get("created_at", "")), reverse=True)
     out: list[dict[str, Any]] = []

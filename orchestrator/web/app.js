@@ -217,8 +217,40 @@ function renderLearningCandidates(items) {
     action.className = "todo-action";
     action.textContent = item.title || item.id || "-";
 
+    const actions = document.createElement("div");
+    actions.className = "todo-actions";
+
+    const acceptBtn = document.createElement("button");
+    acceptBtn.className = "todo-resolve-btn";
+    acceptBtn.type = "button";
+    acceptBtn.textContent = "Accept";
+    acceptBtn.addEventListener("click", () => {
+      reviewLearningCandidate(item.id, "accept");
+    });
+
+    const rejectBtn = document.createElement("button");
+    rejectBtn.className = "todo-resolve-btn";
+    rejectBtn.type = "button";
+    rejectBtn.textContent = "Reject";
+    rejectBtn.addEventListener("click", () => {
+      reviewLearningCandidate(item.id, "reject");
+    });
+
+    const modifyBtn = document.createElement("button");
+    modifyBtn.className = "todo-resolve-btn";
+    modifyBtn.type = "button";
+    modifyBtn.textContent = "Modify";
+    modifyBtn.addEventListener("click", () => {
+      reviewLearningCandidate(item.id, "modify");
+    });
+
+    actions.appendChild(acceptBtn);
+    actions.appendChild(rejectBtn);
+    actions.appendChild(modifyBtn);
+
     wrap.appendChild(head);
     wrap.appendChild(action);
+    wrap.appendChild(actions);
     learningCandidates.appendChild(wrap);
   }
 }
@@ -363,6 +395,18 @@ function renderActionResult(data) {
   }
   if (data.import_record_id) {
     out.push(`import_record_id: ${data.import_record_id}`);
+  }
+  if (data.verdict_record_id) {
+    out.push(`verdict_record_id: ${data.verdict_record_id}`);
+  }
+  if (data.candidate_ref) {
+    out.push(`candidate_ref: ${data.candidate_ref}`);
+  }
+  if (data.verdict) {
+    out.push(`verdict: ${data.verdict}`);
+  }
+  if (data.replacement_candidate_ref) {
+    out.push(`replacement_candidate_ref: ${data.replacement_candidate_ref}`);
   }
   if (typeof data.tension_score === "number") {
     out.push(`tension_score: ${data.tension_score}`);
@@ -564,6 +608,52 @@ async function resolveOwnerTodo(todoId) {
     addBubble("system", `Resolved owner todo: ${data.resolved_todo}`);
   } catch (err) {
     addBubble("system", `Resolve failed: ${err.message}`);
+  }
+}
+
+async function reviewLearningCandidate(candidateId, verdict) {
+  const id = String(candidateId || "").trim();
+  if (!id) {
+    return;
+  }
+  const choice = String(verdict || "").trim().toLowerCase();
+  if (!["accept", "modify", "reject"].includes(choice)) {
+    return;
+  }
+
+  let ownerNote = "";
+  let modifiedStatement = null;
+  if (choice === "accept") {
+    ownerNote = window.prompt("Accept note:", "Accepted as aligned with current judgment.") || "";
+  } else if (choice === "reject") {
+    ownerNote = window.prompt("Reject reason:", "Not aligned with my operating model.") || "";
+  } else {
+    ownerNote = window.prompt("Modify reason:", "Useful idea but needs stricter wording.") || "";
+    modifiedStatement = window.prompt("Modified statement:", "") || "";
+  }
+
+  ownerNote = ownerNote.trim();
+  if (!ownerNote) {
+    addBubble("system", "Review skipped: note is required.");
+    return;
+  }
+  if (choice === "modify" && !String(modifiedStatement || "").trim()) {
+    addBubble("system", "Modify skipped: modified statement is required.");
+    return;
+  }
+
+  try {
+    const data = await postJson("/api/action", {
+      action: "review_learning_candidate",
+      candidate_id: id,
+      verdict: choice,
+      owner_note: ownerNote,
+      modified_statement: modifiedStatement,
+    });
+    renderActionResult(data);
+    addBubble("system", `Candidate reviewed: ${id} -> ${choice}`);
+  } catch (err) {
+    addBubble("system", `Candidate review failed: ${err.message}`);
   }
 }
 

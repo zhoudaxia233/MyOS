@@ -368,6 +368,10 @@ Implemented components:
 - Logs:
   - `modules/memory/logs/learning_imports.jsonl` (on first write)
   - `orchestrator/logs/learning_candidates.jsonl` (on first write)
+  - `modules/decision/logs/learning_candidate_verdicts.jsonl` (owner review trail)
+- Candidate review action (minimal):
+  - `review_learning_candidate` with `accept | modify | reject`
+  - `modify` creates a replacement pending candidate for second-pass review
 - UI:
   - three-entrypoint selector
   - Learning Console direct ingest inputs
@@ -380,16 +384,12 @@ Implemented components:
 
 Next implementation slice should focus on:
 
-1. Candidate review actions
-- accept/modify/reject on each candidate
-- owner decision logs with rationale
-
-2. Promotion pipeline
+1. Promotion pipeline
 - explicit `approval_ref`
 - promotion writes into module-specific candidate/promotion logs
 
-3. Audit integration
+2. Audit integration
 - show candidate drift / acceptance rates in owner report
 
-4. Safety guardrails
+3. Safety guardrails
 - enforce that pending candidates cannot overwrite canonical SSOT without explicit promotion.

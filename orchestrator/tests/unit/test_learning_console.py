@@ -5,6 +5,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from learning_console import (
+    apply_learning_candidate_verdict,
     build_learning_handoff_packet,
     ingest_learning_handoff_response,
     list_recent_learning_candidates,
@@ -214,3 +215,66 @@ def test_list_recent_learning_candidates_filters_pending() -> None:
         result = list_recent_learning_candidates(root, limit=10)
         assert len(result) == 1
         assert result[0]["id"] == "lc_20260308_001"
+
+
+def test_apply_learning_candidate_verdict_accept_hides_candidate_from_queue() -> None:
+    with TemporaryDirectory() as td:
+        root = Path(td)
+        _prepare_memory_logs(root)
+        result = ingest_learning_handoff_response(
+            root,
+            json.dumps(
+                {
+                    "source": {"title": "A", "url": "u", "source_type": "video"},
+                    "summary": "s",
+                    "key_points": ["p"],
+                    "candidate_artifacts": {"insights": [{"statement": "candidate one"}]},
+                }
+            ),
+        )
+        candidate_id = result["candidate_record_ids"][0]
+
+        verdict = apply_learning_candidate_verdict(
+            root,
+            candidate_id=candidate_id,
+            verdict="accept",
+            owner_note="Aligned with current judgment.",
+        )
+        assert verdict["verdict"] == "accept"
+        assert verdict["candidate_ref"] == candidate_id
+
+        pending = list_recent_learning_candidates(root, limit=10)
+        assert all(item["id"] != candidate_id for item in pending)
+
+
+def test_apply_learning_candidate_verdict_modify_creates_replacement() -> None:
+    with TemporaryDirectory() as td:
+        root = Path(td)
+        _prepare_memory_logs(root)
+        result = ingest_learning_handoff_response(
+            root,
+            json.dumps(
+                {
+                    "source": {"title": "B", "url": "u2", "source_type": "video"},
+                    "summary": "s2",
+                    "key_points": ["p2"],
+                    "candidate_artifacts": {"rules": [{"rule": "if high risk then check downside"}]},
+                }
+            ),
+        )
+        candidate_id = result["candidate_record_ids"][0]
+
+        verdict = apply_learning_candidate_verdict(
+            root,
+            candidate_id=candidate_id,
+            verdict="modify",
+            owner_note="Need stricter boundary.",
+            modified_statement="If decision is high-risk, require downside + invalidation + disconfirming signal.",
+        )
+        replacement_id = verdict["replacement_candidate_ref"]
+        assert replacement_id is not None
+
+        pending = list_recent_learning_candidates(root, limit=10)
+        pending_ids = [item["id"] for item in pending]
+        assert candidate_id not in pending_ids
+        assert replacement_id in pending_ids

@@ -1,0 +1,1 @@
+{"_schema": {"name": "learning_candidate_verdicts", "version": "1.0", "fields": ["id", "created_at", "status", "candidate_ref", "verdict", "owner_note", "modified_statement", "replacement_candidate_ref", "source_refs", "object_type", "proposal_target"], "notes": "append-only"}}
