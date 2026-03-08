@@ -137,6 +137,10 @@ Completed in this iteration:
   - new trend aggregation `summarize_learning_pipeline_trend` (backlog pressure / reject ratio / promotion conversion)
   - owner report now includes trend section and candidate drift exceptions/auto-triggers
   - web status/action payloads expose `candidate_pipeline_trend` and UI trace shows trend lines
+- Added promotion readiness policy baseline:
+  - pipeline summary now includes `promotion_readiness` (maturity window + ready/cooling counts)
+  - owner report surfaces cooling backlog exceptions/auto-triggers for promotion governance
+  - UI trace now shows promotion readiness by target
 - Added minimal UI evolution toward three-entrypoint model:
   - Task Console / Learning Console / Audit Console selector
   - Learning Console direct ingest and handoff controls
@@ -147,9 +151,9 @@ Completed in this iteration:
 
 Remaining next:
 
-- Promotion availability policy (when promoted items become suggestion-eligible by default)
-- Promotion consumption wiring: define how promoted candidate sinks are loaded/ranked in task suggestion context
+- Promotion consumption wiring: define how ready promoted candidate sinks are loaded/ranked in task suggestion context
 - Dedicated Audit Console candidate-review panel (batch triage, filters by type/source/age)
+- Owner-tunable readiness policy (per-candidate-type maturity hours + explicit override path)
 
 Dependencies / blockers:
 

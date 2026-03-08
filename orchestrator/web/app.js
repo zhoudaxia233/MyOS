@@ -271,6 +271,14 @@ function renderCandidatePipelineSummary(summary, trend = null) {
     `promoted_total: ${summary.promoted_total || 0}`,
     `promotion_conversion_rate: ${(Number(summary.promotion_conversion_rate || 0)).toFixed(3)}`,
   ];
+  const readiness = summary.promotion_readiness || {};
+  if (readiness && typeof readiness === "object") {
+    lines.push(
+      `promotion_readiness: ready=${Number(readiness.ready_total || 0)} ` +
+        `cooling=${Number(readiness.cooling_total || 0)} ` +
+        `maturity_hours=${Number(readiness.maturity_hours || 0)}`
+    );
+  }
   const pendingByType = summary.pending_by_type || {};
   const pendingKeys = Object.keys(pendingByType);
   if (pendingKeys.length > 0) {
@@ -285,6 +293,22 @@ function renderCandidatePipelineSummary(summary, trend = null) {
     lines.push("promoted_by_target:");
     for (const key of promotedKeys.sort()) {
       lines.push(`  ${key}: ${promotedByTarget[key]}`);
+    }
+  }
+  const readyByTarget = readiness.ready_by_target || {};
+  const readyKeys = Object.keys(readyByTarget);
+  if (readyKeys.length > 0) {
+    lines.push("ready_by_target:");
+    for (const key of readyKeys.sort()) {
+      lines.push(`  ${key}: ${readyByTarget[key]}`);
+    }
+  }
+  const coolingByTarget = readiness.cooling_by_target || {};
+  const coolingKeys = Object.keys(coolingByTarget);
+  if (coolingKeys.length > 0) {
+    lines.push("cooling_by_target:");
+    for (const key of coolingKeys.sort()) {
+      lines.push(`  ${key}: ${coolingByTarget[key]}`);
     }
   }
   if (trendSummary && Array.isArray(trendSummary.comparisons)) {

@@ -11,6 +11,7 @@ from learning_console import (
     ingest_learning_handoff_response,
     list_recent_learning_candidates,
     promote_learning_candidate,
+    summarize_learning_pipeline,
     summarize_learning_pipeline_trend,
 )
 
@@ -430,3 +431,54 @@ def test_summarize_learning_pipeline_trend_compares_7d_vs_30d() -> None:
         assert comparisons["reject_ratio"]["trend"] == "worsening"
         assert comparisons["promotion_conversion_rate"]["trend"] == "worsening"
         assert comparisons["backlog_pressure"]["trend"] == "improving"
+
+
+def test_summarize_learning_pipeline_includes_promotion_readiness() -> None:
+    with TemporaryDirectory() as td:
+        root = Path(td)
+        now = datetime(2026, 3, 8, 10, 0, tzinfo=timezone.utc)
+
+        _write_jsonl(
+            root / "orchestrator/logs/learning_candidates.jsonl",
+            "learning_candidates",
+            ["id", "created_at", "status", "candidate_type", "candidate_state", "proposal_target"],
+            [
+                {
+                    "id": "lc_1",
+                    "created_at": "2026-03-07T10:00:00Z",
+                    "status": "active",
+                    "candidate_type": "insight",
+                    "candidate_state": "pending_review",
+                    "proposal_target": "memory",
+                }
+            ],
+        )
+        _write_jsonl(
+            root / "modules/decision/logs/learning_candidate_promotions.jsonl",
+            "learning_candidate_promotions",
+            ["id", "created_at", "status", "candidate_ref", "promotion_target"],
+            [
+                {
+                    "id": "lp_old",
+                    "created_at": "2026-03-06T09:00:00Z",
+                    "status": "active",
+                    "candidate_ref": "lc_old",
+                    "promotion_target": "memory",
+                },
+                {
+                    "id": "lp_new",
+                    "created_at": "2026-03-08T02:00:00Z",
+                    "status": "active",
+                    "candidate_ref": "lc_new",
+                    "promotion_target": "decision",
+                },
+            ],
+        )
+
+        summary = summarize_learning_pipeline(root, window_days=30, now=now)
+        readiness = summary["promotion_readiness"]
+        assert readiness["maturity_hours"] == 24
+        assert readiness["ready_total"] == 1
+        assert readiness["cooling_total"] == 1
+        assert readiness["ready_by_target"]["memory"] == 1
+        assert readiness["cooling_by_target"]["decision"] == 1

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from math import ceil
 import re
 from collections import Counter
 from datetime import datetime, timedelta, timezone
@@ -236,6 +237,9 @@ CANDIDATE_SINK_CONFIG: dict[str, dict[str, Any]] = {
         "proposal_target": "principle",
     },
 }
+
+PROMOTION_MATURITY_HOURS = 24
+PROMOTION_READINESS_PREVIEW_LIMIT = 5
 
 FENCED_JSON_RE = re.compile(r"```(?:json)?\s*(\{[\s\S]*?\})\s*```", re.IGNORECASE)
 
@@ -1063,6 +1067,7 @@ def summarize_learning_pipeline(
     accepted_total = verdict_counter.get("accept", 0)
     promoted_total = len(promotions)
     promotion_conversion_rate = (promoted_total / accepted_total) if accepted_total > 0 else 0.0
+    promotion_readiness = summarize_promotion_readiness(repo_root, now=now)
 
     return {
         "window_days": window_days,
@@ -1077,6 +1082,70 @@ def summarize_learning_pipeline(
         "promoted_total": promoted_total,
         "promoted_by_target": dict(promotion_by_target),
         "promotion_conversion_rate": round(promotion_conversion_rate, 3),
+        "promotion_readiness": promotion_readiness,
+    }
+
+
+def summarize_promotion_readiness(
+    repo_root: Path,
+    *,
+    now: datetime | None = None,
+    maturity_hours: int = PROMOTION_MATURITY_HOURS,
+) -> dict[str, Any]:
+    now = now or datetime.now(timezone.utc)
+    required_hours = max(0, int(maturity_hours))
+    path = repo_root / "modules" / "decision" / "logs" / "learning_candidate_promotions.jsonl"
+    promotions = [
+        row
+        for row in _read_jsonl(path)
+        if str(row.get("status", "")).strip().lower() == "active"
+    ]
+
+    ready_by_target: Counter[str] = Counter()
+    cooling_by_target: Counter[str] = Counter()
+    cooling_candidates: list[dict[str, Any]] = []
+
+    for row in promotions:
+        created = _parse_iso8601(str(row.get("created_at", "")).strip())
+        target = str(row.get("promotion_target", "")).strip() or "unknown"
+        candidate_ref = str(row.get("candidate_ref", "")).strip()
+        promotion_ref = str(row.get("id", "")).strip()
+        if created is None:
+            cooling_by_target[target] += 1
+            if len(cooling_candidates) < PROMOTION_READINESS_PREVIEW_LIMIT:
+                cooling_candidates.append(
+                    {
+                        "promotion_ref": promotion_ref,
+                        "candidate_ref": candidate_ref,
+                        "promotion_target": target,
+                        "hours_remaining": required_hours,
+                    }
+                )
+            continue
+
+        age_hours = max(0.0, (now - created).total_seconds() / 3600.0)
+        if age_hours >= required_hours:
+            ready_by_target[target] += 1
+            continue
+
+        cooling_by_target[target] += 1
+        if len(cooling_candidates) < PROMOTION_READINESS_PREVIEW_LIMIT:
+            cooling_candidates.append(
+                {
+                    "promotion_ref": promotion_ref,
+                    "candidate_ref": candidate_ref,
+                    "promotion_target": target,
+                    "hours_remaining": max(0, int(ceil(required_hours - age_hours))),
+                }
+            )
+
+    return {
+        "maturity_hours": required_hours,
+        "ready_total": sum(ready_by_target.values()),
+        "cooling_total": sum(cooling_by_target.values()),
+        "ready_by_target": dict(ready_by_target),
+        "cooling_by_target": dict(cooling_by_target),
+        "cooling_candidates": cooling_candidates,
     }
 
 

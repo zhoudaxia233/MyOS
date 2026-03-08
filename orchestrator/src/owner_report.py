@@ -249,6 +249,13 @@ def build_owner_snapshot(repo_root: Path, window_days: int, now: datetime | None
     accept_count = int(verdicts.get("accept", 0)) if isinstance(verdicts, dict) else 0
     reviewed_total = int(candidate_pipeline.get("reviewed_total", 0))
     promoted_total = int(candidate_pipeline.get("promoted_total", 0))
+    promotion_readiness = candidate_pipeline.get("promotion_readiness", {})
+    readiness_ready_total = (
+        _to_int(promotion_readiness.get("ready_total"), 0) if isinstance(promotion_readiness, dict) else 0
+    )
+    readiness_cooling_total = (
+        _to_int(promotion_readiness.get("cooling_total"), 0) if isinstance(promotion_readiness, dict) else 0
+    )
 
     trend_map: dict[str, dict] = {}
     trend_comparisons = candidate_pipeline_trend.get("comparisons", [])
@@ -302,6 +309,14 @@ def build_owner_snapshot(repo_root: Path, window_days: int, now: datetime | None
                 "type": "candidate_promotion_gap",
                 "label": "learning_candidates.promotion_gap",
                 "detail": "accepted candidates exist but none promoted",
+            }
+        )
+    if readiness_cooling_total >= 3 and readiness_ready_total == 0:
+        top_exceptions.append(
+            {
+                "type": "candidate_promotion_cooling",
+                "label": "learning_candidates.promotion_readiness",
+                "detail": f"{readiness_cooling_total} promoted candidates still cooling",
             }
         )
     if backlog_is_worsening:
@@ -429,6 +444,14 @@ def build_owner_snapshot(repo_root: Path, window_days: int, now: datetime | None
                 "action": "Review promotion criteria and unblock accepted candidates pending promotion.",
             }
         )
+    if readiness_cooling_total >= 3 and readiness_ready_total == 0:
+        auto_triggers.append(
+            {
+                "id": "learning_candidate_promotion_readiness_review",
+                "reason": "all promoted candidates are still in cooling period",
+                "action": "Review maturity window and queue follow-up review for cooling promotions.",
+            }
+        )
 
     consecutive_fail_metrics: list[str] = []
     if previous_summary and isinstance(previous_summary.get("summary"), dict):
@@ -515,6 +538,13 @@ def render_owner_report(snapshot: dict) -> str:
         )
         lines.append(f"- promoted_total: {int(pipeline.get('promoted_total', 0))}")
         lines.append(f"- promotion_conversion_rate: {float(pipeline.get('promotion_conversion_rate', 0.0)):.3f}")
+        readiness = pipeline.get("promotion_readiness", {})
+        if isinstance(readiness, dict):
+            lines.append(
+                f"- promotion_readiness: ready={int(readiness.get('ready_total', 0))} "
+                f"cooling={int(readiness.get('cooling_total', 0))} "
+                f"maturity_hours={int(readiness.get('maturity_hours', 0))}"
+            )
         pending_by_type = pipeline.get("pending_by_type", {})
         if isinstance(pending_by_type, dict) and pending_by_type:
             lines.append("- pending_by_type:")
@@ -525,6 +555,17 @@ def render_owner_report(snapshot: dict) -> str:
             lines.append("- promoted_by_target:")
             for key in sorted(promoted_by_target.keys()):
                 lines.append(f"  - {key}: {int(promoted_by_target[key])}")
+        if isinstance(readiness, dict):
+            ready_by_target = readiness.get("ready_by_target", {})
+            if isinstance(ready_by_target, dict) and ready_by_target:
+                lines.append("- ready_by_target:")
+                for key in sorted(ready_by_target.keys()):
+                    lines.append(f"  - {key}: {int(ready_by_target[key])}")
+            cooling_by_target = readiness.get("cooling_by_target", {})
+            if isinstance(cooling_by_target, dict) and cooling_by_target:
+                lines.append("- cooling_by_target:")
+                for key in sorted(cooling_by_target.keys()):
+                    lines.append(f"  - {key}: {int(cooling_by_target[key])}")
     else:
         lines.append("- no pipeline summary")
 
