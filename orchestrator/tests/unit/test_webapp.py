@@ -31,6 +31,7 @@ def test_api_status_lists_modules() -> None:
         assert "decision" in data["modules"]
         assert isinstance(data["cognition_cards"], list)
         assert isinstance(data["learning_candidates"], list)
+        assert isinstance(data["candidate_pipeline_summary"], dict)
 
 
 def test_api_status_reports_env_api_key(monkeypatch) -> None:
@@ -159,6 +160,7 @@ def test_api_action_validate_metrics_and_schedule() -> None:
         assert owner_result["action"] == "owner_report"
         assert "source_artifacts" in owner_result
         assert "owner_todos" in owner_result["source_artifacts"]
+        assert "candidate_pipeline_summary" in owner_result
         assert "owner_todo_queue" in owner_result
 
         owner_todos_log = root / "modules/decision/logs/owner_todos.jsonl"

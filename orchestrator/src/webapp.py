@@ -24,6 +24,7 @@ from learning_console import (
     ingest_learning_handoff_response,
     list_recent_learning_candidates,
     promote_learning_candidate,
+    summarize_learning_pipeline,
 )
 from loader import load_context_bundle
 from learning_ingest import ingest_learning_text
@@ -471,6 +472,7 @@ def _run_owner_report(root: Path, window_days: int, output_rel: str | None) -> d
         "output_path": report_path,
         "output_preview": _preview_text(report),
         "source_artifacts": snapshot["source_artifacts"],
+        "candidate_pipeline_summary": snapshot.get("candidate_pipeline_summary", {}),
         "owner_todos_path": todos_path,
         "owner_todo_queue": queue_sync,
     }
@@ -647,6 +649,7 @@ def api_status(root: Path) -> dict:
         "cognition_cards": cognition_cards,
         "owner_todos": list_open_owner_todos(root),
         "learning_candidates": list_recent_learning_candidates(root, limit=8),
+        "candidate_pipeline_summary": summarize_learning_pipeline(root, window_days=30),
     }
 
 

@@ -35,6 +35,7 @@ const outputTokenMeta = document.getElementById("outputTokenMeta");
 const cognitionCards = document.getElementById("cognitionCards");
 const ownerTodos = document.getElementById("ownerTodos");
 const learningCandidates = document.getElementById("learningCandidates");
+const candidatePipeline = document.getElementById("candidatePipeline");
 const settingsModal = document.getElementById("settingsModal");
 const settingsClose = document.getElementById("settingsClose");
 const settingsSave = document.getElementById("settingsSave");
@@ -253,6 +254,39 @@ function renderLearningCandidates(items) {
     wrap.appendChild(actions);
     learningCandidates.appendChild(wrap);
   }
+}
+
+function renderCandidatePipelineSummary(summary) {
+  if (!summary || typeof summary !== "object") {
+    candidatePipeline.textContent = "-";
+    return;
+  }
+  const verdicts = summary.verdicts || {};
+  const lines = [
+    `window_days: ${summary.window_days || 30}`,
+    `pending_total: ${summary.pending_total || 0}`,
+    `reviewed_total: ${summary.reviewed_total || 0}`,
+    `verdicts: accept=${verdicts.accept || 0} modify=${verdicts.modify || 0} reject=${verdicts.reject || 0}`,
+    `promoted_total: ${summary.promoted_total || 0}`,
+    `promotion_conversion_rate: ${(Number(summary.promotion_conversion_rate || 0)).toFixed(3)}`,
+  ];
+  const pendingByType = summary.pending_by_type || {};
+  const pendingKeys = Object.keys(pendingByType);
+  if (pendingKeys.length > 0) {
+    lines.push("pending_by_type:");
+    for (const key of pendingKeys.sort()) {
+      lines.push(`  ${key}: ${pendingByType[key]}`);
+    }
+  }
+  const promotedByTarget = summary.promoted_by_target || {};
+  const promotedKeys = Object.keys(promotedByTarget);
+  if (promotedKeys.length > 0) {
+    lines.push("promoted_by_target:");
+    for (const key of promotedKeys.sort()) {
+      lines.push(`  ${key}: ${promotedByTarget[key]}`);
+    }
+  }
+  candidatePipeline.textContent = lines.join("\n");
 }
 
 function switchEntrypoint(entrypoint) {
@@ -509,6 +543,9 @@ function renderActionResult(data) {
   if (Array.isArray(data.learning_candidates)) {
     renderLearningCandidates(data.learning_candidates);
   }
+  if (data.candidate_pipeline_summary && typeof data.candidate_pipeline_summary === "object") {
+    renderCandidatePipelineSummary(data.candidate_pipeline_summary);
+  }
   setPreview("-");
   setOutputTokenMeta("-");
 }
@@ -750,6 +787,7 @@ async function loadStatus() {
     renderCognitionCards(data.cognition_cards || []);
     renderOwnerTodos(data.owner_todos || []);
     renderLearningCandidates(data.learning_candidates || []);
+    renderCandidatePipelineSummary(data.candidate_pipeline_summary || {});
 
     setStatus("Connected", "ok");
     addBubble("system", `Connected to ${data.repo_root}`);

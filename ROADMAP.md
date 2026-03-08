@@ -130,6 +130,9 @@ Completed in this iteration:
   - `modules/profile/logs/profile_trait_candidates.jsonl`
   - `modules/cognition/logs/schema_candidates.jsonl`
   - `modules/principles/logs/principle_candidates.jsonl`
+- Added audit visibility for candidate pipeline quality:
+  - owner report includes candidate pipeline summary (pending/reviewed/verdict/promoted/conversion)
+  - web status/trace exposes `candidate_pipeline_summary` for Audit Console
 - Added minimal UI evolution toward three-entrypoint model:
   - Task Console / Learning Console / Audit Console selector
   - Learning Console direct ingest and handoff controls
@@ -140,7 +143,7 @@ Completed in this iteration:
 
 Remaining next:
 
-- Audit views for candidate drift and promotion quality over time
+- Candidate trend visualization over rolling windows (7d/30d) and drift alerts
 - Promotion availability policy (when promoted items become suggestion-eligible by default)
 
 Dependencies / blockers:

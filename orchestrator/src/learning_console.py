@@ -3,7 +3,8 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-from datetime import datetime, timezone
+from collections import Counter
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -754,6 +755,27 @@ def _read_jsonl(path: Path) -> list[dict[str, Any]]:
     return rows
 
 
+def _parse_iso8601(ts: str) -> datetime | None:
+    if not ts:
+        return None
+    try:
+        return datetime.fromisoformat(ts.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def _window_filter(rows: list[dict[str, Any]], now: datetime, window_days: int) -> list[dict[str, Any]]:
+    cutoff = now - timedelta(days=window_days)
+    out: list[dict[str, Any]] = []
+    for row in rows:
+        created = _parse_iso8601(str(row.get("created_at", "")).strip())
+        if created is None:
+            continue
+        if created >= cutoff:
+            out.append(row)
+    return out
+
+
 def _active_verdict_map(repo_root: Path) -> dict[str, dict[str, Any]]:
     path = repo_root / "modules" / "decision" / "logs" / "learning_candidate_verdicts.jsonl"
     rows = _read_jsonl(path)
@@ -989,6 +1011,57 @@ def promote_learning_candidate(
         "promotion_target": promotion_record["promotion_target"],
         "module_candidate_ref": sink_record_id,
         "module_candidate_path": sink_path,
+    }
+
+
+def summarize_learning_pipeline(
+    repo_root: Path,
+    *,
+    window_days: int = 30,
+    now: datetime | None = None,
+) -> dict[str, Any]:
+    now = now or datetime.now(timezone.utc)
+    candidate_path = repo_root / "orchestrator" / "logs" / "learning_candidates.jsonl"
+    verdict_path = repo_root / "modules" / "decision" / "logs" / "learning_candidate_verdicts.jsonl"
+    promotion_path = repo_root / "modules" / "decision" / "logs" / "learning_candidate_promotions.jsonl"
+
+    candidates = _read_jsonl(candidate_path)
+    verdicts = _window_filter(_read_jsonl(verdict_path), now, window_days)
+    promotions = _window_filter(_read_jsonl(promotion_path), now, window_days)
+    reviewed_candidate_refs = set(_active_verdict_map(repo_root).keys())
+    promoted_candidate_refs = set(_active_promotion_map(repo_root).keys())
+
+    pending_rows = [
+        row
+        for row in candidates
+        if str(row.get("status", "")).strip().lower() == "active"
+        and str(row.get("candidate_state", "")).strip().lower() == "pending_review"
+        and str(row.get("id", "")).strip() not in reviewed_candidate_refs
+        and str(row.get("id", "")).strip() not in promoted_candidate_refs
+    ]
+    pending_by_type = Counter(str(row.get("candidate_type", "unknown")).strip() or "unknown" for row in pending_rows)
+
+    verdict_counter = Counter(str(row.get("verdict", "")).strip().lower() for row in verdicts)
+    promotion_by_target = Counter(str(row.get("promotion_target", "")).strip() or "unknown" for row in promotions)
+
+    reviewed_total = sum(verdict_counter.values())
+    accepted_total = verdict_counter.get("accept", 0)
+    promoted_total = len(promotions)
+    promotion_conversion_rate = (promoted_total / accepted_total) if accepted_total > 0 else 0.0
+
+    return {
+        "window_days": window_days,
+        "pending_total": len(pending_rows),
+        "pending_by_type": dict(pending_by_type),
+        "reviewed_total": reviewed_total,
+        "verdicts": {
+            "accept": accepted_total,
+            "modify": verdict_counter.get("modify", 0),
+            "reject": verdict_counter.get("reject", 0),
+        },
+        "promoted_total": promoted_total,
+        "promoted_by_target": dict(promotion_by_target),
+        "promotion_conversion_rate": round(promotion_conversion_rate, 3),
     }
 
 

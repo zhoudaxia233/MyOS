@@ -384,6 +384,10 @@ Implemented components:
     - `modules/profile/logs/profile_trait_candidates.jsonl`
     - `modules/cognition/logs/schema_candidates.jsonl`
     - `modules/principles/logs/principle_candidates.jsonl`
+- Audit integration (minimal):
+  - owner report now includes learning candidate pipeline metrics:
+    - pending/reviewed/verdict/promoted/conversion summary
+  - web audit trace includes `Candidate Pipeline (30D)` snapshot
 - UI:
   - three-entrypoint selector
   - Learning Console direct ingest inputs

@@ -145,6 +145,7 @@ def test_owner_snapshot_and_render() -> None:
         report = render_owner_report(snapshot)
 
         assert snapshot["override_count"] == 1
+        assert isinstance(snapshot["candidate_pipeline_summary"], dict)
         assert any(a.startswith("metrics_mismatch:precommit_coverage:") for a in snapshot["consistency_alerts"])
         assert any(a.startswith("decision_audit_conflict:") for a in snapshot["consistency_alerts"])
         assert any(a.startswith("weekly_review_conflict:") for a in snapshot["consistency_alerts"])
@@ -154,6 +155,7 @@ def test_owner_snapshot_and_render() -> None:
         assert "guardrail_overrides.invest" in report
         assert "Consistency Alerts" in report
         assert "Auto Triggers" in report
+        assert "Learning Candidate Pipeline" in report
         assert "Escalation Todos (2W Fail)" in report
         assert "[RED-2W]" in report
         assert "Owner Report" in report

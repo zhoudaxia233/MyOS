@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from idgen import next_id_for_path
+from learning_console import summarize_learning_pipeline
 from metrics import compute_drift_metrics
 from validators import append_jsonl
 
@@ -200,6 +201,7 @@ def build_owner_snapshot(repo_root: Path, window_days: int, now: datetime | None
     )
 
     override_domains = Counter(str(o.get("domain", "unknown")).lower() for o in overrides)
+    candidate_pipeline = summarize_learning_pipeline(repo_root, window_days=window_days, now=now)
 
     failed_metrics = [k for k, v in metrics["metrics"].items() if v["status"] == "fail"]
     warned_metrics = [k for k, v in metrics["metrics"].items() if v["status"] == "warn"]
@@ -230,6 +232,38 @@ def build_owner_snapshot(repo_root: Path, window_days: int, now: datetime | None
                 "type": "override",
                 "label": f"guardrail_overrides.{domain}",
                 "detail": f"{count} overrides in window",
+            }
+        )
+
+    pending_total = int(candidate_pipeline.get("pending_total", 0))
+    verdicts = candidate_pipeline.get("verdicts", {})
+    reject_count = int(verdicts.get("reject", 0)) if isinstance(verdicts, dict) else 0
+    accept_count = int(verdicts.get("accept", 0)) if isinstance(verdicts, dict) else 0
+    reviewed_total = int(candidate_pipeline.get("reviewed_total", 0))
+    promoted_total = int(candidate_pipeline.get("promoted_total", 0))
+
+    if pending_total >= 10:
+        top_exceptions.append(
+            {
+                "type": "candidate_backlog",
+                "label": "learning_candidates.pending",
+                "detail": f"{pending_total} pending candidates",
+            }
+        )
+    if reviewed_total >= 4 and reject_count > accept_count:
+        top_exceptions.append(
+            {
+                "type": "candidate_drift",
+                "label": "learning_candidates.review_quality",
+                "detail": f"reject({reject_count}) > accept({accept_count}) in window",
+            }
+        )
+    if accept_count >= 3 and promoted_total == 0:
+        top_exceptions.append(
+            {
+                "type": "candidate_promotion_gap",
+                "label": "learning_candidates.promotion_gap",
+                "detail": "accepted candidates exist but none promoted",
             }
         )
 
@@ -328,6 +362,7 @@ def build_owner_snapshot(repo_root: Path, window_days: int, now: datetime | None
         },
         "consistency_alerts": consistency_alerts,
         "auto_triggers": auto_triggers,
+        "candidate_pipeline_summary": candidate_pipeline,
         "previous_summary": previous_summary,
         "consecutive_fail_metrics": consecutive_fail_metrics,
         "escalation_todos": escalation_todos,
@@ -364,6 +399,38 @@ def render_owner_report(snapshot: dict) -> str:
     else:
         for e in snapshot["top_exceptions"]:
             lines.append(f"- [{e['type']}] {e['label']}: {e['detail']}")
+
+    lines.extend(
+        [
+            "",
+            "## Learning Candidate Pipeline",
+            "",
+        ]
+    )
+
+    pipeline = snapshot.get("candidate_pipeline_summary", {})
+    if isinstance(pipeline, dict):
+        verdicts = pipeline.get("verdicts", {})
+        lines.append(f"- pending_total: {int(pipeline.get('pending_total', 0))}")
+        lines.append(f"- reviewed_total: {int(pipeline.get('reviewed_total', 0))}")
+        lines.append(
+            f"- verdicts: accept={int(verdicts.get('accept', 0))} "
+            f"modify={int(verdicts.get('modify', 0))} reject={int(verdicts.get('reject', 0))}"
+        )
+        lines.append(f"- promoted_total: {int(pipeline.get('promoted_total', 0))}")
+        lines.append(f"- promotion_conversion_rate: {float(pipeline.get('promotion_conversion_rate', 0.0)):.3f}")
+        pending_by_type = pipeline.get("pending_by_type", {})
+        if isinstance(pending_by_type, dict) and pending_by_type:
+            lines.append("- pending_by_type:")
+            for key in sorted(pending_by_type.keys()):
+                lines.append(f"  - {key}: {int(pending_by_type[key])}")
+        promoted_by_target = pipeline.get("promoted_by_target", {})
+        if isinstance(promoted_by_target, dict) and promoted_by_target:
+            lines.append("- promoted_by_target:")
+            for key in sorted(promoted_by_target.keys()):
+                lines.append(f"  - {key}: {int(promoted_by_target[key])}")
+    else:
+        lines.append("- no pipeline summary")
 
     lines.extend(
         [
