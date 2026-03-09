@@ -35,10 +35,11 @@ Keep rollout evolutionary: preserve existing extraction/distillation pipelines a
   - structured suggestion records at `orchestrator/logs/suggestions.jsonl`
   - `run` / web `api_run` return `suggestion_id`
   - classification consistency for runtime logs (`object_type` / `proposal_target`)
-- Next:
   - suggestion detail query API by `suggestion_id`
   - web trace panel support for full suggestion detail view
   - clearer `invoked_rules` / `invoked_traits` fields in suggestion records
+- Next:
+  - bridge suggestion detail to owner verdict/correction actions (`suggestion_id` as first-class review handle)
 - Exit criteria:
   - end-to-end trace from task input to suggestion, run record, output artifact, and loaded context
   - owner can inspect why a recommendation was produced

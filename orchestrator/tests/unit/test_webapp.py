@@ -148,11 +148,17 @@ def test_api_inspect_and_run_writes_output() -> None:
         assert suggestion_record["run_ref"] == run_record["id"]
         assert suggestion_record["object_type"] == "system"
         assert suggestion_record["proposal_target"] is None
+        assert isinstance(suggestion_record["invoked_rules"], list)
+        assert isinstance(suggestion_record["invoked_traits"], list)
+        assert any(str(item).startswith("route_reason:") for item in suggestion_record["invoked_rules"])
+        assert any(str(item).startswith("plan_skill:") for item in suggestion_record["invoked_rules"])
 
         suggestion_detail = api_suggestion(root, run_result["suggestion_id"])
         assert suggestion_detail["ok"] is True
         assert suggestion_detail["suggestion"]["id"] == run_result["suggestion_id"]
         assert suggestion_detail["suggestion"]["run_ref"] == run_record["id"]
+        assert isinstance(suggestion_detail["suggestion"]["invoked_rules"], list)
+        assert isinstance(suggestion_detail["suggestion"]["invoked_traits"], list)
         assert suggestion_detail["run"] is not None
         assert suggestion_detail["run"]["id"] == run_record["id"]
         assert suggestion_detail["output_path"] == run_result["output_path"]

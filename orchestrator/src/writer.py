@@ -186,7 +186,7 @@ DECISION_CONSTITUTION_CHECKS_SCHEMA = {
 SUGGESTIONS_SCHEMA = {
     "_schema": {
         "name": "suggestions",
-        "version": "1.0",
+        "version": "1.1",
         "fields": [
             "id",
             "created_at",
@@ -201,6 +201,8 @@ SUGGESTIONS_SCHEMA = {
             "retrieval_hit_ids",
             "retrieval_hit_count",
             "invoked_artifacts",
+            "invoked_rules",
+            "invoked_traits",
             "tensions",
             "uncertainties",
             "recommendation_path",
@@ -248,6 +250,84 @@ def _with_classification(record: dict, *, object_type: str, proposal_target: str
     out.setdefault("object_type", object_type)
     out.setdefault("proposal_target", proposal_target)
     return out
+
+
+def _as_list_of_text(value: object) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    out: list[str] = []
+    for item in value:
+        text = str(item).strip()
+        if text:
+            out.append(text)
+    return out
+
+
+def _ordered_unique(values: list[str]) -> list[str]:
+    out: list[str] = []
+    seen: set[str] = set()
+    for raw in values:
+        text = str(raw).strip()
+        if not text or text in seen:
+            continue
+        seen.add(text)
+        out.append(text)
+    return out
+
+
+def _skill_label(skill_path: str) -> str | None:
+    text = str(skill_path).strip()
+    if not text:
+        return None
+    if text.endswith("/MODULE.md"):
+        return "MODULE"
+    name = Path(text).name
+    if name.lower().endswith(".md"):
+        name = name[:-3]
+    return name or None
+
+
+def _derive_invoked_rules(record: dict) -> list[str]:
+    rules: list[str] = []
+
+    route_reason = str(record.get("route_reason", "")).strip()
+    if route_reason:
+        rules.append(f"route_reason:{route_reason.split('|', 1)[0]}")
+
+    for keyword in _as_list_of_text(record.get("matched_keywords"))[:5]:
+        rules.append(f"route_keyword:{keyword}")
+
+    skill = _skill_label(str(record.get("skill", "")))
+    if skill:
+        rules.append(f"plan_skill:{skill}")
+
+    retrieval_hit_count = int(record.get("retrieval_hit_count", 0) or 0)
+    if retrieval_hit_count > 0:
+        rules.append("retrieval:context_hits")
+
+    return _ordered_unique(rules)
+
+
+def _derive_invoked_traits(record: dict) -> list[str]:
+    traits: list[str] = []
+    files = _as_list_of_text(record.get("loaded_files")) + _as_list_of_text(record.get("invoked_artifacts"))
+
+    for rel in _ordered_unique(files):
+        text = rel.replace("\\", "/")
+        if text.startswith("modules/profile/data/"):
+            stem = Path(text).stem
+            if stem:
+                traits.append(f"profile_data:{stem}")
+        elif text.startswith("modules/profile/logs/"):
+            stem = Path(text).stem
+            if stem:
+                traits.append(f"profile_signal:{stem}")
+        elif text.startswith("modules/profile/skills/"):
+            stem = Path(text).stem
+            if stem:
+                traits.append(f"profile_skill:{stem}")
+
+    return _ordered_unique(traits)
 
 
 def write_output(repo_root: Path, output_rel: str, content: str) -> Path:
@@ -305,4 +385,7 @@ def log_decision_constitution_check(repo_root: Path, record: dict) -> None:
 
 def log_suggestion(repo_root: Path, record: dict) -> None:
     path = _safe_repo_path(repo_root, "orchestrator/logs/suggestions.jsonl")
-    append_jsonl(path, _with_classification(record, object_type="system"), schema_header=SUGGESTIONS_SCHEMA)
+    enriched = _with_classification(record, object_type="system")
+    enriched.setdefault("invoked_rules", _derive_invoked_rules(enriched))
+    enriched.setdefault("invoked_traits", _derive_invoked_traits(enriched))
+    append_jsonl(path, enriched, schema_header=SUGGESTIONS_SCHEMA)
