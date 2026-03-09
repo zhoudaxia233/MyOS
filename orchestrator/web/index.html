@@ -39,7 +39,7 @@
         <h3 data-i18n="section_task">任务执行</h3>
         <form id="taskForm" class="workspace-form">
           <label class="label" for="taskInput" data-i18n="label_task">任务</label>
-          <textarea id="taskInput" rows="4" placeholder="例如：帮我做本周决策复盘，给3条优先行动" data-i18n-placeholder="task_placeholder"></textarea>
+          <textarea id="taskInput" rows="4" placeholder="例如：总结我本周做了什么、哪里做得好/不好、下周3件重点事" data-i18n-placeholder="task_placeholder"></textarea>
 
           <div class="action-row workspace-actions">
             <button id="runBtn" type="submit" class="btn primary" data-i18n="btn_run">开始执行</button>
@@ -90,10 +90,11 @@
         <section class="quick-actions workspace-starters">
           <h4 data-i18n="task_starters">快捷开始</h4>
           <p class="helper-note" data-i18n="starter_hint">点击任一项会自动执行。</p>
+          <p class="helper-note" data-i18n="review_definition">复盘 = 回顾本周关键决策、结果原因、改进动作，并给下周执行清单。</p>
           <div class="chips">
-            <button type="button" class="chip" data-task="帮我做本周决策复盘，并给3条优先级最高的行动建议" data-i18n="starter_weekly_review">每周决策复盘</button>
-            <button type="button" class="chip" data-task="请从这周聊天中提取可执行模式" data-i18n="starter_extract_patterns">提取本周聊天模式</button>
-            <button type="button" class="chip" data-task="写一篇饭后可读的BTC市场故事，强调风险控制" data-i18n="starter_write_story">写一篇饭后BTC故事</button>
+            <button type="button" class="chip" data-task="请输出本周复盘：1) 本周关键事件与决策；2) 做对了什么、做错了什么及原因；3) 下周最重要的3个行动及风险提醒" data-i18n="starter_weekly_review">本周总结+下周3件事</button>
+            <button type="button" class="chip" data-task="请把我本周目标拆成可执行清单：今天做什么、本周做什么、延期什么，并给优先级" data-i18n="starter_extract_patterns">目标拆解行动清单</button>
+            <button type="button" class="chip" data-task="请检查我当前计划的前三个风险点，每个风险给一个应对动作和触发条件" data-i18n="starter_write_story">风险检查+应对动作</button>
           </div>
         </section>
       </section>

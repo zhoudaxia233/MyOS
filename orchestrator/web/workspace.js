@@ -80,11 +80,11 @@ const I18N = {
     status_connected: "已连接",
     status_offline: "离线",
     hero_title: "你想让我帮你做什么？",
-    hero_desc: "任务执行和学习更新都在这里。审计与治理能力在审计中心。",
-    section_task: "任务执行",
+    hero_desc: "你说目标，我给结果、关键结论和下一步动作。任务与学习都在这里。",
+    section_task: "生成结果",
     section_learning: "学习更新",
     label_task: "任务",
-    task_placeholder: "例如：帮我做本周决策复盘，给3条优先行动",
+    task_placeholder: "例如：总结我本周做了什么、哪里做得好/不好、下周3件重点事",
     btn_run: "开始执行",
     btn_inspect: "预览处理方式",
     btn_go_audit: "打开审计中心",
@@ -102,11 +102,12 @@ const I18N = {
     option_provider_handoff: "外部协作（handoff）",
     option_provider_openai: "OpenAI（直连）",
     option_provider_deepseek: "DeepSeek（直连）",
-    task_starters: "快捷开始",
-    starter_hint: "点击任一项会自动执行。",
-    starter_weekly_review: "每周决策复盘",
-    starter_extract_patterns: "提取本周聊天模式",
-    starter_write_story: "写一篇饭后BTC故事",
+    task_starters: "示例任务",
+    starter_hint: "点击任一项会自动执行并生成结果。",
+    review_definition: "复盘 = 回顾本周关键决策、结果原因、改进动作，并给下周执行清单。",
+    starter_weekly_review: "本周总结+下周3件事",
+    starter_extract_patterns: "目标拆解行动清单",
+    starter_write_story: "风险检查+应对动作",
     learning_intro: "把你新的经验、资料、文章要点放进系统，帮助后续任务更贴合你。",
     learning_direct_title: "直接学习输入",
     label_learning_text: "学习文本",
@@ -212,7 +213,8 @@ const I18N = {
     summary_run_generic: "结果已生成。你可以先看下方摘要，再按需展开完整 Markdown。",
     summary_handoff: "当前是 handoff 模式：这是一份“给外部模型的请求包”，不是最终复盘。请复制完整报告到外部模型执行。",
     summary_dry_run: "当前是 dry-run 演练模式：输出是系统草稿，不是最终高质量结果。建议配置 API 后再执行。",
-    summary_review_title: "本周复盘已生成，重点如下：",
+    summary_review_title: "本周复盘已生成（包含：发生了什么 / 为什么 / 下一步）：",
+    summary_structure_title: "这份结果包含：",
     summary_actions_title: "建议你先看这几条可执行点：",
     summary_no_bullets: "完整报告已经生成，请展开“完整报告（Markdown）”查看详细内容。",
     msg_learning_text_required: "请先粘贴学习文本。",
@@ -239,11 +241,11 @@ const I18N = {
     status_connected: "Connected",
     status_offline: "Offline",
     hero_title: "What do you want me to do?",
-    hero_desc: "Task execution and learning are both here. Audit and governance live in Audit Center.",
-    section_task: "Task Execution",
+    hero_desc: "Tell me the goal. I return outcomes, key conclusions, and next actions.",
+    section_task: "Generate Outcome",
     section_learning: "Learning",
     label_task: "Task",
-    task_placeholder: "Example: generate weekly decision review with top 3 next actions",
+    task_placeholder: "Example: summarize my week, what worked/failed, and top 3 priorities for next week",
     btn_run: "Run",
     btn_inspect: "Preview Plan",
     btn_go_audit: "Open Audit Center",
@@ -261,11 +263,12 @@ const I18N = {
     option_provider_handoff: "External Handoff",
     option_provider_openai: "OpenAI (Direct)",
     option_provider_deepseek: "DeepSeek (Direct)",
-    task_starters: "Quick Starters",
-    starter_hint: "Clicking any item runs it immediately.",
-    starter_weekly_review: "Weekly Decision Review",
-    starter_extract_patterns: "Extract Weekly Chat Patterns",
-    starter_write_story: "Write After-Meal BTC Story",
+    task_starters: "Example Tasks",
+    starter_hint: "Clicking any item runs it immediately and generates output.",
+    review_definition: "Review means: what happened, why it happened, what to improve, and next-week checklist.",
+    starter_weekly_review: "Weekly Summary + Top 3 Next Actions",
+    starter_extract_patterns: "Break Goals Into Action List",
+    starter_write_story: "Risk Check + Response Actions",
     learning_intro: "Feed your new experiences and notes into the system so future tasks fit you better.",
     learning_direct_title: "Direct Learning Input",
     label_learning_text: "Learning Text",
@@ -371,7 +374,8 @@ const I18N = {
     summary_run_generic: "Output generated. Read the summary first, then expand the full markdown if needed.",
     summary_handoff: "Current mode is handoff: this is a request packet for external model, not the final review.",
     summary_dry_run: "Current mode is dry-run: this is a system draft, not final quality output. Configure API for direct generation.",
-    summary_review_title: "Weekly review is ready. Key points:",
+    summary_review_title: "Weekly review is ready (what / why / next):",
+    summary_structure_title: "This output includes:",
     summary_actions_title: "Suggested actionable points:",
     summary_no_bullets: "Full report is generated. Expand Full Report (Markdown) for details.",
     msg_learning_text_required: "Learning text is required.",
@@ -646,6 +650,31 @@ function extractTopBullets(markdown, limit = 3) {
   return bullets;
 }
 
+function extractTopHeadings(markdown, limit = 4) {
+  const lines = String(markdown || "").split("\n");
+  const headings = [];
+  let inCodeBlock = false;
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (line.startsWith("```")) {
+      inCodeBlock = !inCodeBlock;
+      continue;
+    }
+    if (inCodeBlock || !line) {
+      continue;
+    }
+    const match = line.match(/^#{1,3}\s+(.+)$/);
+    if (match && match[1]) {
+      headings.push(match[1].trim());
+      if (headings.length >= limit) {
+        break;
+      }
+    }
+  }
+  return headings;
+}
+
 function renderReadableSummary(task, provider, outputText) {
   if (provider === "handoff") {
     setResultSummary(t("summary_handoff"));
@@ -658,12 +687,20 @@ function renderReadableSummary(task, provider, outputText) {
 
   const taskText = String(task || "").toLowerCase();
   const bullets = extractTopBullets(outputText, 3);
+  const headings = extractTopHeadings(outputText, 4);
   const lines = [];
 
   if (taskText.includes("复盘") || taskText.includes("review")) {
     lines.push(t("summary_review_title"));
   } else {
     lines.push(t("summary_run_generic"));
+  }
+
+  if (headings.length > 0) {
+    lines.push(t("summary_structure_title"));
+    for (const item of headings.slice(0, 3)) {
+      lines.push(`- ${item}`);
+    }
   }
 
   if (bullets.length > 0) {
