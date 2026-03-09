@@ -14,6 +14,7 @@ const copyOutputBtn = document.getElementById("copyOutputBtn");
 const quickIngestBtn = document.getElementById("quickIngestBtn");
 const learningPacketBtn = document.getElementById("learningPacketBtn");
 const learningImportBtn = document.getElementById("learningImportBtn");
+const mvpFlowBtn = document.getElementById("mvpFlowBtn");
 const learningDirectInput = document.getElementById("learningDirectInput");
 const learningTitleInput = document.getElementById("learningTitleInput");
 const learningSourceType = document.getElementById("learningSourceType");
@@ -1034,6 +1035,38 @@ async function runTask() {
   }
 }
 
+async function runMvpFlow() {
+  const demoTask = "run weekly decision review and output top 3 owner actions with risk notes";
+  taskInput.value = demoTask;
+
+  if (providerSelect.querySelector('option[value="dry-run"]')) {
+    providerSelect.value = "dry-run";
+  }
+  retrievalToggle.checked = false;
+  moduleSelect.value = "";
+
+  addUserTaskOnce(demoTask);
+  addBubble("system", "MVP flow started: Inspect -> Run -> Suggestion detail.");
+
+  try {
+    const payload = buildPayload();
+    const inspectData = await postJson("/api/inspect", payload);
+    renderInspectResult(inspectData);
+    addBubble("system", `MVP inspect ready: ${inspectData.module} -> ${inspectData.plan.skill}`);
+
+    const runData = await postJson("/api/run", payload);
+    renderRunResult(runData);
+    if (runData.suggestion_id) {
+      await loadSuggestionDetail(runData.suggestion_id);
+    }
+
+    switchEntrypoint("audit");
+    addBubble("system", "MVP flow complete. Review Suggestion Detail and click Accept/Modify/Reject.");
+  } catch (err) {
+    addBubble("system", `MVP flow failed: ${err.message}`);
+  }
+}
+
 async function reviewSuggestion(verdict) {
   const sid = String(latestSuggestionId || "").trim();
   if (!sid) {
@@ -1240,6 +1273,13 @@ inspectBtn.addEventListener("click", (event) => {
   event.preventDefault();
   inspectTask();
 });
+
+if (mvpFlowBtn) {
+  mvpFlowBtn.addEventListener("click", (event) => {
+    event.preventDefault();
+    runMvpFlow();
+  });
+}
 
 taskForm.addEventListener("submit", (event) => {
   event.preventDefault();

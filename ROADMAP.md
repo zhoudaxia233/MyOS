@@ -29,6 +29,15 @@ The system is a stable, extensible operating center where:
 
 Keep rollout evolutionary: preserve existing extraction/distillation pipelines as first-class upstream inputs.
 
+#### Immediate Priority - Perceivable MVP Flow (2026-03-09)
+
+- Principle:
+  - prioritize user-visible interaction and directly testable flows over invisible internal plumbing
+- Completed:
+  - web Task Console now has one-click `Run MVP Flow (Inspect -> Run -> Review)` path for immediate end-to-end trial
+- Next:
+  - add explicit in-UI completion checklist for first successful run-through (inspect ok / run ok / suggestion reviewed)
+
 #### Stage 1 - Transparent Suggestion Pipeline (Current)
 
 - Completed:
