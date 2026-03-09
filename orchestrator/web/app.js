@@ -486,6 +486,7 @@ function renderInspectResult(data) {
   renderLoadedFiles(data.loaded_files || []);
   latestSuggestionId = null;
   suggestionTrace.textContent = "-";
+  setSuggestionReviewEnabled(false);
   if (!data.output_preview) {
     setPreview("-");
     setOutputTokenMeta("-");
@@ -495,6 +496,7 @@ function renderInspectResult(data) {
 function renderSuggestionDetail(data) {
   if (!data || typeof data !== "object" || !data.suggestion || typeof data.suggestion !== "object") {
     suggestionTrace.textContent = "-";
+    setSuggestionReviewEnabled(false);
     return;
   }
   const payload = {
@@ -505,12 +507,14 @@ function renderSuggestionDetail(data) {
     output_preview: data.output_preview || null,
   };
   suggestionTrace.textContent = JSON.stringify(payload, null, 2);
+  setSuggestionReviewEnabled(true);
 }
 
 async function loadSuggestionDetail(suggestionId) {
   const sid = String(suggestionId || "").trim();
   if (!sid) {
     suggestionTrace.textContent = "-";
+    setSuggestionReviewEnabled(false);
     return;
   }
   try {
@@ -518,7 +522,15 @@ async function loadSuggestionDetail(suggestionId) {
     renderSuggestionDetail(data);
   } catch (err) {
     suggestionTrace.textContent = `load_failed: ${err.message}`;
+    setSuggestionReviewEnabled(false);
   }
+}
+
+function setSuggestionReviewEnabled(enabled) {
+  const active = Boolean(enabled);
+  suggestionAcceptBtn.disabled = !active;
+  suggestionModifyBtn.disabled = !active;
+  suggestionRejectBtn.disabled = !active;
 }
 
 function renderRunResult(data) {
@@ -939,7 +951,6 @@ async function loadStatus() {
     renderSuggestionReviewSummary(data.suggestion_review_summary || {}, data.suggestion_review_trend || null);
 
     setStatus("Connected", "ok");
-    addBubble("system", `Connected to ${data.repo_root}`);
   } catch (err) {
     setStatus("Offline", "fail");
     addBubble("system", `Connection failed: ${err.message}`);
@@ -1310,8 +1321,6 @@ for (const tab of entrypointTabs) {
   });
 }
 
-addBubble("system", "Type a task, click Inspect, then Run.");
-
 const THEME_KEY = "pcos_theme";
 
 function applyTheme(theme) {
@@ -1379,6 +1388,7 @@ suggestionRejectBtn.addEventListener("click", () => {
 
 initTheme();
 switchEntrypoint("task");
+setSuggestionReviewEnabled(false);
 loadStatus();
 loadSettings();
 setOutputTokenMeta("-");

@@ -175,6 +175,8 @@ body {
   grid-template-columns: 1.2fr 0.8fr;
   gap: 16px;
   padding: 12px 24px 24px;
+  height: calc(100dvh - 96px);
+  min-height: 0;
 }
 
 .card {
@@ -189,12 +191,15 @@ body {
   flex-direction: column;
   gap: 12px;
   padding: 14px;
-  min-height: 76vh;
+  min-height: 0;
+  height: 100%;
+  overflow: auto;
 }
 
 .chat-log {
-  flex: 1 1 auto;
-  min-height: 220px;
+  flex: 0 0 auto;
+  min-height: 88px;
+  max-height: 132px;
   overflow: auto;
   padding: 8px;
   display: flex;
@@ -207,6 +212,10 @@ body {
   );
   border: 1px solid color-mix(in srgb, var(--border) 75%, white);
   border-radius: 10px;
+}
+
+.chat-log:empty {
+  display: none;
 }
 
 .bubble {
@@ -249,6 +258,8 @@ body {
   background: color-mix(in srgb, var(--card) 96%, white 4%);
   color: var(--accent-ink);
   padding: 7px 12px;
+  min-width: 116px;
+  text-align: center;
   font: inherit;
   font-size: 0.82rem;
   font-weight: 600;
@@ -262,6 +273,8 @@ body {
 .entrypoint-tab.active {
   background: color-mix(in srgb, var(--accent) 18%, white);
   border-color: color-mix(in srgb, var(--accent) 66%, white);
+  color: var(--bubble-user-text);
+  font-weight: 700;
 }
 
 .entrypoint-hint {
@@ -481,7 +494,8 @@ body {
 
 .panel-trace {
   padding: 14px;
-  min-height: 76vh;
+  min-height: 0;
+  height: 100%;
   overflow: auto;
 }
 
@@ -609,8 +623,8 @@ body {
 .todo-resolve-btn {
   border: 1px solid color-mix(in srgb, var(--accent) 50%, white);
   border-radius: 8px;
-  background: color-mix(in srgb, var(--accent) 12%, white);
-  color: var(--accent-ink);
+  background: color-mix(in srgb, var(--accent) 24%, var(--card) 76%);
+  color: var(--text);
   font-size: 0.76rem;
   padding: 4px 8px;
   cursor: pointer;
@@ -618,6 +632,15 @@ body {
 
 .todo-resolve-btn:hover {
   border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 32%, var(--card) 68%);
+}
+
+.todo-resolve-btn:disabled {
+  border-color: var(--border);
+  background: color-mix(in srgb, var(--bg-soft) 78%, var(--card) 22%);
+  color: var(--muted);
+  cursor: not-allowed;
+  opacity: 1;
 }
 
 pre {
@@ -728,11 +751,13 @@ pre {
 @media (max-width: 1100px) {
   .layout {
     grid-template-columns: 1fr;
+    height: auto;
   }
 
   .panel-chat,
   .panel-trace {
     min-height: auto;
+    height: auto;
   }
 }
 
