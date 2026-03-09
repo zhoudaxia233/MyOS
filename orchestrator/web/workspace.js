@@ -34,6 +34,10 @@ const outputDetails = document.getElementById("outputDetails");
 const outputPathText = document.getElementById("outputPathText");
 const resultSummary = document.getElementById("resultSummary");
 const modeGuide = document.getElementById("modeGuide");
+const nextStepsList = document.getElementById("nextStepsList");
+const quickSettingsBtn = document.getElementById("quickSettingsBtn");
+const quickCopyBtn = document.getElementById("quickCopyBtn");
+const quickFollowupBtn = document.getElementById("quickFollowupBtn");
 
 const settingsModal = document.getElementById("settingsModal");
 const settingsClose = document.getElementById("settingsClose");
@@ -60,6 +64,8 @@ let latestRunProvider = null;
 let settingsCache = null;
 let statusCache = null;
 let uiLanguage = "zh";
+let latestGuidanceMode = "pre_run_no_api";
+let isRunningTask = false;
 
 const LEARNING_SOURCE_DEFAULT = "notes";
 
@@ -92,7 +98,12 @@ const I18N = {
     label_use_retrieval: "启用检索",
     label_top_k: "Top K",
     top_k_help: "检索时最多带入多少条历史记录。越大越全，但更慢；默认 6。",
+    option_provider_dry_run: "离线演练（dry-run）",
+    option_provider_handoff: "外部协作（handoff）",
+    option_provider_openai: "OpenAI（直连）",
+    option_provider_deepseek: "DeepSeek（直连）",
     task_starters: "快捷开始",
+    starter_hint: "点击任一项会自动执行。",
     starter_weekly_review: "每周决策复盘",
     starter_extract_patterns: "提取本周聊天模式",
     starter_write_story: "写一篇饭后BTC故事",
@@ -120,6 +131,11 @@ const I18N = {
     result_title: "执行结果",
     result_summary_empty: "执行后，这里会先给你可读摘要。",
     result_file_label: "结果文件",
+    next_steps_title: "下一步怎么做",
+    next_steps_idle: "先执行一次任务，系统会告诉你下一步。",
+    btn_open_settings: "去配置 API",
+    btn_copy_report: "复制完整报告",
+    btn_prepare_followup: "生成回填任务模板",
     output_details_summary: "完整报告（Markdown）",
     technical_summary: "技术详情（路由/计划/文件）",
     trace_route: "路由",
@@ -161,6 +177,11 @@ const I18N = {
     msg_run_complete: "执行完成：输出文件 {output}",
     msg_run_failed: "执行失败：{error}",
     msg_copy_failed: "复制失败：{error}",
+    msg_report_copied: "完整报告已复制。",
+    msg_followup_prepared: "回填任务模板已放入任务框。请粘贴外部模型结果后执行。",
+    msg_followup_truncated: "外部结果太长，已自动截断到可编辑范围。",
+    followup_template_intro:
+      "请基于下面的外部模型输出，整理成最终版复盘。要求：1) 先给3条优先行动；2) 给每条行动的风险提示；3) 最后给本周执行清单。",
     msg_no_output_yet: "暂无可复制输出，请先执行任务。",
     msg_no_suggestion: "本次执行没有生成系统建议。",
     msg_token_exact: "Tokens：{tokens}（精确）",
@@ -169,6 +190,25 @@ const I18N = {
     mode_with_api: "已检测到 API 配置，直接点击“开始执行”即可得到结果。",
     mode_no_api: "你还没有配置 API Key。当前会走离线模式，输出可能是请求包或草稿。",
     mode_no_api_steps: "建议步骤：1) 打开设置填写 API Key；或 2) 使用 handoff，把“完整报告（Markdown）”复制到外部模型，再将返回内容贴回这里继续处理。",
+    next_pre_run_api_1: "输入任务后点击“开始执行”。",
+    next_pre_run_api_2: "先看“执行结果”摘要，再决定是否展开完整 Markdown。",
+    next_pre_run_no_api_1: "先去“设置”配置 API，可直接得到最终结果。",
+    next_pre_run_no_api_2: "若暂不配 API：使用 handoff，把完整报告发到外部模型。",
+    next_handoff_1: "点击“复制完整报告”，把请求包发给外部模型。",
+    next_handoff_2: "拿到外部模型结果后，点击“生成回填任务模板”。",
+    next_handoff_3: "把外部结果粘贴到模板中，再点“开始执行”。",
+    next_dry_run_1: "当前是演练结果，仅用于流程验证。",
+    next_dry_run_2: "建议先配置 API，再重跑得到可用复盘。",
+    next_final_1: "先阅读摘要中的关键结论和行动点。",
+    next_final_2: "需要细节时展开完整 Markdown。",
+    next_final_3: "可复制完整报告用于归档或分享。",
+    next_learning_packet_1: "复制完整报告中的学习请求包。",
+    next_learning_packet_2: "发送到外部模型执行。",
+    next_learning_packet_3: "把 JSON 结果粘贴到“外部模型 JSON 回复”，点击“导入学习候选”。",
+    next_learning_import_1: "学习候选已入队，可继续在审计中心做治理。",
+    next_learning_import_2: "后续任务会逐步利用这些学习内容。",
+    next_learning_saved_1: "学习记录已保存，后续任务会参考这些内容。",
+    next_learning_saved_2: "如需结构化提炼，可使用“外部模型辅助学习”。",
     summary_run_generic: "结果已生成。你可以先看下方摘要，再按需展开完整 Markdown。",
     summary_handoff: "当前是 handoff 模式：这是一份“给外部模型的请求包”，不是最终复盘。请复制完整报告到外部模型执行。",
     summary_dry_run: "当前是 dry-run 演练模式：输出是系统草稿，不是最终高质量结果。建议配置 API 后再执行。",
@@ -217,7 +257,12 @@ const I18N = {
     label_use_retrieval: "Use retrieval",
     label_top_k: "Top K",
     top_k_help: "How many historical records to include during retrieval. Higher = broader but slower. Default 6.",
+    option_provider_dry_run: "Offline Dry Run",
+    option_provider_handoff: "External Handoff",
+    option_provider_openai: "OpenAI (Direct)",
+    option_provider_deepseek: "DeepSeek (Direct)",
     task_starters: "Quick Starters",
+    starter_hint: "Clicking any item runs it immediately.",
     starter_weekly_review: "Weekly Decision Review",
     starter_extract_patterns: "Extract Weekly Chat Patterns",
     starter_write_story: "Write After-Meal BTC Story",
@@ -245,6 +290,11 @@ const I18N = {
     result_title: "Result",
     result_summary_empty: "After running, this area will show a readable summary first.",
     result_file_label: "Result File",
+    next_steps_title: "What To Do Next",
+    next_steps_idle: "Run a task once and the system will show the next steps.",
+    btn_open_settings: "Configure API",
+    btn_copy_report: "Copy Full Report",
+    btn_prepare_followup: "Prepare Follow-up Template",
     output_details_summary: "Full Report (Markdown)",
     technical_summary: "Technical Details (Route/Plan/Files)",
     trace_route: "Route",
@@ -286,6 +336,11 @@ const I18N = {
     msg_run_complete: "Run complete: output file {output}",
     msg_run_failed: "Run failed: {error}",
     msg_copy_failed: "Copy failed: {error}",
+    msg_report_copied: "Full report copied.",
+    msg_followup_prepared: "Follow-up template is ready in the task box. Paste external result and run.",
+    msg_followup_truncated: "External content was too long and has been truncated for editing.",
+    followup_template_intro:
+      "Based on the external model output below, produce a final review: 1) top 3 prioritized actions, 2) risk note for each action, 3) this-week execution checklist.",
     msg_no_output_yet: "No output yet. Run a task first.",
     msg_no_suggestion: "No system suggestion was produced for this run.",
     msg_token_exact: "Tokens: {tokens} (exact)",
@@ -294,6 +349,25 @@ const I18N = {
     mode_with_api: "API key detected. Click Run to get direct outputs.",
     mode_no_api: "No API key configured. The system is in offline mode, so output may be a packet or draft.",
     mode_no_api_steps: "Recommended: 1) add API key in Settings; or 2) use handoff, copy Full Report to external model, then paste response back for further processing.",
+    next_pre_run_api_1: "Enter your task and click Run.",
+    next_pre_run_api_2: "Read the result summary first, then open markdown only if needed.",
+    next_pre_run_no_api_1: "Configure API in Settings to get final direct outputs.",
+    next_pre_run_no_api_2: "If not, use handoff and send Full Report to an external model.",
+    next_handoff_1: "Click Copy Full Report and send the packet to an external model.",
+    next_handoff_2: "After you get the external result, click Prepare Follow-up Template.",
+    next_handoff_3: "Paste external result into the template and click Run.",
+    next_dry_run_1: "This is a simulation draft for flow validation.",
+    next_dry_run_2: "Configure API and rerun for production-grade review.",
+    next_final_1: "Read the key conclusions and action points in the summary.",
+    next_final_2: "Open markdown only when you need full detail.",
+    next_final_3: "Copy full report for archive or sharing.",
+    next_learning_packet_1: "Copy the learning packet from Full Report.",
+    next_learning_packet_2: "Send it to an external model.",
+    next_learning_packet_3: "Paste JSON back to External Model Response and import candidates.",
+    next_learning_import_1: "Learning candidates are imported and ready for governance in Audit Center.",
+    next_learning_import_2: "Future tasks will gradually use these learning inputs.",
+    next_learning_saved_1: "Learning note is saved and will be used by future tasks.",
+    next_learning_saved_2: "Use External Assisted Learning for structured extraction if needed.",
     summary_run_generic: "Output generated. Read the summary first, then expand the full markdown if needed.",
     summary_handoff: "Current mode is handoff: this is a request packet for external model, not the final review.",
     summary_dry_run: "Current mode is dry-run: this is a system draft, not final quality output. Configure API for direct generation.",
@@ -360,12 +434,48 @@ function setLanguage(lang) {
   for (const option of fallbackOptions) {
     option.textContent = t("option_use_fallback");
   }
+  setNextStepsByMode(latestGuidanceMode);
   renderModeGuide();
 }
 
 function setResultSummary(text) {
   resultSummary.removeAttribute("data-i18n");
   resultSummary.textContent = String(text || t("result_summary_empty"));
+}
+
+function setNextSteps(lines) {
+  if (!nextStepsList) {
+    return;
+  }
+  nextStepsList.innerHTML = "";
+  const items = Array.isArray(lines) && lines.length > 0 ? lines : [t("next_steps_idle")];
+  for (const line of items) {
+    const li = document.createElement("li");
+    li.textContent = line;
+    nextStepsList.appendChild(li);
+  }
+}
+
+function setNextStepsByMode(mode) {
+  latestGuidanceMode = mode;
+  const mapping = {
+    pre_run_api: ["next_pre_run_api_1", "next_pre_run_api_2"],
+    pre_run_no_api: ["next_pre_run_no_api_1", "next_pre_run_no_api_2"],
+    handoff: ["next_handoff_1", "next_handoff_2", "next_handoff_3"],
+    dry_run: ["next_dry_run_1", "next_dry_run_2"],
+    final: ["next_final_1", "next_final_2", "next_final_3"],
+    learning_packet: ["next_learning_packet_1", "next_learning_packet_2", "next_learning_packet_3"],
+    learning_import: ["next_learning_import_1", "next_learning_import_2"],
+    learning_saved: ["next_learning_saved_1", "next_learning_saved_2"],
+    idle: ["next_steps_idle"],
+  };
+  const keys = mapping[mode] || mapping.idle;
+  setNextSteps(keys.map((key) => t(key)));
+}
+
+function hasUserVisibleResult() {
+  const preview = String(outputPreview.textContent || "").trim();
+  return preview !== "-" || Boolean(latestOutputPath);
 }
 
 function renderModeGuide() {
@@ -381,6 +491,9 @@ function renderModeGuide() {
     lines.push(t("mode_no_api_steps"));
   }
   modeGuide.textContent = lines.join("\n");
+  if (!hasUserVisibleResult()) {
+    setNextStepsByMode(hasApi ? "pre_run_api" : "pre_run_no_api");
+  }
 }
 
 function addBubble(role, text) {
@@ -615,6 +728,13 @@ function renderRunResult(data, userTask) {
   setOutputPath(data.output_path || "-");
   setPreview(data.output_preview || "-");
   renderReadableSummary(userTask, latestRunProvider, data.output_preview || "");
+  if (latestRunProvider === "handoff") {
+    setNextStepsByMode("handoff");
+  } else if (latestRunProvider === "dry-run") {
+    setNextStepsByMode("dry_run");
+  } else {
+    setNextStepsByMode("final");
+  }
   outputDetails.open = true;
   refreshOutputTokenMeta();
   loadSuggestionDetail(latestSuggestionId);
@@ -630,6 +750,13 @@ function renderActionPreview(data) {
     setPreview(data.output_preview);
     outputDetails.open = true;
     setOutputTokenMeta("-");
+    if (data.action === "learning_handoff_packet") {
+      setNextStepsByMode("learning_packet");
+    } else if (data.action === "learning_handoff_import") {
+      setNextStepsByMode("learning_import");
+    } else if (data.action === "ingest_learning") {
+      setNextStepsByMode("learning_saved");
+    }
     return;
   }
 
@@ -637,6 +764,7 @@ function renderActionPreview(data) {
     setPreview(data.packet_text);
     outputDetails.open = true;
     setOutputTokenMeta("-");
+    setNextStepsByMode("learning_packet");
     return;
   }
 
@@ -653,6 +781,7 @@ function renderActionPreview(data) {
     setPreview(previewLines.join("\n") || "-");
     outputDetails.open = true;
     setOutputTokenMeta("-");
+    setNextStepsByMode("learning_saved");
     return;
   }
 
@@ -669,6 +798,7 @@ function renderActionPreview(data) {
     setPreview(previewLines.join("\n") || "-");
     outputDetails.open = true;
     setOutputTokenMeta("-");
+    setNextStepsByMode("learning_import");
     return;
   }
 }
@@ -792,10 +922,10 @@ async function copyText(text) {
   document.body.removeChild(temp);
 }
 
-async function copyLatestOutput() {
+async function copyLatestOutput(withSuccessHint = false) {
   if (!latestOutputPath) {
     addBubble("system", t("msg_no_output_yet"));
-    return;
+    return false;
   }
   const originalIcon = copyOutputBtn.textContent;
   try {
@@ -805,6 +935,37 @@ async function copyLatestOutput() {
     setTimeout(() => {
       copyOutputBtn.textContent = originalIcon;
     }, 1200);
+    if (withSuccessHint) {
+      addBubble("system", t("msg_report_copied"));
+    }
+    return true;
+  } catch (err) {
+    addBubble("system", t("msg_copy_failed", { error: err.message }));
+    return false;
+  }
+}
+
+async function prepareFollowupTaskTemplate() {
+  if (!latestOutputPath) {
+    addBubble("system", t("msg_no_output_yet"));
+    return;
+  }
+
+  try {
+    const data = await getJson(`/api/output?path=${encodeURIComponent(latestOutputPath)}`);
+    const maxChars = 15000;
+    let content = String(data.content || "");
+    if (content.length > maxChars) {
+      content = `${content.slice(0, maxChars)}\n\n...[truncated]`;
+      addBubble("system", t("msg_followup_truncated"));
+    }
+    const template = `${t("followup_template_intro")}\n\n${content}`;
+    taskInput.value = template;
+    taskInput.focus();
+    taskInput.selectionStart = 0;
+    taskInput.selectionEnd = 0;
+    setNextStepsByMode("final");
+    addBubble("system", t("msg_followup_prepared"));
   } catch (err) {
     addBubble("system", t("msg_copy_failed", { error: err.message }));
   }
@@ -981,6 +1142,9 @@ async function inspectTask() {
 }
 
 async function runTask() {
+  if (isRunningTask) {
+    return;
+  }
   const payload = buildPayload();
   if (!payload.task) {
     addBubble("system", t("msg_task_required_run"));
@@ -989,6 +1153,7 @@ async function runTask() {
 
   addUserTaskOnce(payload.task);
 
+  isRunningTask = true;
   runBtn.disabled = true;
   inspectBtn.disabled = true;
   try {
@@ -998,6 +1163,7 @@ async function runTask() {
   } catch (err) {
     addBubble("system", t("msg_run_failed", { error: err.message }));
   } finally {
+    isRunningTask = false;
     runBtn.disabled = false;
     inspectBtn.disabled = false;
   }
@@ -1145,6 +1311,7 @@ for (const button of document.querySelectorAll(".chip[data-task]")) {
   button.addEventListener("click", () => {
     taskInput.value = button.getAttribute("data-task") || "";
     taskInput.focus();
+    runTask();
   });
 }
 
@@ -1168,6 +1335,24 @@ themeToggle.addEventListener("click", () => {
 copyOutputBtn.addEventListener("click", () => {
   copyLatestOutput();
 });
+
+if (quickSettingsBtn) {
+  quickSettingsBtn.addEventListener("click", () => {
+    openSettingsModal();
+  });
+}
+
+if (quickCopyBtn) {
+  quickCopyBtn.addEventListener("click", () => {
+    copyLatestOutput(true);
+  });
+}
+
+if (quickFollowupBtn) {
+  quickFollowupBtn.addEventListener("click", () => {
+    prepareFollowupTaskTemplate();
+  });
+}
 
 providerSelect.addEventListener("change", () => {
   if (providerSelect.value === "auto") {

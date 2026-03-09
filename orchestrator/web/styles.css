@@ -417,6 +417,39 @@ body {
   padding: 6px 8px;
 }
 
+.next-steps {
+  margin-top: 10px;
+  border: 1px solid color-mix(in srgb, var(--border) 78%, white);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--card) 96%, white 4%);
+  padding: 10px;
+}
+
+.next-steps h3 {
+  margin: 0 0 8px;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.next-steps-list {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 4px;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  color: var(--text);
+}
+
+.next-steps .action-row {
+  flex-wrap: wrap;
+}
+
+.next-steps .btn {
+  flex: 1 1 160px;
+  text-align: center;
+}
+
 .workspace-technical {
   margin-top: 10px;
   border: 1px solid color-mix(in srgb, var(--border) 80%, white);

@@ -61,10 +61,10 @@
                 <span data-i18n="label_provider">Provider</span>
                 <select id="providerSelect">
                   <option value="auto" data-i18n="option_provider_auto">自动（按设置）</option>
-                  <option value="dry-run">dry-run</option>
-                  <option value="handoff">handoff</option>
-                  <option value="openai">openai</option>
-                  <option value="deepseek">deepseek</option>
+                  <option value="dry-run" data-i18n="option_provider_dry_run">离线演练（dry-run）</option>
+                  <option value="handoff" data-i18n="option_provider_handoff">外部协作（handoff）</option>
+                  <option value="openai" data-i18n="option_provider_openai">OpenAI（直连）</option>
+                  <option value="deepseek" data-i18n="option_provider_deepseek">DeepSeek（直连）</option>
                 </select>
               </label>
 
@@ -89,6 +89,7 @@
 
         <section class="quick-actions workspace-starters">
           <h4 data-i18n="task_starters">快捷开始</h4>
+          <p class="helper-note" data-i18n="starter_hint">点击任一项会自动执行。</p>
           <div class="chips">
             <button type="button" class="chip" data-task="帮我做本周决策复盘，并给3条优先级最高的行动建议" data-i18n="starter_weekly_review">每周决策复盘</button>
             <button type="button" class="chip" data-task="请从这周聊天中提取可执行模式" data-i18n="starter_extract_patterns">提取本周聊天模式</button>
@@ -155,6 +156,18 @@
         <span class="label" data-i18n="result_file_label">结果文件</span>
         <code id="outputPathText">-</code>
       </div>
+
+      <section class="next-steps">
+        <h3 data-i18n="next_steps_title">下一步怎么做</h3>
+        <ol id="nextStepsList" class="next-steps-list">
+          <li data-i18n="next_steps_idle">先执行一次任务，系统会告诉你下一步。</li>
+        </ol>
+        <div class="action-row">
+          <button id="quickSettingsBtn" type="button" class="btn secondary" data-i18n="btn_open_settings">去配置 API</button>
+          <button id="quickCopyBtn" type="button" class="btn secondary" data-i18n="btn_copy_report">复制完整报告</button>
+          <button id="quickFollowupBtn" type="button" class="btn secondary" data-i18n="btn_prepare_followup">生成回填任务模板</button>
+        </div>
+      </section>
 
       <div id="outputTokenMeta" class="token-meta">-</div>
 
