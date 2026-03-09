@@ -246,6 +246,40 @@ body {
   font-size: 0.92rem;
 }
 
+.mode-guide {
+  border: 1px solid color-mix(in srgb, var(--accent) 36%, var(--border));
+  border-radius: 10px;
+  background: linear-gradient(
+    120deg,
+    color-mix(in srgb, var(--accent) 10%, var(--card) 90%),
+    color-mix(in srgb, var(--warm) 8%, var(--card) 92%)
+  );
+  color: var(--accent-ink);
+  padding: 10px 12px;
+  white-space: pre-wrap;
+  line-height: 1.4;
+  font-size: 0.84rem;
+}
+
+.workspace-section {
+  border: 1px solid color-mix(in srgb, var(--border) 80%, white);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--card) 96%, white 4%);
+  padding: 12px;
+}
+
+.workspace-section h3 {
+  margin: 0 0 8px;
+  font-size: 1rem;
+  color: var(--accent-ink);
+}
+
+.workspace-section h4 {
+  margin: 0 0 8px;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
 .workspace-form textarea {
   width: 100%;
   margin-top: 4px;
@@ -294,6 +328,38 @@ body {
   max-height: 180px;
 }
 
+.learning-section .learning-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.learning-card {
+  border: 1px solid color-mix(in srgb, var(--border) 78%, white);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--card) 98%, white 2%);
+  padding: 10px;
+}
+
+.learning-card textarea,
+.learning-card input,
+.learning-card select {
+  width: 100%;
+  margin-top: 4px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--card) 96%, white 4%);
+  padding: 8px 10px;
+  font: inherit;
+  color: var(--text);
+}
+
+.learning-card textarea::placeholder,
+.learning-card input::placeholder {
+  color: var(--muted);
+  opacity: 1;
+}
+
 .workspace-result-head {
   display: flex;
   justify-content: space-between;
@@ -315,12 +381,40 @@ body {
 
 .workspace-result #outputPreview {
   margin-top: 8px;
-  max-height: 320px;
+  max-height: 300px;
   overflow: auto;
   border: 1px solid color-mix(in srgb, var(--border) 80%, white);
   border-radius: 10px;
   padding: 10px;
   background: color-mix(in srgb, var(--card) 96%, white 4%);
+}
+
+.result-summary {
+  margin-top: 10px;
+  border: 1px solid color-mix(in srgb, var(--border) 78%, white);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--card) 96%, white 4%);
+  padding: 10px;
+  white-space: pre-wrap;
+  line-height: 1.45;
+  font-size: 0.86rem;
+}
+
+.result-meta {
+  margin-top: 10px;
+  display: grid;
+  gap: 4px;
+}
+
+.result-meta code {
+  font-family: "IBM Plex Mono", "Consolas", monospace;
+  font-size: 0.76rem;
+  line-height: 1.4;
+  color: var(--text);
+  background: color-mix(in srgb, var(--card) 95%, white 5%);
+  border: 1px solid color-mix(in srgb, var(--border) 78%, white);
+  border-radius: 8px;
+  padding: 6px 8px;
 }
 
 .workspace-technical {
@@ -1047,6 +1141,10 @@ pre {
   .workspace-actions .btn {
     flex: 1 1 auto;
     text-align: center;
+  }
+
+  .learning-section .learning-grid {
+    grid-template-columns: 1fr;
   }
 
   .learning-capture {

@@ -13,7 +13,7 @@
   <header class="topbar workspace-topbar">
     <div class="title-wrap">
       <h1 data-i18n="app_title">Personal Core OS</h1>
-      <p data-i18n="app_subtitle">简化工作台</p>
+      <p data-i18n="app_subtitle">工作台（任务 + 学习）</p>
     </div>
     <nav class="workspace-nav" aria-label="Primary navigation">
       <a class="workspace-nav-link active" href="/" data-i18n="nav_workspace">工作台</a>
@@ -30,64 +30,110 @@
     <section class="card workspace-main">
       <div class="workspace-intro">
         <h2 data-i18n="hero_title">你想让我帮你做什么？</h2>
-        <p data-i18n="hero_desc">输入目标，点击执行。复杂诊断和治理能力在审计中心。</p>
+        <p data-i18n="hero_desc">任务执行和学习更新都在这里。审计与治理能力在审计中心。</p>
       </div>
 
-      <form id="taskForm" class="workspace-form">
-        <label class="label" for="taskInput" data-i18n="label_task">任务</label>
-        <textarea id="taskInput" rows="4" placeholder="例如：帮我生成本周决策复盘" data-i18n-placeholder="task_placeholder"></textarea>
+      <section id="modeGuide" class="mode-guide" aria-live="polite">-</section>
 
-        <div class="action-row workspace-actions">
-          <button id="runBtn" type="submit" class="btn primary" data-i18n="btn_run">开始执行</button>
-          <button id="inspectBtn" type="button" class="btn secondary" data-i18n="btn_inspect">预览处理方式</button>
-          <a class="btn secondary nav-btn" href="/audit.html" data-i18n="btn_go_audit">打开审计中心</a>
-        </div>
+      <section class="workspace-section">
+        <h3 data-i18n="section_task">任务执行</h3>
+        <form id="taskForm" class="workspace-form">
+          <label class="label" for="taskInput" data-i18n="label_task">任务</label>
+          <textarea id="taskInput" rows="4" placeholder="例如：帮我做本周决策复盘，给3条优先行动" data-i18n-placeholder="task_placeholder"></textarea>
 
-        <details class="workspace-advanced" id="advancedControls">
-          <summary data-i18n="advanced_summary">高级选项（可选）</summary>
-          <div class="control-grid">
-            <label class="control">
-              <span data-i18n="label_module">模块</span>
-              <select id="moduleSelect">
-                <option value="" data-i18n="option_auto_route">自动路由</option>
-              </select>
-            </label>
-
-            <label class="control">
-              <span data-i18n="label_provider">Provider</span>
-              <select id="providerSelect">
-                <option value="auto" data-i18n="option_provider_auto">自动（按设置）</option>
-                <option value="dry-run">dry-run</option>
-                <option value="handoff">handoff</option>
-                <option value="openai">openai</option>
-                <option value="deepseek">deepseek</option>
-              </select>
-            </label>
-
-            <label class="control">
-              <span data-i18n="label_model">模型</span>
-              <input id="modelInput" type="text" placeholder="gpt-4.1-mini / deepseek-chat" data-i18n-placeholder="model_placeholder">
-            </label>
-
-            <label class="control checkbox">
-              <input id="retrievalToggle" type="checkbox">
-              <span data-i18n="label_use_retrieval">启用检索</span>
-            </label>
-
-            <label class="control">
-              <span data-i18n="label_top_k">Top K</span>
-              <input id="retrievalTopK" type="number" min="1" max="32" value="6">
-            </label>
+          <div class="action-row workspace-actions">
+            <button id="runBtn" type="submit" class="btn primary" data-i18n="btn_run">开始执行</button>
+            <button id="inspectBtn" type="button" class="btn secondary" data-i18n="btn_inspect">预览处理方式</button>
+            <a class="btn secondary nav-btn" href="/audit.html" data-i18n="btn_go_audit">打开审计中心</a>
           </div>
-        </details>
-      </form>
 
-      <section class="quick-actions workspace-starters">
-        <h3 data-i18n="task_starters">快捷开始</h3>
-        <div class="chips">
-          <button type="button" class="chip" data-task="帮我做本周决策复盘，并给3条优先级最高的行动建议" data-i18n="starter_weekly_review">每周决策复盘</button>
-          <button type="button" class="chip" data-task="请从这周聊天中提取可执行模式" data-i18n="starter_extract_patterns">提取本周聊天模式</button>
-          <button type="button" class="chip" data-task="写一篇饭后可读的BTC市场故事，强调风险控制" data-i18n="starter_write_story">写一篇饭后BTC故事</button>
+          <details class="workspace-advanced" id="advancedControls">
+            <summary data-i18n="advanced_summary">高级选项（可选）</summary>
+            <div class="control-grid">
+              <label class="control">
+                <span data-i18n="label_module">模块</span>
+                <select id="moduleSelect">
+                  <option value="" data-i18n="option_auto_route">自动路由</option>
+                </select>
+              </label>
+
+              <label class="control">
+                <span data-i18n="label_provider">Provider</span>
+                <select id="providerSelect">
+                  <option value="auto" data-i18n="option_provider_auto">自动（按设置）</option>
+                  <option value="dry-run">dry-run</option>
+                  <option value="handoff">handoff</option>
+                  <option value="openai">openai</option>
+                  <option value="deepseek">deepseek</option>
+                </select>
+              </label>
+
+              <label class="control">
+                <span data-i18n="label_model">模型</span>
+                <input id="modelInput" type="text" placeholder="gpt-4.1-mini / deepseek-chat" data-i18n-placeholder="model_placeholder">
+              </label>
+
+              <label class="control checkbox">
+                <input id="retrievalToggle" type="checkbox">
+                <span data-i18n="label_use_retrieval">启用检索</span>
+              </label>
+
+              <label class="control">
+                <span data-i18n="label_top_k">Top K</span>
+                <input id="retrievalTopK" type="number" min="1" max="32" value="6">
+                <span class="helper-note" data-i18n="top_k_help">检索时最多带入多少条历史记录。越大越全，但更慢；默认 6。</span>
+              </label>
+            </div>
+          </details>
+        </form>
+
+        <section class="quick-actions workspace-starters">
+          <h4 data-i18n="task_starters">快捷开始</h4>
+          <div class="chips">
+            <button type="button" class="chip" data-task="帮我做本周决策复盘，并给3条优先级最高的行动建议" data-i18n="starter_weekly_review">每周决策复盘</button>
+            <button type="button" class="chip" data-task="请从这周聊天中提取可执行模式" data-i18n="starter_extract_patterns">提取本周聊天模式</button>
+            <button type="button" class="chip" data-task="写一篇饭后可读的BTC市场故事，强调风险控制" data-i18n="starter_write_story">写一篇饭后BTC故事</button>
+          </div>
+        </section>
+      </section>
+
+      <section class="workspace-section learning-section">
+        <h3 data-i18n="section_learning">学习更新</h3>
+        <p class="helper-note" data-i18n="learning_intro">把你新的经验、资料、文章要点放进系统，帮助后续任务更贴合你。</p>
+
+        <div class="learning-grid">
+          <section class="learning-card">
+            <h4 data-i18n="learning_direct_title">直接学习输入</h4>
+            <label class="label" for="learningDirectInput" data-i18n="label_learning_text">学习文本</label>
+            <textarea id="learningDirectInput" rows="4" placeholder="粘贴你的复盘、文章摘要、会议纪要..." data-i18n-placeholder="learning_text_placeholder"></textarea>
+            <label class="label" for="learningTitleInput" data-i18n="label_title_optional">标题（可选）</label>
+            <input id="learningTitleInput" type="text" placeholder="这段内容叫什么" data-i18n-placeholder="title_placeholder">
+            <label class="label" for="learningCertainty" data-i18n="label_learning_certainty">把握程度</label>
+            <select id="learningCertainty">
+              <option value="auto" data-i18n="certainty_auto">自动</option>
+              <option value="low" data-i18n="certainty_low">低</option>
+              <option value="medium" data-i18n="certainty_medium">中</option>
+              <option value="high" data-i18n="certainty_high">高</option>
+            </select>
+            <div class="action-row">
+              <button id="quickIngestBtn" class="btn primary" type="button" data-i18n="btn_ingest_memory">保存到学习记录</button>
+            </div>
+          </section>
+
+          <section class="learning-card">
+            <h4 data-i18n="learning_handoff_title">外部模型辅助学习</h4>
+            <p class="helper-note" data-i18n="learning_handoff_help">适合没有 API 时：先生成“学习请求包”给外部模型，再把 JSON 回复粘贴回来。</p>
+            <label class="label" for="learningSourceInput" data-i18n="label_source_url">来源链接 / 引用</label>
+            <textarea id="learningSourceInput" rows="2" placeholder="YouTube / 播客 / 文章链接" data-i18n-placeholder="source_url_placeholder"></textarea>
+            <div class="action-row">
+              <button id="learningPacketBtn" type="button" class="btn secondary" data-i18n="btn_generate_packet">生成学习请求包</button>
+            </div>
+            <label class="label" for="learningResponseInput" data-i18n="label_external_response">外部模型 JSON 回复</label>
+            <textarea id="learningResponseInput" rows="4" placeholder="把外部模型 JSON 粘贴到这里" data-i18n-placeholder="external_response_placeholder"></textarea>
+            <div class="action-row">
+              <button id="learningImportBtn" type="button" class="btn primary" data-i18n="btn_parse_queue">导入学习候选</button>
+            </div>
+          </section>
         </div>
       </section>
 
@@ -102,8 +148,20 @@
         <h2 data-i18n="result_title">执行结果</h2>
         <button id="copyOutputBtn" class="icon-btn copy-btn" type="button" aria-label="Copy full output" title="Copy full output">⧉</button>
       </div>
+
+      <section id="resultSummary" class="result-summary" data-i18n="result_summary_empty">执行后，这里会先给你可读摘要。</section>
+
+      <div class="result-meta">
+        <span class="label" data-i18n="result_file_label">结果文件</span>
+        <code id="outputPathText">-</code>
+      </div>
+
       <div id="outputTokenMeta" class="token-meta">-</div>
-      <pre id="outputPreview">-</pre>
+
+      <details id="outputDetails" class="workspace-technical" open>
+        <summary data-i18n="output_details_summary">完整报告（Markdown）</summary>
+        <pre id="outputPreview">-</pre>
+      </details>
 
       <details class="workspace-technical" id="technicalDetails">
         <summary data-i18n="technical_summary">技术详情（路由/计划/文件）</summary>

@@ -13,6 +13,15 @@ const themeToggle = document.getElementById("themeToggle");
 const settingsToggle = document.getElementById("settingsToggle");
 const copyOutputBtn = document.getElementById("copyOutputBtn");
 
+const quickIngestBtn = document.getElementById("quickIngestBtn");
+const learningPacketBtn = document.getElementById("learningPacketBtn");
+const learningImportBtn = document.getElementById("learningImportBtn");
+const learningDirectInput = document.getElementById("learningDirectInput");
+const learningTitleInput = document.getElementById("learningTitleInput");
+const learningCertainty = document.getElementById("learningCertainty");
+const learningSourceInput = document.getElementById("learningSourceInput");
+const learningResponseInput = document.getElementById("learningResponseInput");
+
 const routeTrace = document.getElementById("routeTrace");
 const planTrace = document.getElementById("planTrace");
 const loadedFiles = document.getElementById("loadedFiles");
@@ -21,6 +30,10 @@ const suggestionTrace = document.getElementById("suggestionTrace");
 const outputPreview = document.getElementById("outputPreview");
 const outputTokenMeta = document.getElementById("outputTokenMeta");
 const technicalDetails = document.getElementById("technicalDetails");
+const outputDetails = document.getElementById("outputDetails");
+const outputPathText = document.getElementById("outputPathText");
+const resultSummary = document.getElementById("resultSummary");
+const modeGuide = document.getElementById("modeGuide");
 
 const settingsModal = document.getElementById("settingsModal");
 const settingsClose = document.getElementById("settingsClose");
@@ -43,23 +56,29 @@ const settingsUiLanguage = document.getElementById("settingsUiLanguage");
 
 let latestOutputPath = null;
 let latestSuggestionId = null;
+let latestRunProvider = null;
 let settingsCache = null;
+let statusCache = null;
 let uiLanguage = "zh";
+
+const LEARNING_SOURCE_DEFAULT = "notes";
 
 const I18N = {
   zh: {
     doc_title: "Personal Core OS | 工作台",
     app_title: "Personal Core OS",
-    app_subtitle: "简化工作台",
+    app_subtitle: "工作台（任务 + 学习）",
     nav_workspace: "工作台",
     nav_audit: "审计中心",
     status_connecting: "连接中...",
     status_connected: "已连接",
     status_offline: "离线",
     hero_title: "你想让我帮你做什么？",
-    hero_desc: "输入目标，点击执行。复杂诊断和治理能力在审计中心。",
+    hero_desc: "任务执行和学习更新都在这里。审计与治理能力在审计中心。",
+    section_task: "任务执行",
+    section_learning: "学习更新",
     label_task: "任务",
-    task_placeholder: "例如：帮我生成本周决策复盘",
+    task_placeholder: "例如：帮我做本周决策复盘，给3条优先行动",
     btn_run: "开始执行",
     btn_inspect: "预览处理方式",
     btn_go_audit: "打开审计中心",
@@ -72,12 +91,36 @@ const I18N = {
     model_placeholder: "gpt-4.1-mini / deepseek-chat",
     label_use_retrieval: "启用检索",
     label_top_k: "Top K",
+    top_k_help: "检索时最多带入多少条历史记录。越大越全，但更慢；默认 6。",
     task_starters: "快捷开始",
     starter_weekly_review: "每周决策复盘",
     starter_extract_patterns: "提取本周聊天模式",
     starter_write_story: "写一篇饭后BTC故事",
+    learning_intro: "把你新的经验、资料、文章要点放进系统，帮助后续任务更贴合你。",
+    learning_direct_title: "直接学习输入",
+    label_learning_text: "学习文本",
+    learning_text_placeholder: "粘贴你的复盘、文章摘要、会议纪要...",
+    label_title_optional: "标题（可选）",
+    title_placeholder: "这段内容叫什么",
+    label_learning_certainty: "把握程度",
+    certainty_auto: "自动（系统判断）",
+    certainty_low: "低（先记为待验证）",
+    certainty_medium: "中（大体可靠）",
+    certainty_high: "高（高度确定）",
+    btn_ingest_memory: "保存到学习记录",
+    learning_handoff_title: "外部模型辅助学习",
+    learning_handoff_help: "适合没有 API 时：先生成“学习请求包”给外部模型，再把 JSON 回复粘贴回来。",
+    label_source_url: "来源链接 / 引用",
+    source_url_placeholder: "YouTube / 播客 / 文章链接",
+    btn_generate_packet: "生成学习请求包",
+    label_external_response: "外部模型 JSON 回复",
+    external_response_placeholder: "把外部模型 JSON 粘贴到这里",
+    btn_parse_queue: "导入学习候选",
     trace_messages: "系统消息",
     result_title: "执行结果",
+    result_summary_empty: "执行后，这里会先给你可读摘要。",
+    result_file_label: "结果文件",
+    output_details_summary: "完整报告（Markdown）",
     technical_summary: "技术详情（路由/计划/文件）",
     trace_route: "路由",
     trace_plan: "计划",
@@ -123,20 +166,44 @@ const I18N = {
     msg_token_exact: "Tokens：{tokens}（精确）",
     msg_token_estimate: "Tokens：{tokens}（估算）",
     msg_token_unavailable: "Tokens：不可用",
+    mode_with_api: "已检测到 API 配置，直接点击“开始执行”即可得到结果。",
+    mode_no_api: "你还没有配置 API Key。当前会走离线模式，输出可能是请求包或草稿。",
+    mode_no_api_steps: "建议步骤：1) 打开设置填写 API Key；或 2) 使用 handoff，把“完整报告（Markdown）”复制到外部模型，再将返回内容贴回这里继续处理。",
+    summary_run_generic: "结果已生成。你可以先看下方摘要，再按需展开完整 Markdown。",
+    summary_handoff: "当前是 handoff 模式：这是一份“给外部模型的请求包”，不是最终复盘。请复制完整报告到外部模型执行。",
+    summary_dry_run: "当前是 dry-run 演练模式：输出是系统草稿，不是最终高质量结果。建议配置 API 后再执行。",
+    summary_review_title: "本周复盘已生成，重点如下：",
+    summary_actions_title: "建议你先看这几条可执行点：",
+    summary_no_bullets: "完整报告已经生成，请展开“完整报告（Markdown）”查看详细内容。",
+    msg_learning_text_required: "请先粘贴学习文本。",
+    msg_learning_source_required: "请先填写来源链接 / 引用。",
+    msg_learning_response_required: "请先粘贴外部模型 JSON 回复。",
+    msg_learning_packet_generating: "正在生成学习请求包...",
+    msg_learning_packet_ready: "学习请求包已生成。请复制“完整报告（Markdown）”里的内容发给外部模型。",
+    msg_learning_packet_failed: "学习请求包生成失败：{error}",
+    msg_learning_importing: "正在导入外部学习结果...",
+    msg_learning_import_done: "学习候选已导入：+{count}",
+    msg_learning_import_failed: "学习候选导入失败：{error}",
+    msg_learning_confidence_auto: "把握程度自动判断：{confidence}/10",
+    msg_learning_confidence_manual: "把握程度：{level}（{confidence}/10）",
+    msg_learning_ingest_done: "学习记录已保存：新增 event={events}，insight={insights}",
+    msg_learning_ingest_failed: "学习保存失败：{error}",
   },
   en: {
     doc_title: "Personal Core OS | Workspace",
     app_title: "Personal Core OS",
-    app_subtitle: "Simple Workspace",
+    app_subtitle: "Workspace (Task + Learning)",
     nav_workspace: "Workspace",
     nav_audit: "Audit Center",
     status_connecting: "Connecting...",
     status_connected: "Connected",
     status_offline: "Offline",
     hero_title: "What do you want me to do?",
-    hero_desc: "Describe your goal and run it. Advanced diagnostics and governance live in Audit Center.",
+    hero_desc: "Task execution and learning are both here. Audit and governance live in Audit Center.",
+    section_task: "Task Execution",
+    section_learning: "Learning",
     label_task: "Task",
-    task_placeholder: "Example: generate this week's decision review",
+    task_placeholder: "Example: generate weekly decision review with top 3 next actions",
     btn_run: "Run",
     btn_inspect: "Preview Plan",
     btn_go_audit: "Open Audit Center",
@@ -149,12 +216,36 @@ const I18N = {
     model_placeholder: "gpt-4.1-mini / deepseek-chat",
     label_use_retrieval: "Use retrieval",
     label_top_k: "Top K",
+    top_k_help: "How many historical records to include during retrieval. Higher = broader but slower. Default 6.",
     task_starters: "Quick Starters",
     starter_weekly_review: "Weekly Decision Review",
     starter_extract_patterns: "Extract Weekly Chat Patterns",
     starter_write_story: "Write After-Meal BTC Story",
+    learning_intro: "Feed your new experiences and notes into the system so future tasks fit you better.",
+    learning_direct_title: "Direct Learning Input",
+    label_learning_text: "Learning Text",
+    learning_text_placeholder: "Paste your review notes, summaries, or memo...",
+    label_title_optional: "Title (optional)",
+    title_placeholder: "Name this learning note",
+    label_learning_certainty: "Certainty",
+    certainty_auto: "Auto (system inferred)",
+    certainty_low: "Low (needs verification)",
+    certainty_medium: "Medium (mostly reliable)",
+    certainty_high: "High (high confidence)",
+    btn_ingest_memory: "Save Learning Note",
+    learning_handoff_title: "External Model Assisted Learning",
+    learning_handoff_help: "Good when API is unavailable: generate a packet, run it in external model, then paste JSON back.",
+    label_source_url: "Source URL / Reference",
+    source_url_placeholder: "YouTube / podcast / article URL",
+    btn_generate_packet: "Generate Learning Packet",
+    label_external_response: "External Model JSON Response",
+    external_response_placeholder: "Paste external model JSON here",
+    btn_parse_queue: "Import Learning Candidates",
     trace_messages: "System Messages",
     result_title: "Result",
+    result_summary_empty: "After running, this area will show a readable summary first.",
+    result_file_label: "Result File",
+    output_details_summary: "Full Report (Markdown)",
     technical_summary: "Technical Details (Route/Plan/Files)",
     trace_route: "Route",
     trace_plan: "Plan",
@@ -200,6 +291,28 @@ const I18N = {
     msg_token_exact: "Tokens: {tokens} (exact)",
     msg_token_estimate: "Tokens: {tokens} (estimate)",
     msg_token_unavailable: "Tokens: unavailable",
+    mode_with_api: "API key detected. Click Run to get direct outputs.",
+    mode_no_api: "No API key configured. The system is in offline mode, so output may be a packet or draft.",
+    mode_no_api_steps: "Recommended: 1) add API key in Settings; or 2) use handoff, copy Full Report to external model, then paste response back for further processing.",
+    summary_run_generic: "Output generated. Read the summary first, then expand the full markdown if needed.",
+    summary_handoff: "Current mode is handoff: this is a request packet for external model, not the final review.",
+    summary_dry_run: "Current mode is dry-run: this is a system draft, not final quality output. Configure API for direct generation.",
+    summary_review_title: "Weekly review is ready. Key points:",
+    summary_actions_title: "Suggested actionable points:",
+    summary_no_bullets: "Full report is generated. Expand Full Report (Markdown) for details.",
+    msg_learning_text_required: "Learning text is required.",
+    msg_learning_source_required: "Source URL/reference is required.",
+    msg_learning_response_required: "Paste external model JSON response first.",
+    msg_learning_packet_generating: "Generating learning packet...",
+    msg_learning_packet_ready: "Learning packet is ready. Copy content from Full Report (Markdown) and send to external model.",
+    msg_learning_packet_failed: "Learning packet generation failed: {error}",
+    msg_learning_importing: "Importing external learning response...",
+    msg_learning_import_done: "Learning candidates imported: +{count}",
+    msg_learning_import_failed: "Learning import failed: {error}",
+    msg_learning_confidence_auto: "Certainty auto-inferred: {confidence}/10",
+    msg_learning_confidence_manual: "Certainty: {level} ({confidence}/10)",
+    msg_learning_ingest_done: "Learning saved: new event={events}, insight={insights}",
+    msg_learning_ingest_failed: "Learning save failed: {error}",
   },
 };
 
@@ -247,6 +360,27 @@ function setLanguage(lang) {
   for (const option of fallbackOptions) {
     option.textContent = t("option_use_fallback");
   }
+  renderModeGuide();
+}
+
+function setResultSummary(text) {
+  resultSummary.removeAttribute("data-i18n");
+  resultSummary.textContent = String(text || t("result_summary_empty"));
+}
+
+function renderModeGuide() {
+  if (!modeGuide) {
+    return;
+  }
+  const hasApi = Boolean(statusCache && (statusCache.has_openai_api_key || statusCache.has_deepseek_api_key));
+  const lines = [];
+  if (hasApi) {
+    lines.push(t("mode_with_api"));
+  } else {
+    lines.push(t("mode_no_api"));
+    lines.push(t("mode_no_api_steps"));
+  }
+  modeGuide.textContent = lines.join("\n");
 }
 
 function addBubble(role, text) {
@@ -266,11 +400,15 @@ function getLastUserBubbleText() {
 }
 
 function addUserTaskOnce(task) {
-  const lastUserText = getLastUserBubbleText();
-  if (lastUserText === task) {
+  const text = String(task || "").trim();
+  if (!text) {
     return;
   }
-  addBubble("user", task);
+  const lastUserText = getLastUserBubbleText();
+  if (lastUserText === text) {
+    return;
+  }
+  addBubble("user", text);
 }
 
 function setStatus(label, kind, key = null) {
@@ -291,6 +429,10 @@ function setPreview(text) {
 
 function setOutputTokenMeta(text) {
   outputTokenMeta.textContent = String(text || "-");
+}
+
+function setOutputPath(path) {
+  outputPathText.textContent = String(path || "-");
 }
 
 function renderLoadedFiles(files) {
@@ -364,10 +506,63 @@ function renderInspectResult(data) {
   renderLoadedFiles(data.loaded_files || []);
   latestSuggestionId = null;
   suggestionTrace.textContent = "-";
-  if (!data.output_preview) {
-    setPreview("-");
-    setOutputTokenMeta("-");
+}
+
+function extractTopBullets(markdown, limit = 3) {
+  const lines = String(markdown || "").split("\n");
+  const bullets = [];
+  let inCodeBlock = false;
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (line.startsWith("```")) {
+      inCodeBlock = !inCodeBlock;
+      continue;
+    }
+    if (inCodeBlock || !line) {
+      continue;
+    }
+    const match = line.match(/^[-*]\s+(.+)$/) || line.match(/^\d+\.\s+(.+)$/);
+    if (match && match[1]) {
+      bullets.push(match[1].trim());
+      if (bullets.length >= limit) {
+        break;
+      }
+    }
   }
+  return bullets;
+}
+
+function renderReadableSummary(task, provider, outputText) {
+  if (provider === "handoff") {
+    setResultSummary(t("summary_handoff"));
+    return;
+  }
+  if (provider === "dry-run") {
+    setResultSummary(t("summary_dry_run"));
+    return;
+  }
+
+  const taskText = String(task || "").toLowerCase();
+  const bullets = extractTopBullets(outputText, 3);
+  const lines = [];
+
+  if (taskText.includes("复盘") || taskText.includes("review")) {
+    lines.push(t("summary_review_title"));
+  } else {
+    lines.push(t("summary_run_generic"));
+  }
+
+  if (bullets.length > 0) {
+    lines.push(t("summary_actions_title"));
+    for (const item of bullets) {
+      lines.push(`- ${item}`);
+    }
+  } else {
+    lines.push(t("summary_no_bullets"));
+  }
+
+  setResultSummary(lines.join("\n"));
 }
 
 function renderSuggestionDetail(data) {
@@ -400,23 +595,82 @@ async function loadSuggestionDetail(suggestionId) {
   }
 }
 
-function renderRunResult(data) {
+function renderRunResult(data, userTask) {
   renderInspectResult(data);
   latestOutputPath = data.output_path || null;
   latestSuggestionId = data.suggestion_id || null;
+  latestRunProvider = data.provider || providerSelect.value || null;
 
   const lines = [
     `output_path: ${data.output_path}`,
     `output_hash: ${data.output_hash}`,
     `module: ${data.module}`,
+    `provider: ${data.provider || "-"}`,
   ];
   if (data.suggestion_id) {
     lines.push(`suggestion_id: ${data.suggestion_id}`);
   }
   resultTrace.textContent = lines.join("\n");
+
+  setOutputPath(data.output_path || "-");
   setPreview(data.output_preview || "-");
+  renderReadableSummary(userTask, latestRunProvider, data.output_preview || "");
+  outputDetails.open = true;
   refreshOutputTokenMeta();
   loadSuggestionDetail(latestSuggestionId);
+}
+
+function renderActionPreview(data) {
+  if (data.output_path) {
+    latestOutputPath = data.output_path;
+    setOutputPath(data.output_path);
+  }
+
+  if (data.output_preview) {
+    setPreview(data.output_preview);
+    outputDetails.open = true;
+    setOutputTokenMeta("-");
+    return;
+  }
+
+  if (data.action === "learning_handoff_packet" && data.packet_text) {
+    setPreview(data.packet_text);
+    outputDetails.open = true;
+    setOutputTokenMeta("-");
+    return;
+  }
+
+  if (data.action === "ingest_learning" && data.preview) {
+    const eventPreview = data.preview.event && data.preview.event.event ? data.preview.event.event : "";
+    const insightPreview = data.preview.insight && data.preview.insight.insight ? data.preview.insight.insight : "";
+    const previewLines = [];
+    if (eventPreview) {
+      previewLines.push(`event: ${eventPreview}`);
+    }
+    if (insightPreview) {
+      previewLines.push(`insight: ${insightPreview}`);
+    }
+    setPreview(previewLines.join("\n") || "-");
+    outputDetails.open = true;
+    setOutputTokenMeta("-");
+    return;
+  }
+
+  if (data.action === "learning_handoff_import" && data.preview) {
+    const previewLines = [];
+    if (data.preview.import) {
+      previewLines.push(`import: ${data.preview.import.id} (${data.preview.import.candidate_count} candidates)`);
+    }
+    if (Array.isArray(data.preview.candidates) && data.preview.candidates.length > 0) {
+      for (const item of data.preview.candidates.slice(0, 5)) {
+        previewLines.push(`- [${item.candidate_type}] ${item.title}`);
+      }
+    }
+    setPreview(previewLines.join("\n") || "-");
+    outputDetails.open = true;
+    setOutputTokenMeta("-");
+    return;
+  }
 }
 
 function buildPayload() {
@@ -430,6 +684,59 @@ function buildPayload() {
     with_retrieval: retrievalToggle.checked,
     retrieval_top_k: Number(retrievalTopK.value || 6),
   };
+}
+
+function clampInt(value, minimum, maximum) {
+  return Math.max(minimum, Math.min(maximum, Math.round(value)));
+}
+
+function inferLearningConfidence(text, sourceRef = "") {
+  const body = String(text || "");
+  const content = body.toLowerCase();
+  let score = 6;
+
+  if (sourceRef && /^https?:\/\//i.test(sourceRef)) {
+    score += 1;
+  }
+  if (body.length >= 1200) {
+    score += 2;
+  } else if (body.length >= 500) {
+    score += 1;
+  } else if (body.length <= 120) {
+    score -= 1;
+  }
+
+  const numberMatches = body.match(/\d+/g) || [];
+  if (numberMatches.length >= 3) {
+    score += 1;
+  }
+
+  const highCues = ["evidence", "metric", "experiment", "validated", "复盘", "数据", "验证", "实验", "证据", "步骤"];
+  const lowCues = ["maybe", "guess", "probably", "uncertain", "可能", "也许", "大概", "猜", "不确定", "感觉"];
+  const highHits = highCues.reduce((count, cue) => (content.includes(cue) ? count + 1 : count), 0);
+  const lowHits = lowCues.reduce((count, cue) => (content.includes(cue) ? count + 1 : count), 0);
+  if (highHits >= 2) {
+    score += 1;
+  }
+  if (lowHits >= 2) {
+    score -= 2;
+  }
+
+  return clampInt(score, 3, 9);
+}
+
+function resolveLearningConfidence(text, sourceRef = "") {
+  const mode = (learningCertainty && learningCertainty.value) || "auto";
+  if (mode === "low") {
+    return { mode, confidence: 4 };
+  }
+  if (mode === "medium") {
+    return { mode, confidence: 7 };
+  }
+  if (mode === "high") {
+    return { mode, confidence: 9 };
+  }
+  return { mode: "auto", confidence: inferLearningConfidence(text, sourceRef) };
 }
 
 async function postJson(path, payload) {
@@ -533,6 +840,8 @@ async function loadStatus() {
       throw new Error(data.error || "Failed to load status");
     }
 
+    statusCache = data;
+
     moduleSelect.innerHTML = `<option value="">${t("option_auto_route")}</option>`;
     for (const moduleName of data.modules || []) {
       const option = document.createElement("option");
@@ -554,6 +863,7 @@ async function loadStatus() {
       }
     }
 
+    renderModeGuide();
     setStatus(t("status_connected"), "ok", "status_connected");
   } catch (err) {
     setStatus(t("status_offline"), "fail", "status_offline");
@@ -632,6 +942,7 @@ async function saveSettings() {
   try {
     const data = await postJson("/api/settings", payload);
     settingsCache = data;
+    statusCache = data;
     setLanguage(data.ui_language || settingsUiLanguage.value || "zh");
     if (providerSelect.value === "deepseek") {
       modelInput.value = data.deepseek_model || modelInput.value;
@@ -682,13 +993,136 @@ async function runTask() {
   inspectBtn.disabled = true;
   try {
     const data = await postJson("/api/run", payload);
-    renderRunResult(data);
+    renderRunResult(data, payload.task);
     addBubble("system", t("msg_run_complete", { output: data.output_path }));
   } catch (err) {
     addBubble("system", t("msg_run_failed", { error: err.message }));
   } finally {
     runBtn.disabled = false;
     inspectBtn.disabled = false;
+  }
+}
+
+async function runLearningIngest() {
+  const learningText = learningDirectInput.value.trim();
+  if (!learningText) {
+    addBubble("system", t("msg_learning_text_required"));
+    return;
+  }
+
+  const sourceRef = learningSourceInput.value.trim();
+  const confidenceProfile = resolveLearningConfidence(learningText, sourceRef);
+  if (confidenceProfile.mode === "auto") {
+    addBubble("system", t("msg_learning_confidence_auto", { confidence: confidenceProfile.confidence }));
+  } else {
+    addBubble(
+      "system",
+      t("msg_learning_confidence_manual", {
+        level: t(`certainty_${confidenceProfile.mode}`),
+        confidence: confidenceProfile.confidence,
+      })
+    );
+  }
+
+  addUserTaskOnce(learningTitleInput.value.trim() || learningText.slice(0, 120));
+
+  const payload = {
+    action: "ingest_learning",
+    task: learningText,
+    title: learningTitleInput.value.trim() || null,
+    source_type: LEARNING_SOURCE_DEFAULT,
+    max_points: 6,
+    confidence: confidenceProfile.confidence,
+    tags: ["ui_workspace_learning"],
+  };
+
+  try {
+    const data = await postJson("/api/action", payload);
+    renderActionPreview(data);
+    setResultSummary(
+      t("msg_learning_ingest_done", {
+        events: data.appended_events || 0,
+        insights: data.appended_insights || 0,
+      })
+    );
+    addBubble(
+      "system",
+      t("msg_learning_ingest_done", {
+        events: data.appended_events || 0,
+        insights: data.appended_insights || 0,
+      })
+    );
+  } catch (err) {
+    addBubble("system", t("msg_learning_ingest_failed", { error: err.message }));
+  }
+}
+
+async function generateLearningHandoffPacket() {
+  const sourceRef = learningSourceInput.value.trim();
+  if (!sourceRef) {
+    addBubble("system", t("msg_learning_source_required"));
+    return;
+  }
+
+  const payload = {
+    action: "learning_handoff_packet",
+    source_ref: sourceRef,
+    title: learningTitleInput.value.trim() || null,
+    source_type: LEARNING_SOURCE_DEFAULT,
+    max_candidates_per_type: 3,
+  };
+
+  addBubble("system", t("msg_learning_packet_generating"));
+  try {
+    const data = await postJson("/api/action", payload);
+    renderActionPreview(data);
+    setResultSummary(t("msg_learning_packet_ready"));
+    addBubble("system", t("msg_learning_packet_ready"));
+  } catch (err) {
+    addBubble("system", t("msg_learning_packet_failed", { error: err.message }));
+  }
+}
+
+async function importLearningHandoffResponse() {
+  const responseText = learningResponseInput.value.trim();
+  if (!responseText) {
+    addBubble("system", t("msg_learning_response_required"));
+    return;
+  }
+
+  const sourceRef = learningSourceInput.value.trim();
+  const confidenceProfile = resolveLearningConfidence(responseText, sourceRef);
+
+  if (confidenceProfile.mode === "auto") {
+    addBubble("system", t("msg_learning_confidence_auto", { confidence: confidenceProfile.confidence }));
+  } else {
+    addBubble(
+      "system",
+      t("msg_learning_confidence_manual", {
+        level: t(`certainty_${confidenceProfile.mode}`),
+        confidence: confidenceProfile.confidence,
+      })
+    );
+  }
+
+  const payload = {
+    action: "learning_handoff_import",
+    response_text: responseText,
+    source_ref: sourceRef || null,
+    title: learningTitleInput.value.trim() || null,
+    source_type: LEARNING_SOURCE_DEFAULT,
+    confidence: confidenceProfile.confidence,
+    tags: ["ui_workspace_learning_handoff"],
+  };
+
+  addBubble("system", t("msg_learning_importing"));
+  try {
+    const data = await postJson("/api/action", payload);
+    renderActionPreview(data);
+    setResultSummary(t("msg_learning_import_done", { count: data.candidate_total || 0 }));
+    addBubble("system", t("msg_learning_import_done", { count: data.candidate_total || 0 }));
+  } catch (err) {
+    addBubble("system", t("msg_learning_import_failed", { error: err.message }));
   }
 }
 
@@ -746,9 +1180,11 @@ providerSelect.addEventListener("change", () => {
   } else if (providerSelect.value === "openai") {
     const current = modelInput.value.trim();
     if (!current || current.startsWith("deepseek-")) {
-      modelInput.value = (settingsCache && (settingsCache.openai_model || settingsCache.task_model)) || "gpt-4.1-mini";
+      modelInput.value =
+        (settingsCache && (settingsCache.openai_model || settingsCache.task_model)) || "gpt-4.1-mini";
     }
   }
+  renderModeGuide();
   refreshOutputTokenMeta();
 });
 
@@ -774,8 +1210,27 @@ settingsModal.addEventListener("click", (event) => {
   }
 });
 
+if (quickIngestBtn) {
+  quickIngestBtn.addEventListener("click", () => {
+    runLearningIngest();
+  });
+}
+if (learningPacketBtn) {
+  learningPacketBtn.addEventListener("click", () => {
+    generateLearningHandoffPacket();
+  });
+}
+if (learningImportBtn) {
+  learningImportBtn.addEventListener("click", () => {
+    importLearningHandoffResponse();
+  });
+}
+
 setLanguage("zh");
 setStatus(t("status_connecting"), "pending", "status_connecting");
+setResultSummary(t("result_summary_empty"));
+setOutputPath("-");
+setPreview("-");
 setOutputTokenMeta("-");
 initTheme();
 loadSettings();
