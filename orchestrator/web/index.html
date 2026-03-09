@@ -44,9 +44,16 @@
         </ol>
       </section>
 
-      <section class="workspace-section">
-        <h3 data-i18n="section_task">生成结果</h3>
-        <form id="taskForm" class="workspace-form">
+      <section class="entrypoint-tabs workspace-entry-tabs" aria-label="Workspace sections">
+        <button class="entrypoint-tab workspace-tab active" type="button" data-workspace-tab="task" data-i18n="workspace_tab_task">任务执行</button>
+        <button class="entrypoint-tab workspace-tab" type="button" data-workspace-tab="learning" data-i18n="workspace_tab_learning">学习更新</button>
+      </section>
+
+      <section id="workspaceTaskPanel" class="workspace-panel active">
+        <section class="workspace-section">
+          <h3 data-i18n="section_task">任务输入</h3>
+          <p class="helper-note" data-i18n="task_intro">在这里输入任务，执行后在右侧查看结果。</p>
+          <form id="taskForm" class="workspace-form">
           <label class="label" for="taskInput" data-i18n="label_task">任务</label>
           <textarea id="taskInput" rows="4" placeholder="例如：总结我本周做了什么、哪里做得好/不好、下周3件重点事" data-i18n-placeholder="task_placeholder"></textarea>
 
@@ -91,65 +98,68 @@
               </label>
 
               <label class="control">
-                <span data-i18n="label_top_k">参考条数（Top K）</span>
+                <span data-i18n="label_top_k">参考条数</span>
                 <input id="retrievalTopK" type="number" min="1" max="32" value="6">
                 <span class="helper-note" data-i18n="top_k_help">检索时最多带入多少条历史记录。越大越全，但更慢；默认 6。</span>
                 <span id="retrievalHelp" class="helper-note" data-i18n="retrieval_help_off">当前未开启历史参考：仅基于你这次输入生成结果。</span>
               </label>
             </div>
           </details>
-        </form>
+          </form>
 
-        <section class="quick-actions workspace-starters">
-          <h4 data-i18n="task_starters">快捷开始</h4>
-          <p class="helper-note" data-i18n="starter_hint">点击任一项会自动执行。</p>
-          <p class="helper-note" data-i18n="review_definition">复盘 = 回顾本周关键决策、结果原因、改进动作，并给下周执行清单。</p>
-          <div class="chips">
-            <button type="button" class="chip" data-task="请输出本周复盘：1) 本周关键事件与决策；2) 做对了什么、做错了什么及原因；3) 下周最重要的3个行动及风险提醒" data-i18n="starter_weekly_review">本周总结+下周3件事</button>
-            <button type="button" class="chip" data-task="请把我本周目标拆成可执行清单：今天做什么、本周做什么、延期什么，并给优先级" data-i18n="starter_extract_patterns">目标拆解行动清单</button>
-            <button type="button" class="chip" data-task="请检查我当前计划的前三个风险点，每个风险给一个应对动作和触发条件" data-i18n="starter_write_story">风险检查+应对动作</button>
-          </div>
+          <section class="quick-actions workspace-starters">
+            <h4 data-i18n="task_starters">快捷开始</h4>
+            <p class="helper-note" data-i18n="starter_hint">点击任一项会自动执行。</p>
+            <p class="helper-note" data-i18n="review_definition">复盘 = 回顾本周关键决策、结果原因、改进动作，并给下周执行清单。</p>
+            <div class="chips">
+              <button type="button" class="chip" data-task="请输出本周复盘：1) 本周关键事件与决策；2) 做对了什么、做错了什么及原因；3) 下周最重要的3个行动及风险提醒" data-i18n="starter_weekly_review">本周总结+下周3件事</button>
+              <button type="button" class="chip" data-task="请把我本周目标拆成可执行清单：今天做什么、本周做什么、延期什么，并给优先级" data-i18n="starter_extract_patterns">目标拆解行动清单</button>
+              <button type="button" class="chip" data-task="请检查我当前计划的前三个风险点，每个风险给一个应对动作和触发条件" data-i18n="starter_write_story">风险检查+应对动作</button>
+            </div>
+          </section>
         </section>
       </section>
 
-      <section class="workspace-section learning-section">
-        <h3 data-i18n="section_learning">学习更新</h3>
-        <p class="helper-note" data-i18n="learning_intro">把你新的经验、资料、文章要点放进系统，帮助后续任务更贴合你。</p>
+      <section id="workspaceLearningPanel" class="workspace-panel">
+        <section class="workspace-section learning-section">
+          <h3 data-i18n="section_learning">学习更新</h3>
+          <p class="helper-note" data-i18n="learning_intro">把你新的经验、资料、文章要点放进系统，帮助后续任务更贴合你。</p>
 
-        <div class="learning-grid">
-          <section class="learning-card">
-            <h4 data-i18n="learning_direct_title">直接学习输入</h4>
-            <label class="label" for="learningDirectInput" data-i18n="label_learning_text">学习文本</label>
-            <textarea id="learningDirectInput" rows="4" placeholder="粘贴你的复盘、文章摘要、会议纪要..." data-i18n-placeholder="learning_text_placeholder"></textarea>
-            <label class="label" for="learningTitleInput" data-i18n="label_title_optional">标题（可选）</label>
-            <input id="learningTitleInput" type="text" placeholder="这段内容叫什么" data-i18n-placeholder="title_placeholder">
-            <label class="label" for="learningCertainty" data-i18n="label_learning_certainty">把握程度</label>
-            <select id="learningCertainty">
-              <option value="auto" data-i18n="certainty_auto">自动</option>
-              <option value="low" data-i18n="certainty_low">低</option>
-              <option value="medium" data-i18n="certainty_medium">中</option>
-              <option value="high" data-i18n="certainty_high">高</option>
-            </select>
-            <div class="action-row">
-              <button id="quickIngestBtn" class="btn primary" type="button" data-i18n="btn_ingest_memory">保存到学习记录</button>
-            </div>
-          </section>
+          <div class="learning-grid">
+            <section class="learning-card">
+              <h4 data-i18n="learning_direct_title">直接学习输入</h4>
+              <label class="label" for="learningDirectInput" data-i18n="label_learning_text">学习文本</label>
+              <textarea id="learningDirectInput" rows="4" placeholder="粘贴你的复盘、文章摘要、会议纪要..." data-i18n-placeholder="learning_text_placeholder"></textarea>
+              <label class="label" for="learningTitleInput" data-i18n="label_title_optional">标题（可选）</label>
+              <input id="learningTitleInput" type="text" placeholder="这段内容叫什么" data-i18n-placeholder="title_placeholder">
+              <label class="label" for="learningCertainty" data-i18n="label_learning_certainty">把握程度</label>
+              <select id="learningCertainty">
+                <option value="auto" data-i18n="certainty_auto">自动</option>
+                <option value="low" data-i18n="certainty_low">低</option>
+                <option value="medium" data-i18n="certainty_medium">中</option>
+                <option value="high" data-i18n="certainty_high">高</option>
+              </select>
+              <div class="action-row">
+                <button id="quickIngestBtn" class="btn primary" type="button" data-i18n="btn_ingest_memory">保存到学习记录</button>
+              </div>
+            </section>
 
-          <section class="learning-card">
-            <h4 data-i18n="learning_handoff_title">外部模型辅助学习</h4>
-            <p class="helper-note" data-i18n="learning_handoff_help">适合没有 API 时：先生成“学习请求包”给外部模型，再把 JSON 回复粘贴回来。</p>
-            <label class="label" for="learningSourceInput" data-i18n="label_source_url">来源链接 / 引用</label>
-            <textarea id="learningSourceInput" rows="2" placeholder="YouTube / 播客 / 文章链接" data-i18n-placeholder="source_url_placeholder"></textarea>
-            <div class="action-row">
-              <button id="learningPacketBtn" type="button" class="btn secondary" data-i18n="btn_generate_packet">生成学习请求包</button>
-            </div>
-            <label class="label" for="learningResponseInput" data-i18n="label_external_response">外部模型 JSON 回复</label>
-            <textarea id="learningResponseInput" rows="4" placeholder="把外部模型 JSON 粘贴到这里" data-i18n-placeholder="external_response_placeholder"></textarea>
-            <div class="action-row">
-              <button id="learningImportBtn" type="button" class="btn primary" data-i18n="btn_parse_queue">导入学习候选</button>
-            </div>
-          </section>
-        </div>
+            <section class="learning-card">
+              <h4 data-i18n="learning_handoff_title">外部模型辅助学习</h4>
+              <p class="helper-note" data-i18n="learning_handoff_help">适合没有 API 时：先生成“学习请求包”给外部模型，再把 JSON 回复粘贴回来。</p>
+              <label class="label" for="learningSourceInput" data-i18n="label_source_url">来源链接 / 引用</label>
+              <textarea id="learningSourceInput" rows="2" placeholder="YouTube / 播客 / 文章链接" data-i18n-placeholder="source_url_placeholder"></textarea>
+              <div class="action-row">
+                <button id="learningPacketBtn" type="button" class="btn secondary" data-i18n="btn_generate_packet">生成学习请求包</button>
+              </div>
+              <label class="label" for="learningResponseInput" data-i18n="label_external_response">外部模型 JSON 回复</label>
+              <textarea id="learningResponseInput" rows="4" placeholder="把外部模型 JSON 粘贴到这里" data-i18n-placeholder="external_response_placeholder"></textarea>
+              <div class="action-row">
+                <button id="learningImportBtn" type="button" class="btn primary" data-i18n="btn_parse_queue">导入学习候选</button>
+              </div>
+            </section>
+          </div>
+        </section>
       </section>
 
       <section class="workspace-messages">

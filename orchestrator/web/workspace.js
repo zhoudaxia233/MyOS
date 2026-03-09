@@ -40,6 +40,9 @@ const nextStepsList = document.getElementById("nextStepsList");
 const quickSettingsBtn = document.getElementById("quickSettingsBtn");
 const quickCopyBtn = document.getElementById("quickCopyBtn");
 const quickFollowupBtn = document.getElementById("quickFollowupBtn");
+const workspaceTabs = document.querySelectorAll(".workspace-tab");
+const workspaceTaskPanel = document.getElementById("workspaceTaskPanel");
+const workspaceLearningPanel = document.getElementById("workspaceLearningPanel");
 
 const settingsModal = document.getElementById("settingsModal");
 const settingsClose = document.getElementById("settingsClose");
@@ -68,6 +71,7 @@ let statusCache = null;
 let uiLanguage = "zh";
 let latestGuidanceMode = "pre_run_no_api";
 let isRunningTask = false;
+let activeWorkspaceTab = "task";
 
 const LEARNING_SOURCE_DEFAULT = "notes";
 
@@ -82,13 +86,16 @@ const I18N = {
     status_connected: "已连接",
     status_offline: "离线",
     hero_title: "你想让我帮你做什么？",
-    hero_desc: "你说目标，我给结果、关键结论和下一步动作。任务与学习都在这里。",
+    hero_desc: "你说目标，我给结果、关键结论和下一步动作。任务输入和学习更新都在这里。",
     quick_use_title: "30 秒上手",
     quick_use_step_1: "输入你希望得到的结果（例如“给我下周3件最重要的事”）。",
     quick_use_step_2: "点击“开始执行”。",
     quick_use_step_3: "先看右侧“执行结果”摘要，再决定是否看完整 Markdown。",
-    quick_use_step_4: "如果你有新经验/资料，用下方“学习更新”补充到系统里。",
-    section_task: "生成结果",
+    quick_use_step_4: "如果你有新经验/资料，切到上方“学习更新”标签补充到系统里。",
+    workspace_tab_task: "任务执行",
+    workspace_tab_learning: "学习更新",
+    section_task: "任务输入",
+    task_intro: "在这里输入你要的结果，执行后在右侧查看结果。",
     section_learning: "学习更新",
     label_task: "任务",
     task_placeholder: "例如：总结我本周做了什么、哪里做得好/不好、下周3件重点事",
@@ -105,8 +112,8 @@ const I18N = {
     model_placeholder: "gpt-4.1-mini / deepseek-chat",
     model_help: "一般保持空，让系统自动匹配。",
     label_use_retrieval: "参考历史记录",
-    label_top_k: "参考条数（Top K）",
-    top_k_help: "检索时最多带入多少条历史记录。越大越全，但更慢；默认 6。",
+    label_top_k: "参考条数",
+    top_k_help: "每次最多带入多少条历史记录。越大越全，但更慢；默认 6。",
     provider_help_auto: "推荐：系统自动按你的设置选择执行方式。",
     provider_help_dry_run: "离线演练：不调用外部 API，主要用于测试流程。",
     provider_help_handoff: "外部协作：生成请求包，你复制到外部模型执行。",
@@ -269,8 +276,11 @@ const I18N = {
     quick_use_step_1: "Describe the outcome you want (for example: top 3 priorities for next week).",
     quick_use_step_2: "Click Run.",
     quick_use_step_3: "Read the result summary first, then open markdown only if needed.",
-    quick_use_step_4: "Use Learning below to add new notes and experiences into the system.",
-    section_task: "Generate Outcome",
+    quick_use_step_4: "If you have new notes or experience, switch to the Learning tab and add them.",
+    workspace_tab_task: "Task",
+    workspace_tab_learning: "Learning",
+    section_task: "Task Input",
+    task_intro: "Describe the output you want here. Results will appear on the right.",
     section_learning: "Learning",
     label_task: "Task",
     task_placeholder: "Example: summarize my week, what worked/failed, and top 3 priorities for next week",
@@ -287,8 +297,8 @@ const I18N = {
     model_placeholder: "gpt-4.1-mini / deepseek-chat",
     model_help: "Usually leave empty and let the system choose.",
     label_use_retrieval: "Use Historical Context",
-    label_top_k: "Context Count (Top K)",
-    top_k_help: "How many historical records to include during retrieval. Higher = broader but slower. Default 6.",
+    label_top_k: "Context Count",
+    top_k_help: "Maximum historical records to include during retrieval. Higher means broader but slower. Default 6.",
     provider_help_auto: "Recommended: system chooses the best mode from your settings.",
     provider_help_dry_run: "Offline simulation: no external API call, useful for flow checks.",
     provider_help_handoff: "External handoff: generate a packet and run it in external model.",
@@ -468,6 +478,23 @@ function applyI18n() {
   const titleNode = document.querySelector("title[data-i18n]");
   if (titleNode) {
     document.title = t(titleNode.getAttribute("data-i18n") || "");
+  }
+}
+
+function switchWorkspaceTab(tab) {
+  const target = tab === "learning" ? "learning" : "task";
+  activeWorkspaceTab = target;
+  for (const item of workspaceTabs) {
+    const key = item.getAttribute("data-workspace-tab") || "task";
+    const isActive = key === target;
+    item.classList.toggle("active", isActive);
+    item.setAttribute("aria-pressed", isActive ? "true" : "false");
+  }
+  if (workspaceTaskPanel) {
+    workspaceTaskPanel.classList.toggle("active", target === "task");
+  }
+  if (workspaceLearningPanel) {
+    workspaceLearningPanel.classList.toggle("active", target === "learning");
   }
 }
 
@@ -1070,6 +1097,7 @@ async function prepareFollowupTaskTemplate() {
     }
     const template = `${t("followup_template_intro")}\n\n${content}`;
     taskInput.value = template;
+    switchWorkspaceTab("task");
     taskInput.focus();
     taskInput.selectionStart = 0;
     taskInput.selectionEnd = 0;
@@ -1234,6 +1262,7 @@ async function saveSettings() {
 }
 
 async function inspectTask() {
+  switchWorkspaceTab("task");
   const payload = buildPayload();
   if (!payload.task) {
     addBubble("system", t("msg_task_required_inspect"));
@@ -1256,6 +1285,7 @@ async function runTask() {
   if (isRunningTask) {
     return;
   }
+  switchWorkspaceTab("task");
   const payload = buildPayload();
   if (!payload.task) {
     addBubble("system", t("msg_task_required_run"));
@@ -1281,6 +1311,7 @@ async function runTask() {
 }
 
 async function runLearningIngest() {
+  switchWorkspaceTab("learning");
   const learningText = learningDirectInput.value.trim();
   if (!learningText) {
     addBubble("system", t("msg_learning_text_required"));
@@ -1335,6 +1366,7 @@ async function runLearningIngest() {
 }
 
 async function generateLearningHandoffPacket() {
+  switchWorkspaceTab("learning");
   const sourceRef = learningSourceInput.value.trim();
   if (!sourceRef) {
     addBubble("system", t("msg_learning_source_required"));
@@ -1361,6 +1393,7 @@ async function generateLearningHandoffPacket() {
 }
 
 async function importLearningHandoffResponse() {
+  switchWorkspaceTab("learning");
   const responseText = learningResponseInput.value.trim();
   if (!responseText) {
     addBubble("system", t("msg_learning_response_required"));
@@ -1416,6 +1449,16 @@ function initTheme() {
   const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
   const theme = saved || (prefersDark ? "dark" : "light");
   applyTheme(theme);
+}
+
+for (const tab of workspaceTabs) {
+  tab.addEventListener("click", () => {
+    const target = tab.getAttribute("data-workspace-tab") || "task";
+    if (target === activeWorkspaceTab) {
+      return;
+    }
+    switchWorkspaceTab(target);
+  });
 }
 
 for (const button of document.querySelectorAll(".chip[data-task]")) {
@@ -1527,6 +1570,7 @@ if (learningImportBtn) {
   });
 }
 
+switchWorkspaceTab("task");
 setLanguage("zh");
 setStatus(t("status_connecting"), "pending", "status_connecting");
 setResultSummary(t("result_summary_empty"));

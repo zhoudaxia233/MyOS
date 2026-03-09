@@ -283,6 +283,22 @@ body {
   line-height: 1.4;
 }
 
+.workspace-entry-tabs {
+  margin-top: 2px;
+}
+
+.workspace-tab {
+  min-width: 138px;
+}
+
+.workspace-panel {
+  display: none;
+}
+
+.workspace-panel.active {
+  display: block;
+}
+
 .workspace-section {
   border: 1px solid color-mix(in srgb, var(--border) 80%, white);
   border-radius: 12px;

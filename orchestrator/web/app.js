@@ -81,12 +81,12 @@ const I18N = {
     status_connecting: "连接中...",
     status_connected: "已连接",
     status_offline: "离线",
-    tab_task: "任务台",
-    tab_learning: "学习 / 演化",
+    tab_task: "任务执行",
+    tab_learning: "学习输入",
     tab_audit: "审计台",
-    hint_task: "先检查路由和计划，再执行任务。",
-    hint_learning: "可直接导入学习内容，或用低成本 handoff，再复核候选。",
-    hint_audit: "在这里做漂移检查、报告复核和候选治理。",
+    hint_task: "这是任务执行入口（可选）。常规治理请切换到审计台。",
+    hint_learning: "学习输入已迁移到工作台。这里主要做审计与候选治理。",
+    hint_audit: "在这里做漂移检查、报告复核和学习候选治理。",
     label_task: "任务",
     task_placeholder: "描述你要做的事...",
     label_module: "模块",
@@ -97,7 +97,7 @@ const I18N = {
     label_model: "模型",
     model_placeholder: "gpt-4.1-mini / deepseek-chat",
     label_use_retrieval: "启用检索",
-    label_top_k: "Top K",
+    label_top_k: "参考条数",
     btn_inspect: "检查",
     btn_run: "执行",
     task_starters: "快捷任务",
@@ -162,7 +162,7 @@ const I18N = {
     execution_trace: "执行轨迹",
     trace_cognition_signals: "认知信号（7天）",
     trace_owner_todos: "Owner 待办",
-    trace_learning_candidates: "学习候选",
+    trace_learning_candidates: "学习候选（待审核）",
     trace_candidate_pipeline: "候选管道（30天 + 趋势）",
     trace_suggestion_reviews: "建议复核（30天 + 趋势）",
     trace_route: "路由",
@@ -256,12 +256,12 @@ const I18N = {
     status_connecting: "Connecting...",
     status_connected: "Connected",
     status_offline: "Offline",
-    tab_task: "Task Console",
-    tab_learning: "Learning / Evolution",
+    tab_task: "Task",
+    tab_learning: "Learning Input",
     tab_audit: "Audit Console",
-    hint_task: "Ask the system to do work, inspect route/plan first, then run.",
-    hint_learning: "Ingest material directly or run low-cost external handoff, then review candidates.",
-    hint_audit: "Review drift, reports, and candidate queues before promoting long-term changes.",
+    hint_task: "Task execution entry (optional). For governance, switch to Audit Console.",
+    hint_learning: "Learning input has moved to Workspace. This page is for audit and candidate governance.",
+    hint_audit: "Review drift, reports, and learning candidates before promoting changes.",
     label_task: "Task",
     task_placeholder: "Describe what you want to do...",
     label_module: "Module",
@@ -272,7 +272,7 @@ const I18N = {
     label_model: "Model",
     model_placeholder: "gpt-4.1-mini / deepseek-chat",
     label_use_retrieval: "Use retrieval",
-    label_top_k: "Top K",
+    label_top_k: "Context Count",
     btn_inspect: "Inspect",
     btn_run: "Run",
     task_starters: "Task Starters",
@@ -337,7 +337,7 @@ const I18N = {
     execution_trace: "Execution Trace",
     trace_cognition_signals: "Cognition Signals (7D)",
     trace_owner_todos: "Owner Todos",
-    trace_learning_candidates: "Learning Candidates",
+    trace_learning_candidates: "Learning Candidates (To Review)",
     trace_candidate_pipeline: "Candidate Pipeline (30D + Trend)",
     trace_suggestion_reviews: "Suggestion Reviews (30D + Trend)",
     trace_route: "Route",
@@ -913,9 +913,15 @@ function switchEntrypoint(entrypoint) {
     tab.classList.toggle("active", tab.getAttribute("data-entrypoint") === target);
   }
 
-  taskConsolePanel.classList.toggle("active", target === "task");
-  learningConsolePanel.classList.toggle("active", target === "learning");
-  auditConsolePanel.classList.toggle("active", target === "audit");
+  if (taskConsolePanel) {
+    taskConsolePanel.classList.toggle("active", target === "task");
+  }
+  if (learningConsolePanel) {
+    learningConsolePanel.classList.toggle("active", target === "learning");
+  }
+  if (auditConsolePanel) {
+    auditConsolePanel.classList.toggle("active", target === "audit");
+  }
 
   if (target === "learning") {
     entrypointHint.setAttribute("data-i18n", "hint_learning");
@@ -2128,15 +2134,21 @@ settingsModal.addEventListener("click", (event) => {
     closeSettingsModal();
   }
 });
-quickIngestBtn.addEventListener("click", () => {
-  runAction("ingest_learning");
-});
-learningPacketBtn.addEventListener("click", () => {
-  generateLearningHandoffPacket();
-});
-learningImportBtn.addEventListener("click", () => {
-  importLearningHandoffResponse();
-});
+if (quickIngestBtn) {
+  quickIngestBtn.addEventListener("click", () => {
+    runAction("ingest_learning");
+  });
+}
+if (learningPacketBtn) {
+  learningPacketBtn.addEventListener("click", () => {
+    generateLearningHandoffPacket();
+  });
+}
+if (learningImportBtn) {
+  learningImportBtn.addEventListener("click", () => {
+    importLearningHandoffResponse();
+  });
+}
 suggestionAcceptBtn.addEventListener("click", () => {
   reviewSuggestion("accept");
 });
@@ -2153,7 +2165,7 @@ setDemoSummaryKey("demo_summary_idle");
 setAuditGuideKey("audit_guide_idle");
 setStatus(t("status_connecting"), "pending", "status_connecting");
 initTheme();
-switchEntrypoint("task");
+switchEntrypoint("audit");
 setSuggestionReviewEnabled(false);
 loadStatus();
 loadSettings();
