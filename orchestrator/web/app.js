@@ -73,9 +73,11 @@ const LEARNING_SOURCE_DEFAULT = "notes";
 
 const I18N = {
   zh: {
-    doc_title: "Personal Core OS | V1 控制台",
+    doc_title: "Personal Core OS | 审计中心",
     app_title: "Personal Core OS",
-    app_subtitle: "V1 控制台",
+    app_subtitle: "审计中心",
+    nav_workspace: "工作台",
+    nav_audit: "审计中心",
     status_connecting: "连接中...",
     status_connected: "已连接",
     status_offline: "离线",
@@ -239,9 +241,11 @@ const I18N = {
     msg_no_suggestion_selected: "还没有 suggestion，请先执行任务。",
   },
   en: {
-    doc_title: "Personal Core OS | V1 Control Center",
+    doc_title: "Personal Core OS | Audit Center",
     app_title: "Personal Core OS",
-    app_subtitle: "V1 Control Center",
+    app_subtitle: "Audit Center",
+    nav_workspace: "Workspace",
+    nav_audit: "Audit Center",
     status_connecting: "Connecting...",
     status_connected: "Connected",
     status_offline: "Offline",
