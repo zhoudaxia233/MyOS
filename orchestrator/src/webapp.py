@@ -37,6 +37,8 @@ from owner_report import (
     render_owner_report,
     render_owner_todos,
     resolve_owner_todo,
+    summarize_suggestion_review_trend,
+    summarize_suggestion_reviews,
     sync_owner_todos,
 )
 from planner import plan_task
@@ -569,6 +571,8 @@ def _run_owner_report(root: Path, window_days: int, output_rel: str | None) -> d
         "source_artifacts": snapshot["source_artifacts"],
         "candidate_pipeline_summary": snapshot.get("candidate_pipeline_summary", {}),
         "candidate_pipeline_trend": snapshot.get("candidate_pipeline_trend", {}),
+        "suggestion_review_summary": snapshot.get("suggestion_review_summary", {}),
+        "suggestion_review_trend": snapshot.get("suggestion_review_trend", {}),
         "owner_todos_path": todos_path,
         "owner_todo_queue": queue_sync,
     }
@@ -747,6 +751,8 @@ def api_status(root: Path) -> dict:
         "learning_candidates": list_recent_learning_candidates(root, limit=8),
         "candidate_pipeline_summary": summarize_learning_pipeline(root, window_days=30),
         "candidate_pipeline_trend": summarize_learning_pipeline_trend(root),
+        "suggestion_review_summary": summarize_suggestion_reviews(root, window_days=30, limit=12),
+        "suggestion_review_trend": summarize_suggestion_review_trend(root),
     }
 
 
@@ -862,6 +868,23 @@ def api_action(root: Path, payload: dict[str, Any]) -> dict:
         output_rel = _normalize_optional_str(payload.get("output"))
         result = _run_owner_report(root, window_days, output_rel)
         return {"ok": True, "action": action, **result, "owner_todos": list_open_owner_todos(root)}
+
+    if action == "suggestion_review_summary":
+        window_days = _coerce_int(payload.get("window_days"), default=30, minimum=1, maximum=365)
+        verdict_filter = _normalize_optional_str(payload.get("verdict_filter"))
+        summary = summarize_suggestion_reviews(
+            root,
+            window_days=window_days,
+            verdict_filter=verdict_filter,
+            limit=12,
+        )
+        trend = summarize_suggestion_review_trend(root)
+        return {
+            "ok": True,
+            "action": action,
+            "suggestion_review_summary": summary,
+            "suggestion_review_trend": trend,
+        }
 
     if action == "resolve_owner_todo":
         todo_id = str(payload.get("todo_id", "")).strip()

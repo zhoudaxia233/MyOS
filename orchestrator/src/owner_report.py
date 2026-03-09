@@ -196,6 +196,184 @@ def _status_with_red_tag(metric_key: str, status: str, red_keys: set[str]) -> st
     return status
 
 
+def _safe_ratio(numerator: int, denominator: int) -> float:
+    if denominator <= 0:
+        return 0.0
+    return float(numerator) / float(denominator)
+
+
+def _trend_direction(value_7d: float, value_30d: float, *, higher_better: bool, tolerance: float = 0.05) -> str:
+    delta = float(value_7d) - float(value_30d)
+    if abs(delta) <= tolerance:
+        return "stable"
+    if higher_better:
+        return "improving" if delta > 0 else "worsening"
+    return "improving" if delta < 0 else "worsening"
+
+
+def summarize_suggestion_reviews(
+    repo_root: Path,
+    *,
+    window_days: int = 30,
+    now: datetime | None = None,
+    verdict_filter: str | None = None,
+    limit: int = 12,
+) -> dict:
+    now = now or datetime.now(timezone.utc)
+    normalized_filter = str(verdict_filter or "").strip().lower() or None
+    if normalized_filter not in {None, "accept", "modify", "reject"}:
+        normalized_filter = None
+
+    suggestions_rows = _window_filter(
+        _load_jsonl(repo_root / "orchestrator/logs/suggestions.jsonl"),
+        now,
+        window_days,
+    )
+    suggestions_by_id: dict[str, dict] = {}
+    for row in suggestions_rows:
+        sid = str(row.get("id", "")).strip()
+        if sid:
+            suggestions_by_id[sid] = row
+
+    verdict_rows = _window_filter(
+        _load_jsonl(repo_root / "orchestrator/logs/owner_verdicts.jsonl"),
+        now,
+        window_days,
+    )
+    verdict_rows = [r for r in verdict_rows if str(r.get("status", "active")).strip().lower() == "active"]
+    if normalized_filter:
+        verdict_rows = [r for r in verdict_rows if str(r.get("verdict", "")).strip().lower() == normalized_filter]
+
+    correction_rows = _window_filter(
+        _load_jsonl(repo_root / "orchestrator/logs/owner_corrections.jsonl"),
+        now,
+        window_days,
+    )
+    correction_rows = [r for r in correction_rows if str(r.get("status", "active")).strip().lower() == "active"]
+    correction_by_verdict_ref: dict[str, dict] = {}
+    for row in correction_rows:
+        verdict_ref = str(row.get("verdict_ref", "")).strip()
+        if verdict_ref and verdict_ref not in correction_by_verdict_ref:
+            correction_by_verdict_ref[verdict_ref] = row
+
+    reviewed_suggestion_ids = {
+        str(row.get("suggestion_ref", "")).strip()
+        for row in verdict_rows
+        if str(row.get("suggestion_ref", "")).strip()
+    }
+    reviewed_suggestion_ids = {sid for sid in reviewed_suggestion_ids if sid in suggestions_by_id}
+    pending_total = max(0, len(suggestions_by_id) - len(reviewed_suggestion_ids))
+
+    verdict_counter = Counter(str(row.get("verdict", "")).strip().lower() for row in verdict_rows)
+    reviewed_total = sum(verdict_counter.values())
+
+    rows_sorted = sorted(verdict_rows, key=lambda row: str(row.get("created_at", "")), reverse=True)
+    recent_reviews: list[dict] = []
+    for row in rows_sorted:
+        suggestion_ref = str(row.get("suggestion_ref", "")).strip()
+        verdict_id = str(row.get("id", "")).strip()
+        suggestion = suggestions_by_id.get(suggestion_ref, {})
+        correction = correction_by_verdict_ref.get(verdict_id)
+        recent_reviews.append(
+            {
+                "verdict_id": verdict_id,
+                "suggestion_ref": suggestion_ref,
+                "verdict": str(row.get("verdict", "")).strip().lower(),
+                "owner_note": str(row.get("owner_note", "")).strip(),
+                "correction_ref": str((correction or {}).get("id", "")).strip() or None,
+                "module": str(suggestion.get("module", "")).strip() or None,
+                "task_raw": str(suggestion.get("task_raw", "")).strip() or None,
+                "created_at": str(row.get("created_at", "")).strip(),
+            }
+        )
+        if len(recent_reviews) >= max(1, int(limit)):
+            break
+
+    corrections_total = len(correction_rows)
+
+    return {
+        "window_days": int(window_days),
+        "verdict_filter": normalized_filter,
+        "suggestions_total": len(suggestions_by_id),
+        "reviewed_total": reviewed_total,
+        "pending_total": pending_total,
+        "review_coverage_rate": _safe_ratio(len(reviewed_suggestion_ids), len(suggestions_by_id)),
+        "verdicts": {
+            "accept": int(verdict_counter.get("accept", 0)),
+            "modify": int(verdict_counter.get("modify", 0)),
+            "reject": int(verdict_counter.get("reject", 0)),
+        },
+        "corrections_total": corrections_total,
+        "correction_ratio": _safe_ratio(corrections_total, reviewed_total),
+        "recent_reviews": recent_reviews,
+    }
+
+
+def summarize_suggestion_review_trend(repo_root: Path, *, now: datetime | None = None) -> dict:
+    now = now or datetime.now(timezone.utc)
+    snap_7 = summarize_suggestion_reviews(repo_root, window_days=7, now=now, limit=5)
+    snap_30 = summarize_suggestion_reviews(repo_root, window_days=30, now=now, limit=5)
+
+    reviewed_7 = int(snap_7.get("reviewed_total", 0))
+    reviewed_30 = int(snap_30.get("reviewed_total", 0))
+    verdicts_7 = snap_7.get("verdicts", {})
+    verdicts_30 = snap_30.get("verdicts", {})
+
+    modify_ratio_7 = _safe_ratio(int(verdicts_7.get("modify", 0)), reviewed_7)
+    modify_ratio_30 = _safe_ratio(int(verdicts_30.get("modify", 0)), reviewed_30)
+    correction_ratio_7 = float(snap_7.get("correction_ratio", 0.0) or 0.0)
+    correction_ratio_30 = float(snap_30.get("correction_ratio", 0.0) or 0.0)
+    coverage_7 = float(snap_7.get("review_coverage_rate", 0.0) or 0.0)
+    coverage_30 = float(snap_30.get("review_coverage_rate", 0.0) or 0.0)
+
+    comparisons = [
+        {
+            "key": "review_coverage_rate",
+            "value_7d": round(coverage_7, 3),
+            "value_30d": round(coverage_30, 3),
+            "delta": round(coverage_7 - coverage_30, 3),
+            "trend": _trend_direction(coverage_7, coverage_30, higher_better=True),
+        },
+        {
+            "key": "modify_ratio",
+            "value_7d": round(modify_ratio_7, 3),
+            "value_30d": round(modify_ratio_30, 3),
+            "delta": round(modify_ratio_7 - modify_ratio_30, 3),
+            "trend": _trend_direction(modify_ratio_7, modify_ratio_30, higher_better=False),
+        },
+        {
+            "key": "correction_ratio",
+            "value_7d": round(correction_ratio_7, 3),
+            "value_30d": round(correction_ratio_30, 3),
+            "delta": round(correction_ratio_7 - correction_ratio_30, 3),
+            "trend": _trend_direction(correction_ratio_7, correction_ratio_30, higher_better=False),
+        },
+    ]
+
+    return {
+        "generated_at": now.isoformat().replace("+00:00", "Z"),
+        "windows": {
+            "7d": {
+                "suggestions_total": int(snap_7.get("suggestions_total", 0)),
+                "reviewed_total": reviewed_7,
+                "verdicts": snap_7.get("verdicts", {}),
+                "corrections_total": int(snap_7.get("corrections_total", 0)),
+                "review_coverage_rate": round(coverage_7, 3),
+                "correction_ratio": round(correction_ratio_7, 3),
+            },
+            "30d": {
+                "suggestions_total": int(snap_30.get("suggestions_total", 0)),
+                "reviewed_total": reviewed_30,
+                "verdicts": snap_30.get("verdicts", {}),
+                "corrections_total": int(snap_30.get("corrections_total", 0)),
+                "review_coverage_rate": round(coverage_30, 3),
+                "correction_ratio": round(correction_ratio_30, 3),
+            },
+        },
+        "comparisons": comparisons,
+    }
+
+
 def build_owner_snapshot(repo_root: Path, window_days: int, now: datetime | None = None) -> dict:
     now = now or datetime.now(timezone.utc)
     metrics = compute_drift_metrics(repo_root, window_days=window_days, now=now)
@@ -210,6 +388,8 @@ def build_owner_snapshot(repo_root: Path, window_days: int, now: datetime | None
     override_domains = Counter(str(o.get("domain", "unknown")).lower() for o in overrides)
     candidate_pipeline = summarize_learning_pipeline(repo_root, window_days=window_days, now=now)
     candidate_pipeline_trend = summarize_learning_pipeline_trend(repo_root, now=now)
+    suggestion_review = summarize_suggestion_reviews(repo_root, window_days=window_days, now=now, limit=12)
+    suggestion_review_trend = summarize_suggestion_review_trend(repo_root, now=now)
 
     failed_metrics = [k for k, v in metrics["metrics"].items() if v["status"] == "fail"]
     warned_metrics = [k for k, v in metrics["metrics"].items() if v["status"] == "warn"]
@@ -353,6 +533,33 @@ def build_owner_snapshot(repo_root: Path, window_days: int, now: datetime | None
             }
         )
 
+    suggestion_review_coverage = float(suggestion_review.get("review_coverage_rate", 0.0) or 0.0)
+    suggestion_reviewed_total = int(suggestion_review.get("reviewed_total", 0))
+    suggestion_total = int(suggestion_review.get("suggestions_total", 0))
+    suggestion_verdicts = suggestion_review.get("verdicts", {})
+    suggestion_modify_ratio = _safe_ratio(int(suggestion_verdicts.get("modify", 0)), suggestion_reviewed_total)
+    suggestion_correction_ratio = float(suggestion_review.get("correction_ratio", 0.0) or 0.0)
+
+    if suggestion_total >= 3 and suggestion_review_coverage < 0.5:
+        top_exceptions.append(
+            {
+                "type": "suggestion_review_backlog",
+                "label": "suggestions.review_coverage",
+                "detail": (
+                    f"coverage={suggestion_review_coverage:.3f} "
+                    f"({suggestion_reviewed_total}/{suggestion_total})"
+                ),
+            }
+        )
+    if suggestion_reviewed_total >= 3 and suggestion_modify_ratio >= 0.5:
+        top_exceptions.append(
+            {
+                "type": "suggestion_review_drift",
+                "label": "suggestions.modify_ratio",
+                "detail": f"modify_ratio={suggestion_modify_ratio:.3f}",
+            }
+        )
+
     decision_audit = _latest_file(repo_root, "modules/decision/outputs/decision_audit_*.md")
     weekly_review = _latest_file(repo_root, "modules/decision/outputs/weekly_review_*.md")
     metrics_report = _latest_file(repo_root, "modules/decision/outputs/metrics_*.md")
@@ -452,6 +659,22 @@ def build_owner_snapshot(repo_root: Path, window_days: int, now: datetime | None
                 "action": "Review maturity window and queue follow-up review for cooling promotions.",
             }
         )
+    if suggestion_total >= 3 and suggestion_review_coverage < 0.5:
+        auto_triggers.append(
+            {
+                "id": "suggestion_review_coverage_triage",
+                "reason": "suggestion review coverage is low relative to generated suggestions",
+                "action": "Review pending suggestions and submit verdicts before next weekly report.",
+            }
+        )
+    if suggestion_reviewed_total >= 3 and suggestion_correction_ratio >= 0.5:
+        auto_triggers.append(
+            {
+                "id": "suggestion_quality_refinement",
+                "reason": "correction ratio is high in suggestion reviews",
+                "action": "Tighten planning/routing context and update suggestion quality constraints.",
+            }
+        )
 
     consecutive_fail_metrics: list[str] = []
     if previous_summary and isinstance(previous_summary.get("summary"), dict):
@@ -482,6 +705,8 @@ def build_owner_snapshot(repo_root: Path, window_days: int, now: datetime | None
         "auto_triggers": auto_triggers,
         "candidate_pipeline_summary": candidate_pipeline,
         "candidate_pipeline_trend": candidate_pipeline_trend,
+        "suggestion_review_summary": suggestion_review,
+        "suggestion_review_trend": suggestion_review_trend,
         "previous_summary": previous_summary,
         "consecutive_fail_metrics": consecutive_fail_metrics,
         "escalation_todos": escalation_todos,
@@ -583,6 +808,57 @@ def render_owner_report(snapshot: dict) -> str:
         if isinstance(inflow, dict):
             lines.append(f"- inflow: 7d={int(inflow.get('7d', 0))} 30d={int(inflow.get('30d', 0))}")
         comparisons = trend.get("comparisons", [])
+        if isinstance(comparisons, list) and comparisons:
+            for item in comparisons:
+                if not isinstance(item, dict):
+                    continue
+                lines.append(
+                    f"- {str(item.get('key', 'unknown'))}: "
+                    f"7d={_to_float(item.get('value_7d'), 0.0):.3f} "
+                    f"30d={_to_float(item.get('value_30d'), 0.0):.3f} "
+                    f"delta={_to_float(item.get('delta'), 0.0):.3f} "
+                    f"trend={str(item.get('trend', 'stable'))}"
+                )
+        else:
+            lines.append("- no trend comparisons")
+    else:
+        lines.append("- no trend summary")
+
+    lines.extend(
+        [
+            "",
+            "## Suggestion Review Loop",
+            "",
+        ]
+    )
+
+    suggestion_review = snapshot.get("suggestion_review_summary", {})
+    if isinstance(suggestion_review, dict):
+        verdicts = suggestion_review.get("verdicts", {})
+        lines.append(f"- suggestions_total: {int(suggestion_review.get('suggestions_total', 0))}")
+        lines.append(f"- reviewed_total: {int(suggestion_review.get('reviewed_total', 0))}")
+        lines.append(f"- pending_total: {int(suggestion_review.get('pending_total', 0))}")
+        lines.append(f"- review_coverage_rate: {float(suggestion_review.get('review_coverage_rate', 0.0)):.3f}")
+        lines.append(
+            f"- verdicts: accept={int(verdicts.get('accept', 0))} "
+            f"modify={int(verdicts.get('modify', 0))} reject={int(verdicts.get('reject', 0))}"
+        )
+        lines.append(f"- corrections_total: {int(suggestion_review.get('corrections_total', 0))}")
+        lines.append(f"- correction_ratio: {float(suggestion_review.get('correction_ratio', 0.0)):.3f}")
+    else:
+        lines.append("- no suggestion review summary")
+
+    lines.extend(
+        [
+            "",
+            "## Suggestion Review Trend (7d vs 30d)",
+            "",
+        ]
+    )
+
+    suggestion_review_trend = snapshot.get("suggestion_review_trend", {})
+    if isinstance(suggestion_review_trend, dict):
+        comparisons = suggestion_review_trend.get("comparisons", [])
         if isinstance(comparisons, list) and comparisons:
             for item in comparisons:
                 if not isinstance(item, dict):

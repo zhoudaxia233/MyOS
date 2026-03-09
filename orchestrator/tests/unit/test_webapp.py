@@ -43,6 +43,8 @@ def test_api_status_lists_modules() -> None:
         assert isinstance(data["learning_candidates"], list)
         assert isinstance(data["candidate_pipeline_summary"], dict)
         assert isinstance(data["candidate_pipeline_trend"], dict)
+        assert isinstance(data["suggestion_review_summary"], dict)
+        assert isinstance(data["suggestion_review_trend"], dict)
 
 
 def test_api_status_reports_env_api_key(monkeypatch) -> None:
@@ -247,6 +249,62 @@ def test_api_action_review_suggestion_writes_verdict_and_correction() -> None:
         assert correction_row["verdict_ref"] == modify_result["verdict_record_id"]
 
 
+def test_api_action_suggestion_review_summary_filters() -> None:
+    with TemporaryDirectory() as td:
+        root = _copy_repo_subset(Path(td))
+        run_a = api_run(
+            root,
+            {
+                "task": "decision review A",
+                "provider": "dry-run",
+                "with_retrieval": False,
+            },
+        )
+        run_b = api_run(
+            root,
+            {
+                "task": "decision review B",
+                "provider": "dry-run",
+                "with_retrieval": False,
+            },
+        )
+
+        api_action(
+            root,
+            {
+                "action": "review_suggestion",
+                "suggestion_id": run_a["suggestion_id"],
+                "verdict": "accept",
+                "owner_note": "Accept for execution.",
+            },
+        )
+        api_action(
+            root,
+            {
+                "action": "review_suggestion",
+                "suggestion_id": run_b["suggestion_id"],
+                "verdict": "reject",
+                "owner_note": "Not aligned with current context.",
+            },
+        )
+
+        all_result = api_action(root, {"action": "suggestion_review_summary", "window_days": 30})
+        assert all_result["ok"] is True
+        assert all_result["action"] == "suggestion_review_summary"
+        assert isinstance(all_result["suggestion_review_summary"], dict)
+        assert isinstance(all_result["suggestion_review_trend"], dict)
+        assert all_result["suggestion_review_summary"]["reviewed_total"] >= 2
+
+        accept_result = api_action(
+            root,
+            {"action": "suggestion_review_summary", "window_days": 30, "verdict_filter": "accept"},
+        )
+        summary = accept_result["suggestion_review_summary"]
+        assert summary["verdict_filter"] == "accept"
+        assert summary["verdicts"]["accept"] >= 1
+        assert summary["verdicts"]["reject"] == 0
+
+
 def test_api_action_validate_metrics_and_schedule() -> None:
     with TemporaryDirectory() as td:
         root = _copy_repo_subset(Path(td))
@@ -270,6 +328,8 @@ def test_api_action_validate_metrics_and_schedule() -> None:
         assert "owner_todos" in owner_result["source_artifacts"]
         assert "candidate_pipeline_summary" in owner_result
         assert "candidate_pipeline_trend" in owner_result
+        assert "suggestion_review_summary" in owner_result
+        assert "suggestion_review_trend" in owner_result
         assert "owner_todo_queue" in owner_result
 
         owner_todos_log = root / "modules/decision/logs/owner_todos.jsonl"

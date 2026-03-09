@@ -154,6 +154,13 @@
             <button class="chip action" data-action="schedule_weekly">Run Weekly Cycle</button>
             <button class="chip action" data-action="build_index">Build Retrieval Index</button>
           </div>
+          <h2>Suggestion Review Filters</h2>
+          <div class="chips">
+            <button class="chip action" data-action="suggestion_review_summary_all">Review All</button>
+            <button class="chip action" data-action="suggestion_review_summary_accept">Accept</button>
+            <button class="chip action" data-action="suggestion_review_summary_modify">Modify</button>
+            <button class="chip action" data-action="suggestion_review_summary_reject">Reject</button>
+          </div>
         </div>
       </section>
     </section>
@@ -199,6 +206,11 @@
       <div class="trace-block">
         <h3>Candidate Pipeline (30D + Trend)</h3>
         <pre id="candidatePipeline">-</pre>
+      </div>
+
+      <div class="trace-block">
+        <h3>Suggestion Reviews (30D + Trend)</h3>
+        <pre id="suggestionReviewSummary">-</pre>
       </div>
 
       <div class="trace-block">

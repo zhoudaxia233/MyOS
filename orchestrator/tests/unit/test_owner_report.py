@@ -7,6 +7,8 @@ from owner_report import (
     render_owner_report,
     render_owner_todos,
     resolve_owner_todo,
+    summarize_suggestion_review_trend,
+    summarize_suggestion_reviews,
     sync_owner_todos,
 )
 
@@ -213,6 +215,60 @@ def test_owner_snapshot_and_render() -> None:
                 }
             ],
         )
+        _write_jsonl(
+            root / "orchestrator/logs/suggestions.jsonl",
+            "suggestions",
+            ["id", "created_at", "status", "module", "task_raw"],
+            [
+                {
+                    "id": "sg_1",
+                    "created_at": "2026-03-02T11:15:00Z",
+                    "status": "active",
+                    "module": "decision",
+                    "task_raw": "triage weekly decision queue",
+                },
+                {
+                    "id": "sg_2",
+                    "created_at": "2026-03-01T10:15:00Z",
+                    "status": "active",
+                    "module": "memory",
+                    "task_raw": "ingest learning summary",
+                },
+            ],
+        )
+        _write_jsonl(
+            root / "orchestrator/logs/owner_verdicts.jsonl",
+            "owner_verdicts",
+            ["id", "created_at", "status", "suggestion_ref", "verdict", "owner_note", "correction_ref", "source_refs"],
+            [
+                {
+                    "id": "ov_1",
+                    "created_at": "2026-03-02T11:20:00Z",
+                    "status": "active",
+                    "suggestion_ref": "sg_1",
+                    "verdict": "accept",
+                    "owner_note": "Aligned with current execution priority.",
+                    "correction_ref": None,
+                    "source_refs": ["sg_1"],
+                }
+            ],
+        )
+        _write_jsonl(
+            root / "orchestrator/logs/owner_corrections.jsonl",
+            "owner_corrections",
+            [
+                "id",
+                "created_at",
+                "status",
+                "suggestion_ref",
+                "verdict_ref",
+                "target_layer",
+                "replacement_judgment",
+                "unlike_me_reason",
+                "source_refs",
+            ],
+            [],
+        )
 
         snapshot = build_owner_snapshot(root, window_days=7, now=now)
         report = render_owner_report(snapshot)
@@ -220,6 +276,10 @@ def test_owner_snapshot_and_render() -> None:
         assert snapshot["override_count"] == 1
         assert isinstance(snapshot["candidate_pipeline_summary"], dict)
         assert isinstance(snapshot["candidate_pipeline_trend"], dict)
+        assert isinstance(snapshot["suggestion_review_summary"], dict)
+        assert snapshot["suggestion_review_summary"]["suggestions_total"] == 2
+        assert snapshot["suggestion_review_summary"]["reviewed_total"] == 1
+        assert isinstance(snapshot["suggestion_review_trend"], dict)
         assert any(a.startswith("metrics_mismatch:precommit_coverage:") for a in snapshot["consistency_alerts"])
         assert any(a.startswith("decision_audit_conflict:") for a in snapshot["consistency_alerts"])
         assert any(a.startswith("weekly_review_conflict:") for a in snapshot["consistency_alerts"])
@@ -232,6 +292,8 @@ def test_owner_snapshot_and_render() -> None:
         assert "Auto Triggers" in report
         assert "Learning Candidate Pipeline" in report
         assert "Learning Candidate Trend (7d vs 30d)" in report
+        assert "Suggestion Review Loop" in report
+        assert "Suggestion Review Trend (7d vs 30d)" in report
         assert "Escalation Todos (2W Fail)" in report
         assert "[RED-2W]" in report
         assert "Owner Report" in report
@@ -240,6 +302,118 @@ def test_owner_snapshot_and_render() -> None:
         todos = render_owner_todos(snapshot)
         assert "Owner Escalation Todos" in todos
         assert "(RED) precommit_coverage" in todos
+
+
+def test_suggestion_review_summary_filter_and_trend() -> None:
+    from tempfile import TemporaryDirectory
+
+    now = datetime(2026, 3, 9, 10, 0, tzinfo=timezone.utc)
+
+    with TemporaryDirectory() as td:
+        root = Path(td)
+
+        _write_jsonl(
+            root / "orchestrator/logs/suggestions.jsonl",
+            "suggestions",
+            ["id", "created_at", "status", "module", "task_raw"],
+            [
+                {
+                    "id": "sg_1",
+                    "created_at": "2026-03-08T10:00:00Z",
+                    "status": "active",
+                    "module": "decision",
+                    "task_raw": "task a",
+                },
+                {
+                    "id": "sg_2",
+                    "created_at": "2026-03-07T10:00:00Z",
+                    "status": "active",
+                    "module": "decision",
+                    "task_raw": "task b",
+                },
+                {
+                    "id": "sg_3",
+                    "created_at": "2026-02-20T10:00:00Z",
+                    "status": "active",
+                    "module": "memory",
+                    "task_raw": "task c",
+                },
+            ],
+        )
+        _write_jsonl(
+            root / "orchestrator/logs/owner_verdicts.jsonl",
+            "owner_verdicts",
+            ["id", "created_at", "status", "suggestion_ref", "verdict", "owner_note", "correction_ref", "source_refs"],
+            [
+                {
+                    "id": "ov_1",
+                    "created_at": "2026-03-08T11:00:00Z",
+                    "status": "active",
+                    "suggestion_ref": "sg_1",
+                    "verdict": "modify",
+                    "owner_note": "n1",
+                    "correction_ref": "oc_1",
+                    "source_refs": ["sg_1"],
+                },
+                {
+                    "id": "ov_2",
+                    "created_at": "2026-02-21T11:00:00Z",
+                    "status": "active",
+                    "suggestion_ref": "sg_3",
+                    "verdict": "accept",
+                    "owner_note": "n2",
+                    "correction_ref": None,
+                    "source_refs": ["sg_3"],
+                },
+            ],
+        )
+        _write_jsonl(
+            root / "orchestrator/logs/owner_corrections.jsonl",
+            "owner_corrections",
+            [
+                "id",
+                "created_at",
+                "status",
+                "suggestion_ref",
+                "verdict_ref",
+                "target_layer",
+                "replacement_judgment",
+                "unlike_me_reason",
+                "source_refs",
+            ],
+            [
+                {
+                    "id": "oc_1",
+                    "created_at": "2026-03-08T11:05:00Z",
+                    "status": "active",
+                    "suggestion_ref": "sg_1",
+                    "verdict_ref": "ov_1",
+                    "target_layer": "decision",
+                    "replacement_judgment": "r1",
+                    "unlike_me_reason": "u1",
+                    "source_refs": ["sg_1", "ov_1"],
+                }
+            ],
+        )
+
+        summary_all = summarize_suggestion_reviews(root, window_days=30, now=now)
+        assert summary_all["suggestions_total"] == 3
+        assert summary_all["reviewed_total"] == 2
+        assert summary_all["verdicts"]["modify"] == 1
+        assert summary_all["verdicts"]["accept"] == 1
+        assert summary_all["corrections_total"] == 1
+
+        summary_modify = summarize_suggestion_reviews(root, window_days=30, now=now, verdict_filter="modify")
+        assert summary_modify["verdict_filter"] == "modify"
+        assert summary_modify["reviewed_total"] == 1
+        assert summary_modify["verdicts"]["modify"] == 1
+        assert summary_modify["verdicts"]["accept"] == 0
+
+        trend = summarize_suggestion_review_trend(root, now=now)
+        assert "windows" in trend
+        assert "7d" in trend["windows"]
+        assert "30d" in trend["windows"]
+        assert isinstance(trend.get("comparisons"), list)
 
 
 def test_owner_todo_queue_sync_and_resolve() -> None:

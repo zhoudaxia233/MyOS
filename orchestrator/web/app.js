@@ -40,6 +40,7 @@ const cognitionCards = document.getElementById("cognitionCards");
 const ownerTodos = document.getElementById("ownerTodos");
 const learningCandidates = document.getElementById("learningCandidates");
 const candidatePipeline = document.getElementById("candidatePipeline");
+const suggestionReviewSummary = document.getElementById("suggestionReviewSummary");
 const settingsModal = document.getElementById("settingsModal");
 const settingsClose = document.getElementById("settingsClose");
 const settingsSave = document.getElementById("settingsSave");
@@ -336,6 +337,65 @@ function renderCandidatePipelineSummary(summary, trend = null) {
   candidatePipeline.textContent = lines.join("\n");
 }
 
+function renderSuggestionReviewSummary(summary, trend = null) {
+  if (!summary || typeof summary !== "object") {
+    suggestionReviewSummary.textContent = "-";
+    return;
+  }
+  const trendSummary = trend && typeof trend === "object" ? trend : null;
+  const verdicts = summary.verdicts || {};
+  const lines = [
+    `window_days: ${summary.window_days || 30}`,
+    `verdict_filter: ${summary.verdict_filter || "all"}`,
+    `suggestions_total: ${summary.suggestions_total || 0}`,
+    `reviewed_total: ${summary.reviewed_total || 0}`,
+    `pending_total: ${summary.pending_total || 0}`,
+    `review_coverage_rate: ${(Number(summary.review_coverage_rate || 0)).toFixed(3)}`,
+    `verdicts: accept=${verdicts.accept || 0} modify=${verdicts.modify || 0} reject=${verdicts.reject || 0}`,
+    `corrections_total: ${summary.corrections_total || 0}`,
+    `correction_ratio: ${(Number(summary.correction_ratio || 0)).toFixed(3)}`,
+  ];
+
+  const recentReviews = Array.isArray(summary.recent_reviews) ? summary.recent_reviews : [];
+  if (recentReviews.length > 0) {
+    lines.push("recent_reviews:");
+    for (const row of recentReviews.slice(0, 5)) {
+      if (!row || typeof row !== "object") {
+        continue;
+      }
+      const verdict = row.verdict || "-";
+      const suggestionRef = row.suggestion_ref || "-";
+      const module = row.module || "-";
+      const correction = row.correction_ref ? ` correction=${row.correction_ref}` : "";
+      lines.push(`  ${suggestionRef}: ${verdict} module=${module}${correction}`);
+    }
+  }
+
+  if (trendSummary && Array.isArray(trendSummary.comparisons)) {
+    lines.push("");
+    lines.push("trend_7d_vs_30d:");
+    const windows = trendSummary.windows || {};
+    const w7 = windows["7d"] || {};
+    const w30 = windows["30d"] || {};
+    lines.push(
+      `  reviewed_total: 7d=${Number(w7.reviewed_total || 0)} 30d=${Number(w30.reviewed_total || 0)}`
+    );
+    for (const item of trendSummary.comparisons) {
+      if (!item || typeof item !== "object") {
+        continue;
+      }
+      const key = item.key || "unknown";
+      const value7 = Number(item.value_7d || 0).toFixed(3);
+      const value30 = Number(item.value_30d || 0).toFixed(3);
+      const delta = Number(item.delta || 0).toFixed(3);
+      const trendTag = String(item.trend || "stable");
+      lines.push(`  ${key}: 7d=${value7} 30d=${value30} delta=${delta} trend=${trendTag}`);
+    }
+  }
+
+  suggestionReviewSummary.textContent = lines.join("\n");
+}
+
 function switchEntrypoint(entrypoint) {
   const target = String(entrypoint || "task").trim().toLowerCase();
   for (const tab of entrypointTabs) {
@@ -578,6 +638,9 @@ function renderActionResult(data) {
   }
   if (data.candidate_pipeline_summary && typeof data.candidate_pipeline_summary === "object") {
     renderCandidatePipelineSummary(data.candidate_pipeline_summary, data.candidate_pipeline_trend || null);
+  }
+  if (data.suggestion_review_summary && typeof data.suggestion_review_summary === "object") {
+    renderSuggestionReviewSummary(data.suggestion_review_summary, data.suggestion_review_trend || null);
   }
 
   if (data.output_preview) {
@@ -872,6 +935,7 @@ async function loadStatus() {
     renderOwnerTodos(data.owner_todos || []);
     renderLearningCandidates(data.learning_candidates || []);
     renderCandidatePipelineSummary(data.candidate_pipeline_summary || {}, data.candidate_pipeline_trend || null);
+    renderSuggestionReviewSummary(data.suggestion_review_summary || {}, data.suggestion_review_trend || null);
 
     setStatus("Connected", "ok");
     addBubble("system", `Connected to ${data.repo_root}`);
@@ -1048,6 +1112,26 @@ async function runAction(action) {
     payload.action = "schedule_cycle";
     payload.cycle = "weekly";
     payload.no_owner_report = false;
+  }
+
+  if (action === "suggestion_review_summary_all") {
+    payload.action = "suggestion_review_summary";
+    payload.window_days = 30;
+  }
+  if (action === "suggestion_review_summary_accept") {
+    payload.action = "suggestion_review_summary";
+    payload.window_days = 30;
+    payload.verdict_filter = "accept";
+  }
+  if (action === "suggestion_review_summary_modify") {
+    payload.action = "suggestion_review_summary";
+    payload.window_days = 30;
+    payload.verdict_filter = "modify";
+  }
+  if (action === "suggestion_review_summary_reject") {
+    payload.action = "suggestion_review_summary";
+    payload.window_days = 30;
+    payload.verdict_filter = "reject";
   }
 
   if (action === "ingest_learning") {
