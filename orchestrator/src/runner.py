@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from providers.handoff import run_handoff
 from providers.manual import run_manual
-from providers.openai_provider import run_openai
+from providers.openai_provider import run_deepseek, run_openai
 
 
 def run_with_provider(provider: str, task: str, module: str, plan: dict, bundle: dict, model: str) -> str:
@@ -12,4 +12,6 @@ def run_with_provider(provider: str, task: str, module: str, plan: dict, bundle:
         return run_handoff(task, module, plan, bundle)
     if provider == "openai":
         return run_openai(task, module, plan, bundle, model)
+    if provider == "deepseek":
+        return run_deepseek(task, module, plan, bundle, model)
     raise ValueError(f"Unsupported provider: {provider}")

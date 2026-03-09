@@ -39,7 +39,7 @@ from runner import run_with_provider
 from scheduling import task_from_routine
 from schedulers.cron import cron_hint
 from schedulers.manual import get_cycle
-from settings import apply_openai_api_key_env, load_settings
+from settings import apply_provider_api_key_env, load_settings
 from writer import (
     log_decision,
     log_decision_constitution_check,
@@ -76,6 +76,13 @@ def _root_relative(path: Path, root: Path) -> str:
 def _normalize_optional_str(value: str | None) -> str | None:
     text = str(value or "").strip()
     return text or None
+
+
+def _default_task_model(settings: dict, cfg: dict, provider: str) -> str:
+    normalized = str(provider or "").strip().lower()
+    if normalized == "deepseek":
+        return str(settings.get("deepseek_model", "deepseek-chat")) or "deepseek-chat"
+    return str(settings.get("task_model", "")) or str(cfg.get("default_openai_model", "gpt-4.1-mini"))
 
 
 def _route_reason_for_log(route: dict) -> str:
@@ -207,7 +214,7 @@ def execute_task(
         hits = _retrieval_hits(root, task, module, retrieval_top_k)
         bundle = _bundle_with_hits(bundle, hits)
 
-    apply_openai_api_key_env(root)
+    apply_provider_api_key_env(root, provider)
     content = run_with_provider(provider, task, module, plan, bundle, model)
     out = write_output(root, plan["output_path"], content)
     output_hash = hashlib.sha256(content.encode("utf-8")).hexdigest()
@@ -318,7 +325,7 @@ def cmd_run(args: argparse.Namespace) -> int:
     cfg = load_runtime_config(root)
     settings = load_settings(root)
     provider = args.provider or settings["default_provider"] or cfg["default_provider"]
-    model = args.model or settings["task_model"] or cfg["default_openai_model"]
+    model = args.model or _default_task_model(settings, cfg, provider)
 
     result = execute_task(
         root=root,
@@ -816,7 +823,7 @@ def cmd_schedule_run(args: argparse.Namespace) -> int:
     cfg = load_runtime_config(root)
     settings = load_settings(root)
     provider = args.provider or settings["default_provider"] or cfg["default_provider"]
-    model = args.model or settings["task_model"] or cfg["default_openai_model"]
+    model = args.model or _default_task_model(settings, cfg, provider)
 
     if args.scheduler == "cron":
         print(cron_hint(root, args.cycle))
@@ -977,7 +984,7 @@ def build_parser() -> argparse.ArgumentParser:
     sp_inspect.set_defaults(func=cmd_inspect)
 
     sp_run = sub.add_parser("run", parents=[common])
-    sp_run.add_argument("--provider", default=None, choices=["dry-run", "handoff", "openai"])
+    sp_run.add_argument("--provider", default=None, choices=["dry-run", "handoff", "openai", "deepseek"])
     sp_run.add_argument("--model", default=None)
     sp_run.set_defaults(func=cmd_run)
 
@@ -1141,7 +1148,7 @@ def build_parser() -> argparse.ArgumentParser:
     sp_schedule = sub.add_parser("schedule-run")
     sp_schedule.add_argument("--cycle", required=True, choices=["daily", "weekly", "monthly"])
     sp_schedule.add_argument("--scheduler", default="manual", choices=["manual", "cron"])
-    sp_schedule.add_argument("--provider", default=None, choices=["dry-run", "handoff", "openai"])
+    sp_schedule.add_argument("--provider", default=None, choices=["dry-run", "handoff", "openai", "deepseek"])
     sp_schedule.add_argument("--model", default=None)
     sp_schedule.add_argument("--with-retrieval", action="store_true")
     sp_schedule.add_argument("--retrieval-top-k", type=int, default=6)

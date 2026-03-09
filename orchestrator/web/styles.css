@@ -286,6 +286,10 @@ body {
   padding: 9px 10px;
 }
 
+.mvp-guide {
+  margin-top: 8px;
+}
+
 .console-panel {
   display: none;
 }

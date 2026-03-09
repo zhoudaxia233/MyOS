@@ -42,17 +42,290 @@ const ownerTodos = document.getElementById("ownerTodos");
 const learningCandidates = document.getElementById("learningCandidates");
 const candidatePipeline = document.getElementById("candidatePipeline");
 const suggestionReviewSummary = document.getElementById("suggestionReviewSummary");
+const mvpGuide = document.getElementById("mvpGuide");
 const settingsModal = document.getElementById("settingsModal");
 const settingsClose = document.getElementById("settingsClose");
 const settingsSave = document.getElementById("settingsSave");
 const settingsApiKey = document.getElementById("settingsApiKey");
+const settingsDeepseekApiKey = document.getElementById("settingsDeepseekApiKey");
 const settingsDefaultProvider = document.getElementById("settingsDefaultProvider");
 const settingsRoutingModel = document.getElementById("settingsRoutingModel");
 const settingsTaskModel = document.getElementById("settingsTaskModel");
+const settingsDeepseekModel = document.getElementById("settingsDeepseekModel");
+const settingsDeepseekBaseUrl = document.getElementById("settingsDeepseekBaseUrl");
+const settingsUiLanguage = document.getElementById("settingsUiLanguage");
 let latestOutputPath = null;
 let latestOutputProvider = null;
 let latestSuggestionId = null;
 let settingsCache = null;
+let uiLanguage = "zh";
+
+const I18N = {
+  zh: {
+    doc_title: "Personal Core OS | V1 控制台",
+    app_title: "Personal Core OS",
+    app_subtitle: "V1 控制台",
+    status_connecting: "连接中...",
+    status_connected: "已连接",
+    status_offline: "离线",
+    tab_task: "任务台",
+    tab_learning: "学习 / 演化",
+    tab_audit: "审计台",
+    hint_task: "先检查路由和计划，再执行任务。",
+    hint_learning: "可直接导入学习内容，或用低成本 handoff，再复核候选。",
+    hint_audit: "在这里做漂移检查、报告复核和候选治理。",
+    label_task: "任务",
+    task_placeholder: "描述你要做的事...",
+    label_module: "模块",
+    option_auto_route: "自动路由",
+    label_provider: "Provider",
+    label_model: "模型",
+    model_placeholder: "gpt-4.1-mini / deepseek-chat",
+    label_use_retrieval: "启用检索",
+    label_top_k: "Top K",
+    btn_inspect: "检查",
+    btn_run: "执行",
+    task_starters: "快捷任务",
+    starter_weekly_review: "每周决策复盘",
+    starter_extract_patterns: "提取本周聊天模式",
+    starter_write_story: "写一篇饭后 BTC 市场故事",
+    btn_run_mvp: "一键跑通 MVP（检查 -> 执行 -> 复核）",
+    mvp_guide_idle: "新手提示：点击一键按钮后，依次看 Route / Plan / Result / Suggestion Detail。",
+    mvp_guide_inspecting: "MVP 进行中：正在检查路由与计划...",
+    mvp_guide_running: "MVP 进行中：正在执行任务并生成建议...",
+    mvp_guide_done: "MVP 已完成：请到 Suggestion Detail 点击 Accept / Modify / Reject。",
+    learning_direct_ingest_title: "直接导入",
+    learning_direct_ingest_desc: "粘贴文本，直接写入记忆日志。",
+    label_learning_text: "学习文本",
+    learning_text_placeholder: "粘贴 transcript、文章或你的总结...",
+    label_title_optional: "标题（可选）",
+    title_placeholder: "来源标题",
+    label_source_type: "来源类型",
+    label_confidence: "置信度",
+    btn_ingest_memory: "导入到记忆",
+    learning_handoff_title: "学习 Handoff",
+    learning_handoff_desc: "先生成低成本外部包，再把结构化结果贴回。",
+    label_source_url: "来源链接 / 引用",
+    source_url_placeholder: "YouTube / 播客 / 其他来源",
+    btn_generate_packet: "生成 Handoff 包",
+    label_external_response: "外部 LLM JSON 返回",
+    external_response_placeholder: "把外部模型 JSON 粘贴到这里...",
+    btn_parse_queue: "解析到候选队列",
+    audit_actions: "审计动作",
+    audit_validate: "校验",
+    audit_metrics: "7天指标",
+    audit_owner_report: "7天 Owner 报告",
+    audit_detect_diseq: "检测失衡",
+    audit_cognition_timeline: "认知时间线",
+    audit_schedule_weekly: "执行周循环",
+    audit_build_index: "构建检索索引",
+    suggestion_review_filters: "建议复核筛选",
+    filter_review_all: "全部",
+    filter_accept: "接受",
+    filter_modify: "修改",
+    filter_reject: "拒绝",
+    execution_trace: "执行轨迹",
+    trace_cognition_signals: "认知信号（7天）",
+    trace_owner_todos: "Owner 待办",
+    trace_learning_candidates: "学习候选",
+    trace_candidate_pipeline: "候选管道（30天 + 趋势）",
+    trace_suggestion_reviews: "建议复核（30天 + 趋势）",
+    trace_route: "路由",
+    trace_plan: "计划",
+    trace_loaded_files: "已加载文件",
+    trace_result: "结果",
+    trace_suggestion_detail: "建议详情",
+    trace_output_preview: "输出预览",
+    btn_accept: "接受",
+    btn_modify: "修改",
+    btn_reject: "拒绝",
+    btn_resolve: "完成",
+    settings_title: "设置",
+    settings_openai_key: "OpenAI API Key",
+    settings_deepseek_key: "DeepSeek API Key",
+    settings_default_provider: "默认 Provider",
+    settings_routing_model: "路由模型（轻）",
+    settings_task_model: "任务模型（主）",
+    settings_deepseek_model: "DeepSeek 模型",
+    settings_deepseek_base_url: "DeepSeek Base URL",
+    settings_ui_language: "界面语言",
+    btn_save: "保存",
+    settings_key_configured: "已配置（本地存储）",
+    msg_settings_saved: "设置已保存。",
+    msg_connection_failed: "连接失败：{error}",
+    msg_copy_failed: "复制失败：{error}",
+    msg_no_output_yet: "暂无输出，请先执行任务。",
+    msg_no_suggestion_selected: "还没有 suggestion，请先执行任务。",
+    no_cognition_metrics: "暂无认知指标",
+    run_metrics_first: "先运行 Metrics 7D。",
+    msg_mvp_started: "MVP 已开始：检查 -> 执行 -> 建议详情。",
+    msg_mvp_inspect_ready: "MVP 检查完成：{module} -> {skill}",
+    msg_mvp_complete: "MVP 完成。请在 Suggestion Detail 区域做 Accept/Modify/Reject。",
+    msg_mvp_failed: "MVP 失败：{error}",
+    msg_mvp_mode: "MVP 当前执行模式：{provider}",
+    msg_mvp_no_api: "未检测到 DeepSeek/OpenAI key，当前会走非 API 模式。",
+    msg_task_required_inspect: "请先填写任务，再检查。",
+    msg_task_required_run: "请先填写任务，再执行。",
+    msg_no_suggestion_selected: "还没有 suggestion，请先执行任务。",
+  },
+  en: {
+    doc_title: "Personal Core OS | V1 Control Center",
+    app_title: "Personal Core OS",
+    app_subtitle: "V1 Control Center",
+    status_connecting: "Connecting...",
+    status_connected: "Connected",
+    status_offline: "Offline",
+    tab_task: "Task Console",
+    tab_learning: "Learning / Evolution",
+    tab_audit: "Audit Console",
+    hint_task: "Ask the system to do work, inspect route/plan first, then run.",
+    hint_learning: "Ingest material directly or run low-cost external handoff, then review candidates.",
+    hint_audit: "Review drift, reports, and candidate queues before promoting long-term changes.",
+    label_task: "Task",
+    task_placeholder: "Describe what you want to do...",
+    label_module: "Module",
+    option_auto_route: "Auto route",
+    label_provider: "Provider",
+    label_model: "Model",
+    model_placeholder: "gpt-4.1-mini / deepseek-chat",
+    label_use_retrieval: "Use retrieval",
+    label_top_k: "Top K",
+    btn_inspect: "Inspect",
+    btn_run: "Run",
+    task_starters: "Task Starters",
+    starter_weekly_review: "Weekly Decision Review",
+    starter_extract_patterns: "Extract Chat Patterns",
+    starter_write_story: "Write After-Meal Story",
+    btn_run_mvp: "Run MVP Flow (Inspect -> Run -> Review)",
+    mvp_guide_idle: "Quick start: click the MVP button, then check Route / Plan / Result / Suggestion Detail in order.",
+    mvp_guide_inspecting: "MVP in progress: inspecting route and plan...",
+    mvp_guide_running: "MVP in progress: running task and generating suggestion...",
+    mvp_guide_done: "MVP complete: use Accept / Modify / Reject in Suggestion Detail.",
+    learning_direct_ingest_title: "Direct Ingest",
+    learning_direct_ingest_desc: "Paste transcript/article/notes and append memory records directly.",
+    label_learning_text: "Learning Text",
+    learning_text_placeholder: "Paste transcript, article body, or your summary...",
+    label_title_optional: "Title (optional)",
+    title_placeholder: "Source title",
+    label_source_type: "Source Type",
+    label_confidence: "Confidence",
+    btn_ingest_memory: "Ingest To Memory",
+    learning_handoff_title: "Learning Handoff",
+    learning_handoff_desc: "Generate a low-cost packet for external LLM, then paste structured response back.",
+    label_source_url: "Source URL / Reference",
+    source_url_placeholder: "YouTube URL, podcast URL, or source ref",
+    btn_generate_packet: "Generate Handoff Packet",
+    label_external_response: "External LLM JSON Response",
+    external_response_placeholder: "Paste external model JSON here...",
+    btn_parse_queue: "Parse To Candidate Queue",
+    audit_actions: "Audit Actions",
+    audit_validate: "Validate",
+    audit_metrics: "Metrics 7D",
+    audit_owner_report: "Owner Report 7D",
+    audit_detect_diseq: "Detect Disequilibrium",
+    audit_cognition_timeline: "Cognition Timeline",
+    audit_schedule_weekly: "Run Weekly Cycle",
+    audit_build_index: "Build Retrieval Index",
+    suggestion_review_filters: "Suggestion Review Filters",
+    filter_review_all: "Review All",
+    filter_accept: "Accept",
+    filter_modify: "Modify",
+    filter_reject: "Reject",
+    execution_trace: "Execution Trace",
+    trace_cognition_signals: "Cognition Signals (7D)",
+    trace_owner_todos: "Owner Todos",
+    trace_learning_candidates: "Learning Candidates",
+    trace_candidate_pipeline: "Candidate Pipeline (30D + Trend)",
+    trace_suggestion_reviews: "Suggestion Reviews (30D + Trend)",
+    trace_route: "Route",
+    trace_plan: "Plan",
+    trace_loaded_files: "Loaded Files",
+    trace_result: "Result",
+    trace_suggestion_detail: "Suggestion Detail",
+    trace_output_preview: "Output Preview",
+    btn_accept: "Accept",
+    btn_modify: "Modify",
+    btn_reject: "Reject",
+    btn_resolve: "Resolve",
+    settings_title: "Settings",
+    settings_openai_key: "OpenAI API Key",
+    settings_deepseek_key: "DeepSeek API Key",
+    settings_default_provider: "Default Provider",
+    settings_routing_model: "Routing Model (lighter)",
+    settings_task_model: "Task Model (main)",
+    settings_deepseek_model: "DeepSeek Model",
+    settings_deepseek_base_url: "DeepSeek Base URL",
+    settings_ui_language: "UI Language",
+    btn_save: "Save",
+    settings_key_configured: "Configured (stored locally)",
+    msg_settings_saved: "Settings saved.",
+    msg_connection_failed: "Connection failed: {error}",
+    msg_copy_failed: "Copy failed: {error}",
+    msg_no_output_yet: "No output yet. Run a task first.",
+    msg_no_suggestion_selected: "No suggestion selected. Run a task first.",
+    msg_mvp_started: "MVP flow started: Inspect -> Run -> Suggestion detail.",
+    msg_mvp_inspect_ready: "MVP inspect ready: {module} -> {skill}",
+    msg_mvp_complete: "MVP flow complete. Review Suggestion Detail and click Accept/Modify/Reject.",
+    msg_mvp_failed: "MVP flow failed: {error}",
+    msg_mvp_mode: "MVP execution mode: {provider}",
+    msg_mvp_no_api: "No DeepSeek/OpenAI key found, running without direct API provider.",
+    msg_task_required_inspect: "Task is required for inspect.",
+    msg_task_required_run: "Task is required for run.",
+    msg_no_suggestion_selected: "No suggestion selected. Run a task first.",
+    no_cognition_metrics: "No cognition metrics",
+    run_metrics_first: "Run metrics first.",
+  },
+};
+
+function t(key, vars = {}) {
+  const table = I18N[uiLanguage] || I18N.en;
+  const fallback = I18N.en;
+  let text = table[key] || fallback[key] || key;
+  for (const [name, value] of Object.entries(vars || {})) {
+    text = text.replaceAll(`{${name}}`, String(value));
+  }
+  return text;
+}
+
+function applyI18n() {
+  const lang = uiLanguage === "en" ? "en" : "zh";
+  document.documentElement.lang = lang;
+  for (const node of document.querySelectorAll("[data-i18n]")) {
+    const key = node.getAttribute("data-i18n");
+    if (!key) {
+      continue;
+    }
+    node.textContent = t(key);
+  }
+  for (const node of document.querySelectorAll("[data-i18n-placeholder]")) {
+    const key = node.getAttribute("data-i18n-placeholder");
+    if (!key) {
+      continue;
+    }
+    node.setAttribute("placeholder", t(key));
+  }
+  const titleNode = document.querySelector("title[data-i18n]");
+  if (titleNode) {
+    document.title = t(titleNode.getAttribute("data-i18n") || "");
+  }
+}
+
+function setMvpGuideText(key) {
+  if (!mvpGuide) {
+    return;
+  }
+  mvpGuide.setAttribute("data-i18n", key);
+  mvpGuide.textContent = t(key);
+}
+
+function setLanguage(lang) {
+  uiLanguage = lang === "en" ? "en" : "zh";
+  applyI18n();
+  const autoOption = moduleSelect.querySelector('option[value=""]');
+  if (autoOption) {
+    autoOption.textContent = t("option_auto_route");
+  }
+}
 
 function addBubble(role, text) {
   const div = document.createElement("div");
@@ -78,8 +351,13 @@ function addUserTaskOnce(task) {
   addBubble("user", task);
 }
 
-function setStatus(label, kind) {
+function setStatus(label, kind, key = null) {
   statusBadge.textContent = label;
+  if (key) {
+    statusBadge.setAttribute("data-i18n", key);
+  } else {
+    statusBadge.removeAttribute("data-i18n");
+  }
   statusBadge.classList.remove("pending", "ok", "fail");
   statusBadge.classList.add(kind);
 }
@@ -114,7 +392,7 @@ function renderCognitionCards(cards) {
   if (!Array.isArray(cards) || cards.length === 0) {
     const empty = document.createElement("div");
     empty.className = "metric-card status-warn";
-    empty.innerHTML = "<div class=\"metric-title\">No cognition metrics</div><div class=\"metric-value\">-</div><div class=\"metric-meta\">Run metrics first.</div>";
+    empty.innerHTML = `<div class="metric-title">${t("no_cognition_metrics")}</div><div class="metric-value">-</div><div class="metric-meta">${t("run_metrics_first")}</div>`;
     cognitionCards.appendChild(empty);
     return;
   }
@@ -153,7 +431,7 @@ function renderOwnerTodos(items) {
   if (!Array.isArray(items) || items.length === 0) {
     const empty = document.createElement("div");
     empty.className = "todo-item";
-    empty.innerHTML = "<div class=\"todo-head\"><span class=\"todo-metric\">No open todos</span></div><div class=\"todo-action\">No unresolved escalation items.</div>";
+    empty.innerHTML = "<div class=\"todo-head\"><span class=\"todo-metric\">-</span></div><div class=\"todo-action\">-</div>";
     ownerTodos.appendChild(empty);
     return;
   }
@@ -183,7 +461,7 @@ function renderOwnerTodos(items) {
     const btn = document.createElement("button");
     btn.className = "todo-resolve-btn";
     btn.type = "button";
-    btn.textContent = "Resolve";
+    btn.textContent = t("btn_resolve");
     btn.addEventListener("click", () => {
       resolveOwnerTodo(item.id);
     });
@@ -201,7 +479,7 @@ function renderLearningCandidates(items) {
   if (!Array.isArray(items) || items.length === 0) {
     const empty = document.createElement("div");
     empty.className = "todo-item";
-    empty.innerHTML = "<div class=\"todo-head\"><span class=\"todo-metric\">No pending candidates</span></div><div class=\"todo-action\">Use Learning Handoff import to populate queue.</div>";
+    empty.innerHTML = "<div class=\"todo-head\"><span class=\"todo-metric\">-</span></div><div class=\"todo-action\">-</div>";
     learningCandidates.appendChild(empty);
     return;
   }
@@ -231,7 +509,7 @@ function renderLearningCandidates(items) {
     const acceptBtn = document.createElement("button");
     acceptBtn.className = "todo-resolve-btn";
     acceptBtn.type = "button";
-    acceptBtn.textContent = "Accept";
+    acceptBtn.textContent = t("btn_accept");
     acceptBtn.addEventListener("click", () => {
       reviewLearningCandidate(item.id, "accept");
     });
@@ -239,7 +517,7 @@ function renderLearningCandidates(items) {
     const rejectBtn = document.createElement("button");
     rejectBtn.className = "todo-resolve-btn";
     rejectBtn.type = "button";
-    rejectBtn.textContent = "Reject";
+    rejectBtn.textContent = t("btn_reject");
     rejectBtn.addEventListener("click", () => {
       reviewLearningCandidate(item.id, "reject");
     });
@@ -247,7 +525,7 @@ function renderLearningCandidates(items) {
     const modifyBtn = document.createElement("button");
     modifyBtn.className = "todo-resolve-btn";
     modifyBtn.type = "button";
-    modifyBtn.textContent = "Modify";
+    modifyBtn.textContent = t("btn_modify");
     modifyBtn.addEventListener("click", () => {
       reviewLearningCandidate(item.id, "modify");
     });
@@ -408,14 +686,17 @@ function switchEntrypoint(entrypoint) {
   auditConsolePanel.classList.toggle("active", target === "audit");
 
   if (target === "learning") {
-    entrypointHint.textContent = "Ingest material directly or run low-cost external handoff, then review candidates.";
+    entrypointHint.setAttribute("data-i18n", "hint_learning");
+    entrypointHint.textContent = t("hint_learning");
     return;
   }
   if (target === "audit") {
-    entrypointHint.textContent = "Review drift, reports, and candidate queues before promoting long-term changes.";
+    entrypointHint.setAttribute("data-i18n", "hint_audit");
+    entrypointHint.textContent = t("hint_audit");
     return;
   }
-  entrypointHint.textContent = "Ask the system to do work, inspect route/plan first, then run.";
+  entrypointHint.setAttribute("data-i18n", "hint_task");
+  entrypointHint.textContent = t("hint_task");
 }
 
 function formatRouteScoring(route) {
@@ -777,7 +1058,7 @@ async function copyText(text) {
 
 async function copyLatestOutput() {
   if (!latestOutputPath) {
-    addBubble("system", "No output yet. Run a task first.");
+    addBubble("system", t("msg_no_output_yet"));
     return;
   }
 
@@ -790,7 +1071,7 @@ async function copyLatestOutput() {
       copyOutputBtn.textContent = originalIcon;
     }, 1200);
   } catch (err) {
-    addBubble("system", `Copy failed: ${err.message}`);
+    addBubble("system", t("msg_copy_failed", { error: err.message }));
   }
 }
 
@@ -930,7 +1211,7 @@ async function loadStatus() {
       throw new Error(data.error || "Failed to load status");
     }
 
-    moduleSelect.innerHTML = "<option value=\"\">Auto route</option>";
+    moduleSelect.innerHTML = `<option value="">${t("option_auto_route")}</option>`;
     for (const moduleName of data.modules || []) {
       const option = document.createElement("option");
       option.value = moduleName;
@@ -944,31 +1225,48 @@ async function loadStatus() {
     if (data.default_model) {
       modelInput.value = data.default_model;
     }
+    if (data.ui_language) {
+      setLanguage(data.ui_language);
+      moduleSelect.innerHTML = `<option value="">${t("option_auto_route")}</option>`;
+      for (const moduleName of data.modules || []) {
+        const option = document.createElement("option");
+        option.value = moduleName;
+        option.textContent = moduleName;
+        moduleSelect.appendChild(option);
+      }
+    }
     renderCognitionCards(data.cognition_cards || []);
     renderOwnerTodos(data.owner_todos || []);
     renderLearningCandidates(data.learning_candidates || []);
     renderCandidatePipelineSummary(data.candidate_pipeline_summary || {}, data.candidate_pipeline_trend || null);
     renderSuggestionReviewSummary(data.suggestion_review_summary || {}, data.suggestion_review_trend || null);
 
-    setStatus("Connected", "ok");
+    setStatus(t("status_connected"), "ok", "status_connected");
   } catch (err) {
-    setStatus("Offline", "fail");
-    addBubble("system", `Connection failed: ${err.message}`);
+    setStatus(t("status_offline"), "fail", "status_offline");
+    addBubble("system", t("msg_connection_failed", { error: err.message }));
   }
 }
 
 function applySettingsToForm(settings) {
   settingsApiKey.value = "";
-  settingsApiKey.placeholder = settings.has_openai_api_key ? "Configured (stored locally)" : "sk-...";
+  settingsApiKey.placeholder = settings.has_openai_api_key ? t("settings_key_configured") : "sk-...";
+  settingsDeepseekApiKey.value = "";
+  settingsDeepseekApiKey.placeholder = settings.has_deepseek_api_key ? t("settings_key_configured") : "sk-...";
   settingsDefaultProvider.value = settings.default_provider || "handoff";
   settingsRoutingModel.value = settings.routing_model || "gpt-4.1-nano";
   settingsTaskModel.value = settings.task_model || "gpt-4.1-mini";
+  settingsDeepseekModel.value = settings.deepseek_model || "deepseek-chat";
+  settingsDeepseekBaseUrl.value = settings.deepseek_base_url || "https://api.deepseek.com/v1";
+  settingsUiLanguage.value = settings.ui_language || "zh";
 }
 
 async function loadSettings() {
   try {
     const data = await getJson("/api/settings");
     settingsCache = data;
+    setLanguage(data.ui_language || "zh");
+    setMvpGuideText("mvp_guide_idle");
     applySettingsToForm(data);
   } catch (err) {
     addBubble("system", `Settings load failed: ${err.message}`);
@@ -988,23 +1286,37 @@ function closeSettingsModal() {
 
 async function saveSettings() {
   const apiKey = settingsApiKey.value.trim();
+  const deepseekApiKey = settingsDeepseekApiKey.value.trim();
   const payload = {
     default_provider: settingsDefaultProvider.value,
     routing_model: settingsRoutingModel.value.trim() || "gpt-4.1-nano",
     task_model: settingsTaskModel.value.trim() || "gpt-4.1-mini",
+    deepseek_model: settingsDeepseekModel.value.trim() || "deepseek-chat",
+    deepseek_base_url: settingsDeepseekBaseUrl.value.trim() || "https://api.deepseek.com/v1",
+    ui_language: settingsUiLanguage.value || "zh",
   };
   if (apiKey) {
     payload.openai_api_key = apiKey;
+  }
+  if (deepseekApiKey) {
+    payload.deepseek_api_key = deepseekApiKey;
   }
 
   try {
     const data = await postJson("/api/settings", payload);
     settingsCache = data;
+    setLanguage(data.ui_language || settingsUiLanguage.value || "zh");
     providerSelect.value = data.default_provider || providerSelect.value;
-    modelInput.value = data.task_model || modelInput.value;
+    if ((data.default_provider || "") === "deepseek") {
+      modelInput.value = data.deepseek_model || modelInput.value;
+    } else {
+      modelInput.value = data.task_model || modelInput.value;
+    }
     settingsApiKey.value = "";
+    settingsDeepseekApiKey.value = "";
     closeSettingsModal();
-    addBubble("system", "Settings saved.");
+    addBubble("system", t("msg_settings_saved"));
+    loadStatus();
   } catch (err) {
     addBubble("system", `Settings save failed: ${err.message}`);
   }
@@ -1013,7 +1325,7 @@ async function saveSettings() {
 async function inspectTask() {
   const payload = buildPayload();
   if (!payload.task) {
-    addBubble("system", "Task is required for inspect.");
+    addBubble("system", t("msg_task_required_inspect"));
     return;
   }
 
@@ -1031,7 +1343,7 @@ async function inspectTask() {
 async function runTask() {
   const payload = buildPayload();
   if (!payload.task) {
-    addBubble("system", "Task is required for run.");
+    addBubble("system", t("msg_task_required_run"));
     return;
   }
 
@@ -1047,24 +1359,41 @@ async function runTask() {
 }
 
 async function runMvpFlow() {
+  if (!settingsCache) {
+    await loadSettings();
+  }
   const demoTask = "run weekly decision review and output top 3 owner actions with risk notes";
   taskInput.value = demoTask;
 
-  if (providerSelect.querySelector('option[value="dry-run"]')) {
-    providerSelect.value = "dry-run";
+  if (settingsCache && settingsCache.has_deepseek_api_key && providerSelect.querySelector('option[value="deepseek"]')) {
+    providerSelect.value = "deepseek";
+    if (!modelInput.value.trim() || modelInput.value.includes("gpt-")) {
+      modelInput.value = settingsCache.deepseek_model || "deepseek-chat";
+    }
+  } else if (settingsCache && settingsCache.has_openai_api_key && providerSelect.querySelector('option[value="openai"]')) {
+    providerSelect.value = "openai";
+    if (!modelInput.value.trim()) {
+      modelInput.value = settingsCache.task_model || "gpt-4.1-mini";
+    }
   }
   retrievalToggle.checked = false;
   moduleSelect.value = "";
 
   addUserTaskOnce(demoTask);
-  addBubble("system", "MVP flow started: Inspect -> Run -> Suggestion detail.");
+  setMvpGuideText("mvp_guide_inspecting");
+  addBubble("system", t("msg_mvp_started"));
+  addBubble("system", t("msg_mvp_mode", { provider: providerSelect.value || "handoff" }));
+  if (!settingsCache || (!settingsCache.has_deepseek_api_key && !settingsCache.has_openai_api_key)) {
+    addBubble("system", t("msg_mvp_no_api"));
+  }
 
   try {
     const payload = buildPayload();
     const inspectData = await postJson("/api/inspect", payload);
     renderInspectResult(inspectData);
-    addBubble("system", `MVP inspect ready: ${inspectData.module} -> ${inspectData.plan.skill}`);
+    addBubble("system", t("msg_mvp_inspect_ready", { module: inspectData.module, skill: inspectData.plan.skill }));
 
+    setMvpGuideText("mvp_guide_running");
     const runData = await postJson("/api/run", payload);
     renderRunResult(runData);
     if (runData.suggestion_id) {
@@ -1072,16 +1401,18 @@ async function runMvpFlow() {
     }
 
     switchEntrypoint("audit");
-    addBubble("system", "MVP flow complete. Review Suggestion Detail and click Accept/Modify/Reject.");
+    setMvpGuideText("mvp_guide_done");
+    addBubble("system", t("msg_mvp_complete"));
   } catch (err) {
-    addBubble("system", `MVP flow failed: ${err.message}`);
+    setMvpGuideText("mvp_guide_idle");
+    addBubble("system", t("msg_mvp_failed", { error: err.message }));
   }
 }
 
 async function reviewSuggestion(verdict) {
   const sid = String(latestSuggestionId || "").trim();
   if (!sid) {
-    addBubble("system", "No suggestion selected. Run a task first.");
+    addBubble("system", t("msg_no_suggestion_selected"));
     return;
   }
   const choice = String(verdict || "").trim().toLowerCase();
@@ -1347,6 +1678,17 @@ copyOutputBtn.addEventListener("click", () => {
   copyLatestOutput();
 });
 providerSelect.addEventListener("change", () => {
+  if (providerSelect.value === "deepseek") {
+    const current = modelInput.value.trim();
+    if (!current || current.startsWith("gpt-")) {
+      modelInput.value = (settingsCache && settingsCache.deepseek_model) || "deepseek-chat";
+    }
+  } else if (providerSelect.value === "openai") {
+    const current = modelInput.value.trim();
+    if (!current || current.startsWith("deepseek-")) {
+      modelInput.value = (settingsCache && settingsCache.task_model) || "gpt-4.1-mini";
+    }
+  }
   latestOutputProvider = providerSelect.value || latestOutputProvider;
   refreshOutputTokenMeta();
 });
@@ -1386,6 +1728,9 @@ suggestionRejectBtn.addEventListener("click", () => {
   reviewSuggestion("reject");
 });
 
+setLanguage("zh");
+setMvpGuideText("mvp_guide_idle");
+setStatus(t("status_connecting"), "pending", "status_connecting");
 initTheme();
 switchEntrypoint("task");
 setSuggestionReviewEnabled(false);

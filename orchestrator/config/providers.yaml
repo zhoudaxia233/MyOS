@@ -6,3 +6,6 @@ providers:
   openai:
     enabled: true
     endpoint: "https://api.openai.com/v1/chat/completions"
+  deepseek:
+    enabled: true
+    endpoint: "https://api.deepseek.com/v1/chat/completions"

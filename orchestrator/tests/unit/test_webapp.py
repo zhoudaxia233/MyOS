@@ -45,6 +45,8 @@ def test_api_status_lists_modules() -> None:
         assert isinstance(data["candidate_pipeline_trend"], dict)
         assert isinstance(data["suggestion_review_summary"], dict)
         assert isinstance(data["suggestion_review_trend"], dict)
+        assert "ui_language" in data
+        assert "has_deepseek_api_key" in data
 
 
 def test_api_status_reports_env_api_key(monkeypatch) -> None:
@@ -62,20 +64,29 @@ def test_api_settings_roundtrip() -> None:
         assert initial["ok"] is True
         assert initial["default_provider"] == "handoff"
         assert initial["has_openai_api_key"] is False
+        assert initial["has_deepseek_api_key"] is False
+        assert initial["ui_language"] in {"zh", "en"}
         assert "openai_api_key" not in initial
 
         updated = api_update_settings(
             root,
             {
                 "openai_api_key": "sk-test",
+                "deepseek_api_key": "sk-deepseek",
                 "default_provider": "dry-run",
                 "task_model": "gpt-4.1-mini",
+                "deepseek_model": "deepseek-chat",
+                "deepseek_base_url": "https://api.deepseek.com/v1",
                 "routing_model": "gpt-4.1-nano",
+                "ui_language": "en",
             },
         )
         assert updated["ok"] is True
         assert updated["default_provider"] == "dry-run"
         assert updated["has_openai_api_key"] is True
+        assert updated["has_deepseek_api_key"] is True
+        assert updated["deepseek_model"] == "deepseek-chat"
+        assert updated["ui_language"] == "en"
         assert "openai_api_key" not in updated
 
         # Blank key field should keep existing saved key.
@@ -86,6 +97,24 @@ def test_api_settings_roundtrip() -> None:
         status = api_status(root)
         assert status["default_provider"] == "handoff"
         assert status["has_openai_api_key"] is True
+        assert status["has_deepseek_api_key"] is True
+
+
+def test_api_status_uses_deepseek_default_model_when_provider_is_deepseek() -> None:
+    with TemporaryDirectory() as td:
+        root = _copy_repo_subset(Path(td))
+        api_update_settings(
+            root,
+            {
+                "default_provider": "deepseek",
+                "deepseek_model": "deepseek-chat",
+                "ui_language": "zh",
+            },
+        )
+        data = api_status(root)
+        assert data["default_provider"] == "deepseek"
+        assert data["default_model"] == "deepseek-chat"
+        assert data["ui_language"] == "zh"
 
 
 def test_api_inspect_and_run_writes_output() -> None:

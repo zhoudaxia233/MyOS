@@ -49,7 +49,14 @@ from route_selector import select_route
 from runner import run_with_provider
 from schedulers.manual import get_cycle
 from scheduling import task_from_routine
-from settings import apply_openai_api_key_env, get_openai_api_key, load_settings, redact_settings, save_settings
+from settings import (
+    apply_provider_api_key_env,
+    get_deepseek_api_key,
+    get_openai_api_key,
+    load_settings,
+    redact_settings,
+    save_settings,
+)
 from token_count import count_text_tokens
 from writer import (
     log_metrics_snapshot,
@@ -107,6 +114,13 @@ def _coerce_bool(value: Any, *, default: bool = False) -> bool:
 def _normalize_optional_str(value: Any) -> str | None:
     text = str(value).strip() if value is not None else ""
     return text or None
+
+
+def _default_task_model(settings: dict, cfg: dict, provider: str) -> str:
+    normalized = str(provider or "").strip().lower()
+    if normalized == "deepseek":
+        return str(settings.get("deepseek_model", "deepseek-chat")) or "deepseek-chat"
+    return str(settings.get("task_model", "")) or str(cfg.get("default_openai_model", "gpt-4.1-mini"))
 
 
 def _route_reason_for_log(route: dict) -> str:
@@ -439,7 +453,7 @@ def _execute_task(
         hits = _retrieval_hits(root, task, module, retrieval_top_k)
         bundle = _bundle_with_hits(bundle, hits)
 
-    apply_openai_api_key_env(root)
+    apply_provider_api_key_env(root, provider)
     content = run_with_provider(provider, task, module, plan, bundle, model)
     out = write_output(root, plan["output_path"], content)
     output_hash = hashlib.sha256(content.encode("utf-8")).hexdigest()
@@ -754,9 +768,12 @@ def api_status(root: Path) -> dict:
         "ok": True,
         "repo_root": str(root),
         "default_provider": settings["default_provider"] or cfg["default_provider"],
-        "default_model": settings["task_model"] or cfg["default_openai_model"],
+        "default_model": _default_task_model(settings, cfg, settings["default_provider"] or cfg["default_provider"]),
         "routing_model": settings["routing_model"],
+        "deepseek_model": settings.get("deepseek_model", "deepseek-chat"),
+        "ui_language": settings.get("ui_language", "zh"),
         "has_openai_api_key": bool(get_openai_api_key(root)),
+        "has_deepseek_api_key": bool(get_deepseek_api_key(root)),
         "modules": modules,
         "cognition_cards": cognition_cards,
         "owner_todos": list_open_owner_todos(root),
@@ -772,6 +789,7 @@ def api_get_settings(root: Path) -> dict:
     settings = load_settings(root)
     payload = redact_settings(settings)
     payload["has_openai_api_key"] = bool(get_openai_api_key(root))
+    payload["has_deepseek_api_key"] = bool(get_deepseek_api_key(root))
     return {"ok": True, **payload}
 
 
@@ -781,8 +799,14 @@ def api_update_settings(root: Path, payload: dict[str, Any]) -> dict:
         updates["default_provider"] = str(payload.get("default_provider", ""))
     if "task_model" in payload:
         updates["task_model"] = str(payload.get("task_model", ""))
+    if "deepseek_model" in payload:
+        updates["deepseek_model"] = str(payload.get("deepseek_model", ""))
     if "routing_model" in payload:
         updates["routing_model"] = str(payload.get("routing_model", ""))
+    if "deepseek_base_url" in payload:
+        updates["deepseek_base_url"] = str(payload.get("deepseek_base_url", ""))
+    if "ui_language" in payload:
+        updates["ui_language"] = str(payload.get("ui_language", ""))
 
     if "openai_api_key" in payload:
         key = str(payload.get("openai_api_key", "")).strip()
@@ -791,9 +815,17 @@ def api_update_settings(root: Path, payload: dict[str, Any]) -> dict:
     elif _coerce_bool(payload.get("clear_openai_api_key"), default=False):
         updates["openai_api_key"] = ""
 
+    if "deepseek_api_key" in payload:
+        key = str(payload.get("deepseek_api_key", "")).strip()
+        if key:
+            updates["deepseek_api_key"] = key
+    elif _coerce_bool(payload.get("clear_deepseek_api_key"), default=False):
+        updates["deepseek_api_key"] = ""
+
     settings = save_settings(root, updates)
     data = redact_settings(settings)
     data["has_openai_api_key"] = bool(get_openai_api_key(root))
+    data["has_deepseek_api_key"] = bool(get_deepseek_api_key(root))
     return {"ok": True, **data}
 
 
@@ -825,7 +857,7 @@ def api_run(root: Path, payload: dict[str, Any]) -> dict:
     settings = load_settings(root)
     module = _normalize_optional_str(payload.get("module"))
     provider = _normalize_optional_str(payload.get("provider")) or settings["default_provider"] or cfg["default_provider"]
-    model = _normalize_optional_str(payload.get("model")) or settings["task_model"] or cfg["default_openai_model"]
+    model = _normalize_optional_str(payload.get("model")) or _default_task_model(settings, cfg, provider)
     with_retrieval = _coerce_bool(payload.get("with_retrieval"), default=False)
     retrieval_top_k = _coerce_int(payload.get("retrieval_top_k"), default=6, minimum=1, maximum=32)
 
@@ -927,7 +959,7 @@ def api_action(root: Path, payload: dict[str, Any]) -> dict:
         provider = (
             _normalize_optional_str(payload.get("provider")) or settings["default_provider"] or cfg["default_provider"]
         )
-        model = _normalize_optional_str(payload.get("model")) or settings["task_model"] or cfg["default_openai_model"]
+        model = _normalize_optional_str(payload.get("model")) or _default_task_model(settings, cfg, provider)
         with_retrieval = _coerce_bool(payload.get("with_retrieval"), default=False)
         retrieval_top_k = _coerce_int(payload.get("retrieval_top_k"), default=6, minimum=1, maximum=32)
         limit_raw = payload.get("limit")
