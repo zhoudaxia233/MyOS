@@ -34,54 +34,67 @@
       </div>
 
       <section id="modeGuide" class="mode-guide" aria-live="polite">-</section>
+      <section class="quick-manual">
+        <h3 data-i18n="quick_use_title">30 秒上手</h3>
+        <ol class="quick-manual-list">
+          <li data-i18n="quick_use_step_1">输入你希望得到的结果（例如“给我下周3件最重要的事”）。</li>
+          <li data-i18n="quick_use_step_2">点击“开始执行”。</li>
+          <li data-i18n="quick_use_step_3">先看右侧“执行结果”摘要，再决定是否看完整 Markdown。</li>
+          <li data-i18n="quick_use_step_4">如果你有新经验/资料，用下方“学习更新”补充到系统里。</li>
+        </ol>
+      </section>
 
       <section class="workspace-section">
-        <h3 data-i18n="section_task">任务执行</h3>
+        <h3 data-i18n="section_task">生成结果</h3>
         <form id="taskForm" class="workspace-form">
           <label class="label" for="taskInput" data-i18n="label_task">任务</label>
           <textarea id="taskInput" rows="4" placeholder="例如：总结我本周做了什么、哪里做得好/不好、下周3件重点事" data-i18n-placeholder="task_placeholder"></textarea>
 
           <div class="action-row workspace-actions">
             <button id="runBtn" type="submit" class="btn primary" data-i18n="btn_run">开始执行</button>
-            <button id="inspectBtn" type="button" class="btn secondary" data-i18n="btn_inspect">预览处理方式</button>
+            <button id="inspectBtn" type="button" class="btn secondary" data-i18n="btn_inspect">查看处理步骤</button>
             <a class="btn secondary nav-btn" href="/audit.html" data-i18n="btn_go_audit">打开审计中心</a>
           </div>
 
           <details class="workspace-advanced" id="advancedControls">
-            <summary data-i18n="advanced_summary">高级选项（可选）</summary>
+            <summary data-i18n="advanced_summary">执行方式与高级控制（可选）</summary>
             <div class="control-grid">
               <label class="control">
-                <span data-i18n="label_module">模块</span>
+                <span data-i18n="label_module">任务类型（可选）</span>
                 <select id="moduleSelect">
                   <option value="" data-i18n="option_auto_route">自动路由</option>
                 </select>
+                <span class="helper-note" data-i18n="module_help">不确定就保持“自动路由”。</span>
               </label>
 
               <label class="control">
-                <span data-i18n="label_provider">Provider</span>
+                <span data-i18n="label_provider">执行方式</span>
                 <select id="providerSelect">
-                  <option value="auto" data-i18n="option_provider_auto">自动（按设置）</option>
+                  <option value="auto" data-i18n="option_provider_auto">系统自动（推荐）</option>
                   <option value="dry-run" data-i18n="option_provider_dry_run">离线演练（dry-run）</option>
                   <option value="handoff" data-i18n="option_provider_handoff">外部协作（handoff）</option>
                   <option value="openai" data-i18n="option_provider_openai">OpenAI（直连）</option>
                   <option value="deepseek" data-i18n="option_provider_deepseek">DeepSeek（直连）</option>
                 </select>
+                <span id="providerHelp" class="helper-note" data-i18n="provider_help_auto">推荐：系统自动按你的设置选择执行方式。</span>
               </label>
 
               <label class="control">
-                <span data-i18n="label_model">模型</span>
+                <span data-i18n="label_model">模型（高级）</span>
                 <input id="modelInput" type="text" placeholder="gpt-4.1-mini / deepseek-chat" data-i18n-placeholder="model_placeholder">
+                <span class="helper-note" data-i18n="model_help">一般保持空，让系统自动匹配。</span>
               </label>
 
               <label class="control checkbox">
                 <input id="retrievalToggle" type="checkbox">
-                <span data-i18n="label_use_retrieval">启用检索</span>
+                <span data-i18n="label_use_retrieval">参考历史记录</span>
               </label>
 
               <label class="control">
-                <span data-i18n="label_top_k">Top K</span>
+                <span data-i18n="label_top_k">参考条数（Top K）</span>
                 <input id="retrievalTopK" type="number" min="1" max="32" value="6">
                 <span class="helper-note" data-i18n="top_k_help">检索时最多带入多少条历史记录。越大越全，但更慢；默认 6。</span>
+                <span id="retrievalHelp" class="helper-note" data-i18n="retrieval_help_off">当前未开启历史参考：仅基于你这次输入生成结果。</span>
               </label>
             </div>
           </details>

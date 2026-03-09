@@ -6,6 +6,8 @@ const providerSelect = document.getElementById("providerSelect");
 const modelInput = document.getElementById("modelInput");
 const retrievalToggle = document.getElementById("retrievalToggle");
 const retrievalTopK = document.getElementById("retrievalTopK");
+const providerHelp = document.getElementById("providerHelp");
+const retrievalHelp = document.getElementById("retrievalHelp");
 const inspectBtn = document.getElementById("inspectBtn");
 const runBtn = document.getElementById("runBtn");
 const statusBadge = document.getElementById("statusBadge");
@@ -81,23 +83,37 @@ const I18N = {
     status_offline: "离线",
     hero_title: "你想让我帮你做什么？",
     hero_desc: "你说目标，我给结果、关键结论和下一步动作。任务与学习都在这里。",
+    quick_use_title: "30 秒上手",
+    quick_use_step_1: "输入你希望得到的结果（例如“给我下周3件最重要的事”）。",
+    quick_use_step_2: "点击“开始执行”。",
+    quick_use_step_3: "先看右侧“执行结果”摘要，再决定是否看完整 Markdown。",
+    quick_use_step_4: "如果你有新经验/资料，用下方“学习更新”补充到系统里。",
     section_task: "生成结果",
     section_learning: "学习更新",
     label_task: "任务",
     task_placeholder: "例如：总结我本周做了什么、哪里做得好/不好、下周3件重点事",
     btn_run: "开始执行",
-    btn_inspect: "预览处理方式",
+    btn_inspect: "查看处理步骤",
     btn_go_audit: "打开审计中心",
-    advanced_summary: "高级选项（可选）",
-    label_module: "模块",
+    advanced_summary: "执行方式与高级控制（可选）",
+    label_module: "任务类型（可选）",
     option_auto_route: "自动路由",
-    label_provider: "Provider",
-    option_provider_auto: "自动（按设置）",
-    label_model: "模型",
+    module_help: "不确定就保持“自动路由”。",
+    label_provider: "执行方式",
+    option_provider_auto: "系统自动（推荐）",
+    label_model: "模型（高级）",
     model_placeholder: "gpt-4.1-mini / deepseek-chat",
-    label_use_retrieval: "启用检索",
-    label_top_k: "Top K",
+    model_help: "一般保持空，让系统自动匹配。",
+    label_use_retrieval: "参考历史记录",
+    label_top_k: "参考条数（Top K）",
     top_k_help: "检索时最多带入多少条历史记录。越大越全，但更慢；默认 6。",
+    provider_help_auto: "推荐：系统自动按你的设置选择执行方式。",
+    provider_help_dry_run: "离线演练：不调用外部 API，主要用于测试流程。",
+    provider_help_handoff: "外部协作：生成请求包，你复制到外部模型执行。",
+    provider_help_openai: "OpenAI 直连：由系统直接生成结果。",
+    provider_help_deepseek: "DeepSeek 直连：由系统直接生成结果。",
+    retrieval_help_off: "当前未开启历史参考：仅基于你这次输入生成结果。",
+    retrieval_help_on: "已开启历史参考：会结合过去记录辅助生成。",
     option_provider_dry_run: "离线演练（dry-run）",
     option_provider_handoff: "外部协作（handoff）",
     option_provider_openai: "OpenAI（直连）",
@@ -242,23 +258,37 @@ const I18N = {
     status_offline: "Offline",
     hero_title: "What do you want me to do?",
     hero_desc: "Tell me the goal. I return outcomes, key conclusions, and next actions.",
+    quick_use_title: "30-Second Guide",
+    quick_use_step_1: "Describe the outcome you want (for example: top 3 priorities for next week).",
+    quick_use_step_2: "Click Run.",
+    quick_use_step_3: "Read the result summary first, then open markdown only if needed.",
+    quick_use_step_4: "Use Learning below to add new notes and experiences into the system.",
     section_task: "Generate Outcome",
     section_learning: "Learning",
     label_task: "Task",
     task_placeholder: "Example: summarize my week, what worked/failed, and top 3 priorities for next week",
     btn_run: "Run",
-    btn_inspect: "Preview Plan",
+    btn_inspect: "View Processing Steps",
     btn_go_audit: "Open Audit Center",
-    advanced_summary: "Advanced Options (Optional)",
-    label_module: "Module",
+    advanced_summary: "Execution Mode & Advanced Controls (Optional)",
+    label_module: "Task Type (Optional)",
     option_auto_route: "Auto route",
-    label_provider: "Provider",
-    option_provider_auto: "auto (from settings)",
-    label_model: "Model",
+    module_help: "If unsure, keep Auto route.",
+    label_provider: "Execution Mode",
+    option_provider_auto: "System Auto (Recommended)",
+    label_model: "Model (Advanced)",
     model_placeholder: "gpt-4.1-mini / deepseek-chat",
-    label_use_retrieval: "Use retrieval",
-    label_top_k: "Top K",
+    model_help: "Usually leave empty and let the system choose.",
+    label_use_retrieval: "Use Historical Context",
+    label_top_k: "Context Count (Top K)",
     top_k_help: "How many historical records to include during retrieval. Higher = broader but slower. Default 6.",
+    provider_help_auto: "Recommended: system chooses the best mode from your settings.",
+    provider_help_dry_run: "Offline simulation: no external API call, useful for flow checks.",
+    provider_help_handoff: "External handoff: generate a packet and run it in external model.",
+    provider_help_openai: "OpenAI direct mode: system generates final output directly.",
+    provider_help_deepseek: "DeepSeek direct mode: system generates final output directly.",
+    retrieval_help_off: "Historical context is off: output is based only on current input.",
+    retrieval_help_on: "Historical context is on: output also uses past records.",
     option_provider_dry_run: "Offline Dry Run",
     option_provider_handoff: "External Handoff",
     option_provider_openai: "OpenAI (Direct)",
@@ -438,6 +468,8 @@ function setLanguage(lang) {
   for (const option of fallbackOptions) {
     option.textContent = t("option_use_fallback");
   }
+  updateProviderHelp();
+  updateRetrievalHelp();
   setNextStepsByMode(latestGuidanceMode);
   renderModeGuide();
 }
@@ -480,6 +512,32 @@ function setNextStepsByMode(mode) {
 function hasUserVisibleResult() {
   const preview = String(outputPreview.textContent || "").trim();
   return preview !== "-" || Boolean(latestOutputPath);
+}
+
+function updateProviderHelp() {
+  if (!providerHelp) {
+    return;
+  }
+  const value = String(providerSelect.value || "auto").toLowerCase();
+  const map = {
+    auto: "provider_help_auto",
+    "dry-run": "provider_help_dry_run",
+    handoff: "provider_help_handoff",
+    openai: "provider_help_openai",
+    deepseek: "provider_help_deepseek",
+  };
+  const key = map[value] || "provider_help_auto";
+  providerHelp.setAttribute("data-i18n", key);
+  providerHelp.textContent = t(key);
+}
+
+function updateRetrievalHelp() {
+  if (!retrievalHelp) {
+    return;
+  }
+  const key = retrievalToggle.checked ? "retrieval_help_on" : "retrieval_help_off";
+  retrievalHelp.setAttribute("data-i18n", key);
+  retrievalHelp.textContent = t(key);
 }
 
 function renderModeGuide() {
@@ -1061,6 +1119,8 @@ async function loadStatus() {
       }
     }
 
+    updateProviderHelp();
+    updateRetrievalHelp();
     renderModeGuide();
     setStatus(t("status_connected"), "ok", "status_connected");
   } catch (err) {
@@ -1406,8 +1466,13 @@ providerSelect.addEventListener("change", () => {
         (settingsCache && (settingsCache.openai_model || settingsCache.task_model)) || "gpt-4.1-mini";
     }
   }
+  updateProviderHelp();
   renderModeGuide();
   refreshOutputTokenMeta();
+});
+
+retrievalToggle.addEventListener("change", () => {
+  updateRetrievalHelp();
 });
 
 modelInput.addEventListener("change", () => {

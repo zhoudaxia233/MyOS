@@ -261,6 +261,28 @@ body {
   font-size: 0.84rem;
 }
 
+.quick-manual {
+  border: 1px solid color-mix(in srgb, var(--border) 82%, white);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--card) 96%, white 4%);
+  padding: 10px 12px;
+}
+
+.quick-manual h3 {
+  margin: 0 0 8px;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.quick-manual-list {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 4px;
+  font-size: 0.84rem;
+  line-height: 1.4;
+}
+
 .workspace-section {
   border: 1px solid color-mix(in srgb, var(--border) 80%, white);
   border-radius: 12px;
