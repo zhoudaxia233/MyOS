@@ -33,6 +33,9 @@ const resultTrace = document.getElementById("resultTrace");
 const suggestionTrace = document.getElementById("suggestionTrace");
 const outputPreview = document.getElementById("outputPreview");
 const outputTokenMeta = document.getElementById("outputTokenMeta");
+const suggestionAcceptBtn = document.getElementById("suggestionAcceptBtn");
+const suggestionModifyBtn = document.getElementById("suggestionModifyBtn");
+const suggestionRejectBtn = document.getElementById("suggestionRejectBtn");
 const cognitionCards = document.getElementById("cognitionCards");
 const ownerTodos = document.getElementById("ownerTodos");
 const learningCandidates = document.getElementById("learningCandidates");
@@ -420,6 +423,7 @@ function renderInspectResult(data) {
   planTrace.textContent = planLines.join("\n");
 
   renderLoadedFiles(data.loaded_files || []);
+  latestSuggestionId = null;
   suggestionTrace.textContent = "-";
   if (!data.output_preview) {
     setPreview("-");
@@ -435,6 +439,7 @@ function renderSuggestionDetail(data) {
   const payload = {
     suggestion: data.suggestion,
     run: data.run || null,
+    owner_review: data.owner_review || null,
     output_path: data.output_path || null,
     output_preview: data.output_preview || null,
   };
@@ -507,6 +512,9 @@ function renderActionResult(data) {
   }
   if (data.verdict_record_id) {
     out.push(`verdict_record_id: ${data.verdict_record_id}`);
+  }
+  if (data.correction_record_id) {
+    out.push(`correction_record_id: ${data.correction_record_id}`);
   }
   if (data.candidate_ref) {
     out.push(`candidate_ref: ${data.candidate_ref}`);
@@ -962,6 +970,65 @@ async function runTask() {
   }
 }
 
+async function reviewSuggestion(verdict) {
+  const sid = String(latestSuggestionId || "").trim();
+  if (!sid) {
+    addBubble("system", "No suggestion selected. Run a task first.");
+    return;
+  }
+  const choice = String(verdict || "").trim().toLowerCase();
+  if (!["accept", "modify", "reject"].includes(choice)) {
+    return;
+  }
+
+  const ownerNote =
+    window.prompt("Owner note (required):", "Reviewed with current judgment context.") || "";
+  const note = ownerNote.trim();
+  if (!note) {
+    addBubble("system", "Review skipped: owner note is required.");
+    return;
+  }
+
+  const payload = {
+    action: "review_suggestion",
+    suggestion_id: sid,
+    verdict: choice,
+    owner_note: note,
+  };
+
+  if (choice === "modify") {
+    const replacement = window.prompt("Replacement judgment (required):", "") || "";
+    if (!replacement.trim()) {
+      addBubble("system", "Modify skipped: replacement judgment is required.");
+      return;
+    }
+    const unlikeReason = window.prompt("Unlike-me reason (required):", "") || "";
+    if (!unlikeReason.trim()) {
+      addBubble("system", "Modify skipped: unlike-me reason is required.");
+      return;
+    }
+    const targetLayer = window.prompt("Target layer (optional):", "decision") || "";
+    payload.replacement_judgment = replacement.trim();
+    payload.unlike_me_reason = unlikeReason.trim();
+    if (targetLayer.trim()) {
+      payload.correction_target_layer = targetLayer.trim();
+    }
+  }
+
+  try {
+    const data = await postJson("/api/action", payload);
+    renderActionResult(data);
+    if (data.suggestion_detail) {
+      renderSuggestionDetail(data.suggestion_detail);
+    } else {
+      await loadSuggestionDetail(sid);
+    }
+    addBubble("system", `Suggestion reviewed: ${sid} -> ${choice}`);
+  } catch (err) {
+    addBubble("system", `Suggestion review failed: ${err.message}`);
+  }
+}
+
 async function runAction(action) {
   const taskText = taskInput.value.trim();
   const learningText = learningDirectInput ? learningDirectInput.value.trim() : "";
@@ -1175,6 +1242,15 @@ learningPacketBtn.addEventListener("click", () => {
 });
 learningImportBtn.addEventListener("click", () => {
   importLearningHandoffResponse();
+});
+suggestionAcceptBtn.addEventListener("click", () => {
+  reviewSuggestion("accept");
+});
+suggestionModifyBtn.addEventListener("click", () => {
+  reviewSuggestion("modify");
+});
+suggestionRejectBtn.addEventListener("click", () => {
+  reviewSuggestion("reject");
 });
 
 initTheme();

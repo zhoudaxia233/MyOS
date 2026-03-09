@@ -108,6 +108,47 @@ OWNER_REPORT_SCHEMA = {
     }
 }
 
+OWNER_VERDICTS_SCHEMA = {
+    "_schema": {
+        "name": "owner_verdicts",
+        "version": "1.0",
+        "fields": [
+            "id",
+            "created_at",
+            "status",
+            "suggestion_ref",
+            "verdict",
+            "owner_note",
+            "correction_ref",
+            "source_refs",
+            "object_type",
+            "proposal_target",
+        ],
+        "notes": "append-only",
+    }
+}
+
+OWNER_CORRECTIONS_SCHEMA = {
+    "_schema": {
+        "name": "owner_corrections",
+        "version": "1.0",
+        "fields": [
+            "id",
+            "created_at",
+            "status",
+            "suggestion_ref",
+            "verdict_ref",
+            "target_layer",
+            "replacement_judgment",
+            "unlike_me_reason",
+            "source_refs",
+            "object_type",
+            "proposal_target",
+        ],
+        "notes": "append-only",
+    }
+}
+
 DECISIONS_SCHEMA = {
     "_schema": {
         "name": "decisions",
@@ -366,6 +407,16 @@ def log_guardrail_override(repo_root: Path, record: dict) -> None:
 def log_owner_report(repo_root: Path, record: dict) -> None:
     path = _safe_repo_path(repo_root, "orchestrator/logs/owner_reports.jsonl")
     append_jsonl(path, _with_classification(record, object_type="system"), schema_header=OWNER_REPORT_SCHEMA)
+
+
+def log_owner_verdict(repo_root: Path, record: dict) -> None:
+    path = _safe_repo_path(repo_root, "orchestrator/logs/owner_verdicts.jsonl")
+    append_jsonl(path, _with_classification(record, object_type="decision"), schema_header=OWNER_VERDICTS_SCHEMA)
+
+
+def log_owner_correction(repo_root: Path, record: dict) -> None:
+    path = _safe_repo_path(repo_root, "orchestrator/logs/owner_corrections.jsonl")
+    append_jsonl(path, _with_classification(record, object_type="decision"), schema_header=OWNER_CORRECTIONS_SCHEMA)
 
 
 def log_decision(repo_root: Path, record: dict) -> None:

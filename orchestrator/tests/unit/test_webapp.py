@@ -175,6 +175,78 @@ def test_api_suggestion_rejects_missing_or_unknown_id() -> None:
             api_suggestion(root, "sg_missing")
 
 
+def test_api_action_review_suggestion_writes_verdict_and_correction() -> None:
+    with TemporaryDirectory() as td:
+        root = _copy_repo_subset(Path(td))
+        run_result = api_run(
+            root,
+            {
+                "task": "run weekly decision review",
+                "provider": "dry-run",
+                "with_retrieval": False,
+            },
+        )
+        suggestion_id = run_result["suggestion_id"]
+
+        accept_result = api_action(
+            root,
+            {
+                "action": "review_suggestion",
+                "suggestion_id": suggestion_id,
+                "verdict": "accept",
+                "owner_note": "Aligned with current operating intent.",
+            },
+        )
+        assert accept_result["ok"] is True
+        assert accept_result["verdict"] == "accept"
+        assert accept_result["verdict_record_id"].startswith("ov_")
+        assert accept_result["correction_record_id"] is None
+        assert isinstance(accept_result["suggestion_detail"], dict)
+
+        accept_detail = api_suggestion(root, suggestion_id)
+        assert accept_detail["owner_review"]["verdict"] is not None
+        assert accept_detail["owner_review"]["verdict"]["id"] == accept_result["verdict_record_id"]
+        assert accept_detail["owner_review"]["correction"] is None
+
+        with pytest.raises(ValueError):
+            api_action(
+                root,
+                {
+                    "action": "review_suggestion",
+                    "suggestion_id": suggestion_id,
+                    "verdict": "modify",
+                    "owner_note": "Needs refinement.",
+                },
+            )
+
+        modify_result = api_action(
+            root,
+            {
+                "action": "review_suggestion",
+                "suggestion_id": suggestion_id,
+                "verdict": "modify",
+                "owner_note": "Direction good, framing should be tighter.",
+                "replacement_judgment": "Use narrower scope and defer irreversible commitment.",
+                "unlike_me_reason": "Current wording overcommits under uncertainty.",
+                "correction_target_layer": "decision",
+            },
+        )
+        assert modify_result["ok"] is True
+        assert modify_result["verdict"] == "modify"
+        assert modify_result["verdict_record_id"].startswith("ov_")
+        assert modify_result["correction_record_id"].startswith("oc_")
+
+        modify_detail = api_suggestion(root, suggestion_id)
+        verdict_row = modify_detail["owner_review"]["verdict"]
+        correction_row = modify_detail["owner_review"]["correction"]
+        assert verdict_row is not None
+        assert correction_row is not None
+        assert verdict_row["id"] == modify_result["verdict_record_id"]
+        assert correction_row["id"] == modify_result["correction_record_id"]
+        assert correction_row["target_layer"] == "decision"
+        assert correction_row["verdict_ref"] == modify_result["verdict_record_id"]
+
+
 def test_api_action_validate_metrics_and_schedule() -> None:
     with TemporaryDirectory() as td:
         root = _copy_repo_subset(Path(td))

@@ -51,7 +51,9 @@ from settings import apply_openai_api_key_env, get_openai_api_key, load_settings
 from token_count import count_text_tokens
 from writer import (
     log_metrics_snapshot,
+    log_owner_correction,
     log_owner_report,
+    log_owner_verdict,
     log_retrieval_query,
     log_run,
     log_schedule_run,
@@ -307,6 +309,35 @@ def _find_jsonl_record_by_id(path: Path, record_id: str) -> dict | None:
     return None
 
 
+def _find_latest_jsonl_record_by_field(path: Path, *, key: str, value: str) -> dict | None:
+    match_value = str(value).strip()
+    if not match_value:
+        return None
+    for row in reversed(_read_jsonl_records(path)):
+        if str(row.get(key, "")).strip() == match_value and str(row.get("status", "active")).strip().lower() == "active":
+            return row
+    return None
+
+
+def _suggestion_owner_review(root: Path, suggestion_id: str) -> dict:
+    verdict_path = root / "orchestrator" / "logs" / "owner_verdicts.jsonl"
+    correction_path = root / "orchestrator" / "logs" / "owner_corrections.jsonl"
+
+    verdict = _find_latest_jsonl_record_by_field(verdict_path, key="suggestion_ref", value=suggestion_id)
+    correction: dict[str, Any] | None = None
+    if verdict is not None:
+        verdict_id = str(verdict.get("id", "")).strip()
+        if verdict_id:
+            correction = _find_latest_jsonl_record_by_field(correction_path, key="verdict_ref", value=verdict_id)
+        if correction is None:
+            correction = _find_latest_jsonl_record_by_field(correction_path, key="suggestion_ref", value=suggestion_id)
+
+    return {
+        "verdict": verdict,
+        "correction": correction,
+    }
+
+
 def api_suggestion(root: Path, suggestion_id: str) -> dict:
     sid = str(suggestion_id).strip()
     if not sid:
@@ -335,6 +366,7 @@ def api_suggestion(root: Path, suggestion_id: str) -> dict:
         "ok": True,
         "suggestion": suggestion,
         "run": run_record,
+        "owner_review": _suggestion_owner_review(root, sid),
         "output_path": output_path,
         "output_preview": output_preview,
     }
@@ -919,6 +951,74 @@ def api_action(root: Path, payload: dict[str, Any]) -> dict:
             "built_at": payload_out["built_at"],
             "doc_count": payload_out["doc_count"],
             "source_count": len(payload_out["sources"]),
+        }
+
+    if action == "review_suggestion":
+        suggestion_id = str(payload.get("suggestion_id", "")).strip()
+        if not suggestion_id:
+            raise ValueError("suggestion_id is required for review_suggestion")
+
+        verdict = str(payload.get("verdict", "")).strip().lower()
+        if verdict not in {"accept", "modify", "reject"}:
+            raise ValueError("verdict must be one of: accept, modify, reject")
+
+        owner_note = str(payload.get("owner_note", "")).strip()
+        if not owner_note:
+            raise ValueError("owner_note is required for review_suggestion")
+
+        suggestion_payload = api_suggestion(root, suggestion_id)
+        suggestion = suggestion_payload.get("suggestion", {})
+        run_ref = str(suggestion.get("run_ref", "")).strip()
+        source_refs: list[str] = [suggestion_id]
+        if run_ref:
+            source_refs.append(run_ref)
+
+        verdict_id = next_id_for_rel_path(root, "ov", "orchestrator/logs/owner_verdicts.jsonl")
+        correction_ref = None
+
+        correction_target_layer = _normalize_optional_str(payload.get("correction_target_layer"))
+        replacement_judgment = _normalize_optional_str(payload.get("replacement_judgment"))
+        unlike_me_reason = _normalize_optional_str(payload.get("unlike_me_reason"))
+
+        if verdict == "modify":
+            if not replacement_judgment:
+                raise ValueError("replacement_judgment is required for modify verdict")
+            if not unlike_me_reason:
+                raise ValueError("unlike_me_reason is required for modify verdict")
+            correction_ref = next_id_for_rel_path(root, "oc", "orchestrator/logs/owner_corrections.jsonl")
+            correction_record = {
+                "id": correction_ref,
+                "created_at": _utc_now(),
+                "status": "active",
+                "suggestion_ref": suggestion_id,
+                "verdict_ref": verdict_id,
+                "target_layer": correction_target_layer or str(suggestion.get("module", "")).strip() or "decision",
+                "replacement_judgment": replacement_judgment,
+                "unlike_me_reason": unlike_me_reason,
+                "source_refs": source_refs + [verdict_id],
+            }
+            log_owner_correction(root, correction_record)
+
+        verdict_record = {
+            "id": verdict_id,
+            "created_at": _utc_now(),
+            "status": "active",
+            "suggestion_ref": suggestion_id,
+            "verdict": verdict,
+            "owner_note": owner_note,
+            "correction_ref": correction_ref,
+            "source_refs": source_refs,
+        }
+        log_owner_verdict(root, verdict_record)
+
+        return {
+            "ok": True,
+            "action": action,
+            "suggestion_id": suggestion_id,
+            "verdict": verdict,
+            "verdict_record_id": verdict_id,
+            "correction_record_id": correction_ref,
+            "suggestion_detail": api_suggestion(root, suggestion_id),
         }
 
     if action == "ingest_learning":

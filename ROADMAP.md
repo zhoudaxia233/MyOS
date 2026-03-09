@@ -38,8 +38,9 @@ Keep rollout evolutionary: preserve existing extraction/distillation pipelines a
   - suggestion detail query API by `suggestion_id`
   - web trace panel support for full suggestion detail view
   - clearer `invoked_rules` / `invoked_traits` fields in suggestion records
-- Next:
   - bridge suggestion detail to owner verdict/correction actions (`suggestion_id` as first-class review handle)
+- Next:
+  - integrate verdict/correction trend summaries into owner report and audit quick filters
 - Exit criteria:
   - end-to-end trace from task input to suggestion, run record, output artifact, and loaded context
   - owner can inspect why a recommendation was produced
@@ -49,6 +50,10 @@ Keep rollout evolutionary: preserve existing extraction/distillation pipelines a
 - New records:
   - `orchestrator/logs/owner_verdicts.jsonl`
   - `orchestrator/logs/owner_corrections.jsonl`
+- Implemented baseline:
+  - web/API action `review_suggestion` with `accept | modify | reject`
+  - `modify` captures correction payload (`target_layer`, `replacement_judgment`, `unlike_me_reason`)
+  - suggestion detail API now returns linked owner review context
 - Required behavior:
   - verdict: `accept | modify | reject`
   - correction captures "unlike-me" reason, replacement judgment, and target layer
