@@ -30,16 +30,11 @@
     <section class="card panel-chat">
       <div id="chatLog" class="chat-log"></div>
 
-      <section class="entrypoint-tabs" aria-label="Operator entrypoints">
-        <button class="entrypoint-tab active" type="button" data-entrypoint="task" data-i18n="tab_task">Task Console</button>
-        <button class="entrypoint-tab" type="button" data-entrypoint="audit" data-i18n="tab_audit">Audit Console</button>
+      <section id="entrypointHint" class="entrypoint-hint" data-i18n="hint_audit">
+        Review drift, reports, and learning candidates before promoting changes.
       </section>
 
-      <section id="entrypointHint" class="entrypoint-hint" data-i18n="hint_task">
-        Ask the system to do work, inspect route/plan first, then run.
-      </section>
-
-      <section id="taskConsolePanel" class="console-panel active" data-console="task">
+      <section id="taskConsolePanel" class="console-panel" data-console="task" hidden>
         <form id="taskForm" class="composer">
           <label class="label" for="taskInput" data-i18n="label_task">Task</label>
           <textarea id="taskInput" rows="3" placeholder="Describe what you want to do..." data-i18n-placeholder="task_placeholder"></textarea>
@@ -105,7 +100,7 @@
         </div>
       </section>
 
-      <section id="auditConsolePanel" class="console-panel" data-console="audit">
+      <section id="auditConsolePanel" class="console-panel active" data-console="audit">
         <div class="quick-actions">
           <h2 data-i18n="audit_start_title">Start Here</h2>
           <p class="helper-note" data-i18n="audit_start_desc">Run one quick audit first, then use manual actions only when needed.</p>
