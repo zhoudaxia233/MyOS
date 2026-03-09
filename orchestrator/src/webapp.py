@@ -1303,11 +1303,17 @@ def _make_handler(root: Path, static_root: Path) -> type[BaseHTTPRequestHandler]
                 if path in {"/", "/index.html"}:
                     self._send_file(static_root / "index.html", "text/html; charset=utf-8")
                     return
+                if path in {"/audit", "/audit.html"}:
+                    self._send_file(static_root / "audit.html", "text/html; charset=utf-8")
+                    return
                 if path == "/styles.css":
                     self._send_file(static_root / "styles.css", "text/css; charset=utf-8")
                     return
                 if path == "/app.js":
                     self._send_file(static_root / "app.js", "application/javascript; charset=utf-8")
+                    return
+                if path == "/workspace.js":
+                    self._send_file(static_root / "workspace.js", "application/javascript; charset=utf-8")
                     return
                 if path == "/api/status":
                     self._send_json(200, api_status(root))

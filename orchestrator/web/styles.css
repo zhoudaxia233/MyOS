@@ -130,6 +130,36 @@ body {
   gap: 10px;
 }
 
+.workspace-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.workspace-nav-link {
+  border: 1px solid color-mix(in srgb, var(--border) 82%, white);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--card) 96%, white 4%);
+  color: var(--accent-ink);
+  padding: 7px 12px;
+  min-width: 116px;
+  text-align: center;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.workspace-nav-link:hover {
+  border-color: color-mix(in srgb, var(--accent) 55%, white);
+}
+
+.workspace-nav-link.active {
+  background: color-mix(in srgb, var(--accent) 18%, white);
+  border-color: color-mix(in srgb, var(--accent) 66%, white);
+  color: var(--bubble-user-text);
+  font-weight: 700;
+}
+
 .icon-btn {
   width: 38px;
   height: 38px;
@@ -177,6 +207,144 @@ body {
   padding: 12px 24px 24px;
   height: calc(100dvh - 96px);
   min-height: 0;
+}
+
+.workspace-layout {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 1.25fr 0.75fr;
+  gap: 16px;
+  padding: 12px 24px 24px;
+  height: calc(100dvh - 96px);
+  min-height: 0;
+}
+
+.workspace-main,
+.workspace-result {
+  min-height: 0;
+  height: 100%;
+  overflow: auto;
+  padding: 14px;
+}
+
+.workspace-main {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.workspace-intro h2 {
+  margin: 0;
+  font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
+  font-size: 1.2rem;
+}
+
+.workspace-intro p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.workspace-form textarea {
+  width: 100%;
+  margin-top: 4px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--card) 96%, white 4%);
+  padding: 12px;
+  resize: vertical;
+  font: inherit;
+  color: var(--text);
+  caret-color: var(--text);
+}
+
+.workspace-advanced {
+  margin-top: 10px;
+  border: 1px solid color-mix(in srgb, var(--border) 80%, white);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--card) 96%, white 4%);
+  padding: 8px 10px 10px;
+}
+
+.workspace-advanced summary {
+  cursor: pointer;
+  font-size: 0.84rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.workspace-advanced .control-grid {
+  margin-top: 10px;
+}
+
+.workspace-starters {
+  border-top: 1px solid color-mix(in srgb, var(--border) 75%, white);
+  padding-top: 10px;
+}
+
+.workspace-starters h3,
+.workspace-messages h3 {
+  margin: 0 0 8px;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.workspace-messages .chat-log {
+  max-height: 180px;
+}
+
+.workspace-result-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.workspace-result-head h2 {
+  margin: 0;
+  font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
+  font-size: 1.1rem;
+}
+
+.workspace-result-head .copy-btn {
+  position: static;
+  width: 30px;
+  height: 30px;
+}
+
+.workspace-result #outputPreview {
+  margin-top: 8px;
+  max-height: 320px;
+  overflow: auto;
+  border: 1px solid color-mix(in srgb, var(--border) 80%, white);
+  border-radius: 10px;
+  padding: 10px;
+  background: color-mix(in srgb, var(--card) 96%, white 4%);
+}
+
+.workspace-technical {
+  margin-top: 10px;
+  border: 1px solid color-mix(in srgb, var(--border) 80%, white);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--card) 96%, white 4%);
+  padding: 8px;
+}
+
+.workspace-technical summary {
+  cursor: pointer;
+  font-size: 0.84rem;
+  color: var(--muted);
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.workspace-technical .trace-block:last-child {
+  margin-bottom: 0;
+}
+
+.nav-btn {
+  text-decoration: none;
 }
 
 .card {
@@ -839,14 +1007,48 @@ pre {
     height: auto;
   }
 
+  .workspace-layout {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+
   .panel-chat,
   .panel-trace {
+    min-height: auto;
+    height: auto;
+  }
+
+  .workspace-main,
+  .workspace-result {
     min-height: auto;
     height: auto;
   }
 }
 
 @media (max-width: 740px) {
+  .topbar {
+    flex-wrap: wrap;
+  }
+
+  .workspace-nav {
+    width: 100%;
+    order: 3;
+  }
+
+  .workspace-nav-link {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .workspace-actions {
+    flex-wrap: wrap;
+  }
+
+  .workspace-actions .btn {
+    flex: 1 1 auto;
+    text-align: center;
+  }
+
   .learning-capture {
     flex-direction: column;
     align-items: stretch;

@@ -3,56 +3,60 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title data-i18n="doc_title">Personal Core OS | V1 Control Center</title>
+  <title data-i18n="doc_title">Personal Core OS | 工作台</title>
   <link rel="stylesheet" href="/styles.css">
 </head>
-<body>
+<body class="workspace-page">
   <div class="bg-layer bg-a"></div>
   <div class="bg-layer bg-b"></div>
 
-  <header class="topbar">
+  <header class="topbar workspace-topbar">
     <div class="title-wrap">
       <h1 data-i18n="app_title">Personal Core OS</h1>
-      <p data-i18n="app_subtitle">V1 Control Center</p>
+      <p data-i18n="app_subtitle">简化工作台</p>
     </div>
+    <nav class="workspace-nav" aria-label="Primary navigation">
+      <a class="workspace-nav-link active" href="/" data-i18n="nav_workspace">工作台</a>
+      <a class="workspace-nav-link" href="/audit.html" data-i18n="nav_audit">审计中心</a>
+    </nav>
     <div class="topbar-right">
       <button id="settingsToggle" class="icon-btn" type="button" aria-label="Open settings" title="Open settings">⚙</button>
       <button id="themeToggle" class="icon-btn" type="button" aria-label="Toggle dark mode" title="Toggle dark mode">☀</button>
-      <div id="statusBadge" class="status-badge pending" data-i18n="status_connecting">Connecting...</div>
+      <div id="statusBadge" class="status-badge pending" data-i18n="status_connecting">连接中...</div>
     </div>
   </header>
 
-  <main class="layout">
-    <section class="card panel-chat">
-      <div id="chatLog" class="chat-log"></div>
+  <main class="workspace-layout">
+    <section class="card workspace-main">
+      <div class="workspace-intro">
+        <h2 data-i18n="hero_title">你想让我帮你做什么？</h2>
+        <p data-i18n="hero_desc">输入目标，点击执行。复杂诊断和治理能力在审计中心。</p>
+      </div>
 
-      <section class="entrypoint-tabs" aria-label="Operator entrypoints">
-        <button class="entrypoint-tab active" type="button" data-entrypoint="task" data-i18n="tab_task">Task Console</button>
-        <button class="entrypoint-tab" type="button" data-entrypoint="learning" data-i18n="tab_learning">Learning / Evolution</button>
-        <button class="entrypoint-tab" type="button" data-entrypoint="audit" data-i18n="tab_audit">Audit Console</button>
-      </section>
+      <form id="taskForm" class="workspace-form">
+        <label class="label" for="taskInput" data-i18n="label_task">任务</label>
+        <textarea id="taskInput" rows="4" placeholder="例如：帮我生成本周决策复盘" data-i18n-placeholder="task_placeholder"></textarea>
 
-      <section id="entrypointHint" class="entrypoint-hint" data-i18n="hint_task">
-        Ask the system to do work, inspect route/plan first, then run.
-      </section>
+        <div class="action-row workspace-actions">
+          <button id="runBtn" type="submit" class="btn primary" data-i18n="btn_run">开始执行</button>
+          <button id="inspectBtn" type="button" class="btn secondary" data-i18n="btn_inspect">预览处理方式</button>
+          <a class="btn secondary nav-btn" href="/audit.html" data-i18n="btn_go_audit">打开审计中心</a>
+        </div>
 
-      <section id="taskConsolePanel" class="console-panel active" data-console="task">
-        <form id="taskForm" class="composer">
-          <label class="label" for="taskInput" data-i18n="label_task">Task</label>
-          <textarea id="taskInput" rows="3" placeholder="Describe what you want to do..." data-i18n-placeholder="task_placeholder"></textarea>
-
+        <details class="workspace-advanced" id="advancedControls">
+          <summary data-i18n="advanced_summary">高级选项（可选）</summary>
           <div class="control-grid">
             <label class="control">
-              <span data-i18n="label_module">Module</span>
+              <span data-i18n="label_module">模块</span>
               <select id="moduleSelect">
-                <option value="" data-i18n="option_auto_route">Auto route</option>
+                <option value="" data-i18n="option_auto_route">自动路由</option>
               </select>
             </label>
 
             <label class="control">
               <span data-i18n="label_provider">Provider</span>
               <select id="providerSelect">
-                <option value="auto" data-i18n="option_provider_auto">auto (from settings)</option>
+                <option value="auto" data-i18n="option_provider_auto">自动（按设置）</option>
                 <option value="dry-run">dry-run</option>
                 <option value="handoff">handoff</option>
                 <option value="openai">openai</option>
@@ -61,13 +65,13 @@
             </label>
 
             <label class="control">
-              <span data-i18n="label_model">Model</span>
-              <input id="modelInput" type="text" placeholder="gpt-4.1-mini" data-i18n-placeholder="model_placeholder">
+              <span data-i18n="label_model">模型</span>
+              <input id="modelInput" type="text" placeholder="gpt-4.1-mini / deepseek-chat" data-i18n-placeholder="model_placeholder">
             </label>
 
             <label class="control checkbox">
               <input id="retrievalToggle" type="checkbox">
-              <span data-i18n="label_use_retrieval">Use retrieval</span>
+              <span data-i18n="label_use_retrieval">启用检索</span>
             </label>
 
             <label class="control">
@@ -75,204 +79,64 @@
               <input id="retrievalTopK" type="number" min="1" max="32" value="6">
             </label>
           </div>
+        </details>
+      </form>
 
-          <div class="action-row">
-            <button id="inspectBtn" type="button" class="btn secondary" data-i18n="btn_inspect">Inspect</button>
-            <button id="runBtn" type="submit" class="btn primary" data-i18n="btn_run">Run</button>
-          </div>
-        </form>
-
-        <div class="quick-actions">
-          <h2 data-i18n="task_starters">Task Starters</h2>
-          <div class="chips">
-            <button class="chip" data-task="run weekly decision review" data-i18n="starter_weekly_review">Weekly Decision Review</button>
-            <button class="chip" data-task="extract chat patterns from this week" data-i18n="starter_extract_patterns">Extract Chat Patterns</button>
-            <button class="chip" data-task="write an after-meal story about BTC market regime" data-i18n="starter_write_story">Write After-Meal Story</button>
-          </div>
-          <div class="action-row">
-            <button id="mvpFlowBtn" type="button" class="btn primary" data-i18n="btn_run_mvp">Run MVP Flow (Inspect -> Run -> Review)</button>
-            <button id="demoModeBtn" type="button" class="btn secondary" data-i18n="btn_run_demo">Run Demo Mode (Decision + Learning + Audit)</button>
-          </div>
-          <section id="mvpGuide" class="entrypoint-hint mvp-guide" data-i18n="mvp_guide_idle">
-            MVP quick guide: click the button, then check Route / Plan / Result / Suggestion Detail in order.
-          </section>
-          <section id="demoSummary" class="entrypoint-hint demo-summary" data-i18n="demo_summary_idle">
-            Demo summary will appear here.
-          </section>
+      <section class="quick-actions workspace-starters">
+        <h3 data-i18n="task_starters">快捷开始</h3>
+        <div class="chips">
+          <button type="button" class="chip" data-task="帮我做本周决策复盘，并给3条优先级最高的行动建议" data-i18n="starter_weekly_review">每周决策复盘</button>
+          <button type="button" class="chip" data-task="请从这周聊天中提取可执行模式" data-i18n="starter_extract_patterns">提取本周聊天模式</button>
+          <button type="button" class="chip" data-task="写一篇饭后可读的BTC市场故事，强调风险控制" data-i18n="starter_write_story">写一篇饭后BTC故事</button>
         </div>
       </section>
 
-      <section id="learningConsolePanel" class="console-panel" data-console="learning">
-        <div class="learning-capture" aria-label="Learning direct ingest">
-          <div class="learning-copy">
-            <h2 data-i18n="learning_direct_ingest_title">Direct Ingest</h2>
-            <p data-i18n="learning_direct_ingest_desc">Paste transcript/article/notes and append memory records directly.</p>
-          </div>
-        </div>
-        <label class="label" for="learningDirectInput" data-i18n="label_learning_text">Learning Text</label>
-        <textarea id="learningDirectInput" rows="5" placeholder="Paste transcript, article body, or your summary..." data-i18n-placeholder="learning_text_placeholder"></textarea>
-        <label class="label" for="learningTitleInput" data-i18n="label_title_optional">Title (optional)</label>
-        <input id="learningTitleInput" type="text" placeholder="Source title" data-i18n-placeholder="title_placeholder">
-        <label class="label" for="learningCertainty" data-i18n="label_learning_certainty">Certainty</label>
-        <select id="learningCertainty">
-          <option value="auto" data-i18n="certainty_auto">Auto</option>
-          <option value="low" data-i18n="certainty_low">Low</option>
-          <option value="medium" data-i18n="certainty_medium">Medium</option>
-          <option value="high" data-i18n="certainty_high">High</option>
-        </select>
-        <p class="helper-note" data-i18n="learning_quick_defaults">
-          Quick mode: source type defaults to notes, certainty defaults to auto.
-        </p>
-        <div class="action-row">
-          <button id="quickIngestBtn" class="btn ingest-btn" type="button" data-i18n="btn_ingest_memory">Ingest To Memory</button>
-        </div>
-
-        <div class="learning-capture" aria-label="Learning handoff">
-          <div class="learning-copy">
-            <h2 data-i18n="learning_handoff_title">Learning Handoff</h2>
-            <p data-i18n="learning_handoff_desc">Generate a low-cost packet for external LLM, then paste structured response back.</p>
-          </div>
-        </div>
-        <label class="label" for="learningSourceInput" data-i18n="label_source_url">Source URL / Reference</label>
-        <textarea id="learningSourceInput" rows="2" placeholder="YouTube URL, podcast URL, or source ref" data-i18n-placeholder="source_url_placeholder"></textarea>
-        <div class="action-row">
-          <button id="learningPacketBtn" type="button" class="btn secondary" data-i18n="btn_generate_packet">Generate Handoff Packet</button>
-        </div>
-        <label class="label" for="learningResponseInput" data-i18n="label_external_response">External LLM JSON Response</label>
-        <textarea id="learningResponseInput" rows="5" placeholder="Paste external model JSON here..." data-i18n-placeholder="external_response_placeholder"></textarea>
-        <div class="action-row">
-          <button id="learningImportBtn" type="button" class="btn primary" data-i18n="btn_parse_queue">Parse To Candidate Queue</button>
-        </div>
-      </section>
-
-      <section id="auditConsolePanel" class="console-panel" data-console="audit">
-        <div class="quick-actions">
-          <h2 data-i18n="audit_start_title">Start Here</h2>
-          <p class="helper-note" data-i18n="audit_start_desc">Run one quick audit first, then use manual actions only when needed.</p>
-          <div class="action-row">
-            <button id="auditQuickRunBtn" type="button" class="btn primary" data-i18n="btn_audit_quick_run">Run Quick Audit (Validate -> Metrics -> Owner Report)</button>
-          </div>
-          <section id="auditGuide" class="entrypoint-hint audit-guide" data-i18n="audit_guide_idle">
-            Audit guide: run quick audit first, then check cognition cards and owner todos on the right.
-          </section>
-
-          <h2 data-i18n="audit_actions_primary">Manual Actions (Common)</h2>
-          <div class="chips">
-            <button class="chip action" data-action="validate" data-i18n="audit_validate">Validate</button>
-            <button class="chip action" data-action="metrics" data-i18n="audit_metrics">Metrics 7D</button>
-            <button class="chip action" data-action="owner_report" data-i18n="audit_owner_report">Owner Report 7D</button>
-          </div>
-          <h2 data-i18n="audit_actions_secondary">Diagnostics / Maintenance</h2>
-          <div class="chips">
-            <button class="chip action" data-action="detect_disequilibrium" data-i18n="audit_detect_diseq">Detect Disequilibrium</button>
-            <button class="chip action" data-action="cognition_timeline" data-i18n="audit_cognition_timeline">Cognition Timeline</button>
-            <button class="chip action" data-action="schedule_weekly" data-i18n="audit_schedule_weekly">Run Weekly Cycle</button>
-            <button class="chip action" data-action="build_index" data-i18n="audit_build_index">Build Retrieval Index</button>
-          </div>
-          <h2 data-i18n="suggestion_review_filters">Suggestion Review Filters</h2>
-          <div class="chips">
-            <button class="chip action" data-action="suggestion_review_summary_all" data-i18n="filter_review_all">Review All</button>
-            <button class="chip action" data-action="suggestion_review_summary_accept" data-i18n="filter_accept">Accept</button>
-            <button class="chip action" data-action="suggestion_review_summary_modify" data-i18n="filter_modify">Modify</button>
-            <button class="chip action" data-action="suggestion_review_summary_reject" data-i18n="filter_reject">Reject</button>
-          </div>
-        </div>
+      <section class="workspace-messages">
+        <h3 data-i18n="trace_messages">系统消息</h3>
+        <div id="chatLog" class="chat-log"></div>
       </section>
     </section>
 
-    <aside class="card panel-trace">
-      <h2 data-i18n="execution_trace">Execution Trace</h2>
-
-      <div class="trace-block">
-        <h3 data-i18n="trace_cognition_signals">Cognition Signals (7D)</h3>
-        <div id="cognitionCards" class="metric-cards">
-          <div class="metric-card status-warn">
-            <div class="metric-title">Loading...</div>
-            <div class="metric-value">-</div>
-            <div class="metric-meta">-</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="trace-block">
-        <h3 data-i18n="trace_owner_todos">Owner Todos</h3>
-        <div id="ownerTodos" class="todo-list">
-          <div class="todo-item">
-            <div class="todo-head">
-              <span class="todo-metric">Loading...</span>
-            </div>
-            <div class="todo-action">-</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="trace-block">
-        <h3 data-i18n="trace_learning_candidates">Learning Candidates</h3>
-        <div id="learningCandidates" class="todo-list">
-          <div class="todo-item">
-            <div class="todo-head">
-              <span class="todo-metric">Loading...</span>
-            </div>
-            <div class="todo-action">-</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="trace-block">
-        <h3 data-i18n="trace_candidate_pipeline">Candidate Pipeline (30D + Trend)</h3>
-        <pre id="candidatePipeline">-</pre>
-      </div>
-
-      <div class="trace-block">
-        <h3 data-i18n="trace_suggestion_reviews">Suggestion Reviews (30D + Trend)</h3>
-        <pre id="suggestionReviewSummary">-</pre>
-      </div>
-
-      <div class="trace-block">
-        <h3 data-i18n="trace_route">Route</h3>
-        <pre id="routeTrace">-</pre>
-      </div>
-
-      <div class="trace-block">
-        <h3 data-i18n="trace_plan">Plan</h3>
-        <pre id="planTrace">-</pre>
-      </div>
-
-      <div class="trace-block">
-        <h3 data-i18n="trace_loaded_files">Loaded Files</h3>
-        <ul id="loadedFiles" class="file-list">
-          <li>-</li>
-        </ul>
-      </div>
-
-      <div class="trace-block">
-        <h3 data-i18n="trace_result">Result</h3>
-        <pre id="resultTrace">-</pre>
-      </div>
-
-      <div class="trace-block">
-        <h3 data-i18n="trace_suggestion_detail">Suggestion Detail</h3>
-        <pre id="suggestionTrace">-</pre>
-        <div class="todo-actions">
-          <button id="suggestionAcceptBtn" class="todo-resolve-btn" type="button" data-i18n="btn_accept">Accept</button>
-          <button id="suggestionModifyBtn" class="todo-resolve-btn" type="button" data-i18n="btn_modify">Modify</button>
-          <button id="suggestionRejectBtn" class="todo-resolve-btn" type="button" data-i18n="btn_reject">Reject</button>
-        </div>
-      </div>
-
-      <div class="trace-block output-block">
-        <h3 data-i18n="trace_output_preview">Output Preview</h3>
+    <aside class="card workspace-result">
+      <div class="workspace-result-head">
+        <h2 data-i18n="result_title">执行结果</h2>
         <button id="copyOutputBtn" class="icon-btn copy-btn" type="button" aria-label="Copy full output" title="Copy full output">⧉</button>
-        <div id="outputTokenMeta" class="token-meta">-</div>
-        <pre id="outputPreview">-</pre>
       </div>
+      <div id="outputTokenMeta" class="token-meta">-</div>
+      <pre id="outputPreview">-</pre>
+
+      <details class="workspace-technical" id="technicalDetails">
+        <summary data-i18n="technical_summary">技术详情（路由/计划/文件）</summary>
+        <div class="trace-block">
+          <h3 data-i18n="trace_route">路由</h3>
+          <pre id="routeTrace">-</pre>
+        </div>
+        <div class="trace-block">
+          <h3 data-i18n="trace_plan">计划</h3>
+          <pre id="planTrace">-</pre>
+        </div>
+        <div class="trace-block">
+          <h3 data-i18n="trace_loaded_files">已加载文件</h3>
+          <ul id="loadedFiles" class="file-list">
+            <li>-</li>
+          </ul>
+        </div>
+        <div class="trace-block">
+          <h3 data-i18n="trace_result">结果元信息</h3>
+          <pre id="resultTrace">-</pre>
+        </div>
+        <div class="trace-block">
+          <h3 data-i18n="trace_suggestion_detail">系统建议</h3>
+          <pre id="suggestionTrace">-</pre>
+        </div>
+      </details>
     </aside>
   </main>
 
   <div id="settingsModal" class="modal hidden">
     <div class="modal-card">
       <div class="modal-header">
-        <h3 data-i18n="settings_title">Settings</h3>
+        <h3 data-i18n="settings_title">设置</h3>
         <button id="settingsClose" class="icon-btn" type="button" aria-label="Close settings" title="Close settings">✕</button>
       </div>
       <div class="modal-body">
@@ -287,7 +151,7 @@
             <input id="settingsOpenaiBaseUrl" type="text" placeholder="https://api.openai.com/v1">
           </label>
           <label class="control">
-            <span data-i18n="settings_openai_model">OpenAI Default Model</span>
+            <span data-i18n="settings_openai_model">OpenAI 默认模型</span>
             <input id="settingsOpenaiModel" type="text" placeholder="gpt-4.1-mini">
           </label>
         </section>
@@ -303,15 +167,15 @@
             <input id="settingsDeepseekBaseUrl" type="text" placeholder="https://api.deepseek.com/v1">
           </label>
           <label class="control">
-            <span data-i18n="settings_deepseek_model">DeepSeek Default Model</span>
+            <span data-i18n="settings_deepseek_model">DeepSeek 默认模型</span>
             <input id="settingsDeepseekModel" type="text" placeholder="deepseek-chat">
           </label>
         </section>
 
         <section class="settings-section">
-          <h4 data-i18n="settings_section_routing">Routing</h4>
+          <h4 data-i18n="settings_section_routing">路由与默认</h4>
           <label class="control">
-            <span data-i18n="settings_default_provider">Fallback Provider</span>
+            <span data-i18n="settings_default_provider">全局回退 Provider</span>
             <select id="settingsDefaultProvider">
               <option value="dry-run">dry-run</option>
               <option value="handoff">handoff</option>
@@ -320,18 +184,18 @@
             </select>
           </label>
           <label class="control">
-            <span data-i18n="settings_routing_model">Routing Model (lighter)</span>
+            <span data-i18n="settings_routing_model">路由模型（轻）</span>
             <input id="settingsRoutingModel" type="text" placeholder="gpt-4.1-nano">
           </label>
         </section>
 
         <section class="settings-section">
-          <h4 data-i18n="settings_section_profiles">Task Profiles (Optional Override)</h4>
-          <p class="settings-note" data-i18n="settings_profiles_note">Leave provider/model empty to use fallback defaults. These apply after module routing.</p>
+          <h4 data-i18n="settings_section_profiles">任务类型模型覆盖（可选）</h4>
+          <p class="settings-note" data-i18n="settings_profiles_note">Provider/Model 留空则使用全局默认；在模块路由后生效。</p>
           <label class="control">
             <span data-i18n="settings_decision_provider">Decision Provider</span>
             <select id="settingsDecisionProvider">
-              <option value="" data-i18n="option_use_fallback">Use fallback</option>
+              <option value="" data-i18n="option_use_fallback">使用全局默认</option>
               <option value="dry-run">dry-run</option>
               <option value="handoff">handoff</option>
               <option value="openai">openai</option>
@@ -339,13 +203,13 @@
             </select>
           </label>
           <label class="control">
-            <span data-i18n="settings_decision_model">Decision Model</span>
+            <span data-i18n="settings_decision_model">Decision 模型</span>
             <input id="settingsDecisionModel" type="text" placeholder="">
           </label>
           <label class="control">
             <span data-i18n="settings_content_provider">Content Provider</span>
             <select id="settingsContentProvider">
-              <option value="" data-i18n="option_use_fallback">Use fallback</option>
+              <option value="" data-i18n="option_use_fallback">使用全局默认</option>
               <option value="dry-run">dry-run</option>
               <option value="handoff">handoff</option>
               <option value="openai">openai</option>
@@ -353,13 +217,13 @@
             </select>
           </label>
           <label class="control">
-            <span data-i18n="settings_content_model">Content Model</span>
+            <span data-i18n="settings_content_model">Content 模型</span>
             <input id="settingsContentModel" type="text" placeholder="">
           </label>
           <label class="control">
             <span data-i18n="settings_cognition_provider">Cognition Provider</span>
             <select id="settingsCognitionProvider">
-              <option value="" data-i18n="option_use_fallback">Use fallback</option>
+              <option value="" data-i18n="option_use_fallback">使用全局默认</option>
               <option value="dry-run">dry-run</option>
               <option value="handoff">handoff</option>
               <option value="openai">openai</option>
@@ -367,15 +231,15 @@
             </select>
           </label>
           <label class="control">
-            <span data-i18n="settings_cognition_model">Cognition Model</span>
+            <span data-i18n="settings_cognition_model">Cognition 模型</span>
             <input id="settingsCognitionModel" type="text" placeholder="">
           </label>
         </section>
 
         <section class="settings-section">
-          <h4 data-i18n="settings_section_ui">Interface</h4>
+          <h4 data-i18n="settings_section_ui">界面</h4>
           <label class="control">
-            <span data-i18n="settings_ui_language">UI Language</span>
+            <span data-i18n="settings_ui_language">界面语言</span>
             <select id="settingsUiLanguage">
               <option value="zh">中文</option>
               <option value="en">English</option>
@@ -384,11 +248,11 @@
         </section>
       </div>
       <div class="modal-actions">
-        <button id="settingsSave" class="btn primary" type="button" data-i18n="btn_save">Save</button>
+        <button id="settingsSave" class="btn primary" type="button" data-i18n="btn_save">保存</button>
       </div>
     </div>
   </div>
 
-  <script src="/app.js" defer></script>
+  <script src="/workspace.js" defer></script>
 </body>
 </html>
