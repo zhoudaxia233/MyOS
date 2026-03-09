@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 from urllib import request
 
@@ -59,8 +60,9 @@ def llm_route_trace(task: str, module_names: list[str], model: str, api_key: str
         "temperature": 0.0,
     }
 
+    base_url = str(os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")).strip().rstrip("/")
     req = request.Request(
-        "https://api.openai.com/v1/chat/completions",
+        f"{base_url}/chat/completions",
         data=json.dumps(payload).encode("utf-8"),
         headers={
             "Authorization": f"Bearer {api_key}",

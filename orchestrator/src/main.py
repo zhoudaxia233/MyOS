@@ -82,7 +82,8 @@ def _default_task_model(settings: dict, cfg: dict, provider: str) -> str:
     normalized = str(provider or "").strip().lower()
     if normalized == "deepseek":
         return str(settings.get("deepseek_model", "deepseek-chat")) or "deepseek-chat"
-    return str(settings.get("task_model", "")) or str(cfg.get("default_openai_model", "gpt-4.1-mini"))
+    openai_model = str(settings.get("openai_model", "")).strip() or str(settings.get("task_model", "")).strip()
+    return openai_model or str(cfg.get("default_openai_model", "gpt-4.1-mini"))
 
 
 def _route_reason_for_log(route: dict) -> str:

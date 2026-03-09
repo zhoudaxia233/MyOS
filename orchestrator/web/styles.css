@@ -335,6 +335,33 @@ body {
   opacity: 1;
 }
 
+#learningTitleInput {
+  width: 100%;
+  margin-top: 4px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--card) 96%, white 4%);
+  padding: 10px 12px;
+  font: inherit;
+  color: var(--text);
+}
+
+#learningCertainty {
+  width: 100%;
+  margin-top: 4px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--card) 96%, white 4%);
+  padding: 10px 12px;
+  font: inherit;
+  color: var(--text);
+}
+
+#learningTitleInput::placeholder {
+  color: var(--muted);
+  opacity: 1;
+}
+
 .control-grid {
   margin-top: 10px;
   display: grid;
@@ -475,6 +502,13 @@ body {
   color: var(--muted);
 }
 
+.helper-note {
+  margin: 8px 0 0;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: var(--muted);
+}
+
 .chips {
   display: flex;
   flex-wrap: wrap;
@@ -498,8 +532,20 @@ body {
 }
 
 .chip.action {
-  color: #6c4600;
-  border-color: color-mix(in srgb, var(--warm) 45%, white);
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--warm) 45%, var(--border));
+  background: color-mix(in srgb, var(--warm) 14%, var(--card) 86%);
+}
+
+.chip.action:hover {
+  border-color: color-mix(in srgb, var(--warm) 62%, var(--border));
+  background: color-mix(in srgb, var(--warm) 18%, var(--card) 82%);
+}
+
+.audit-guide {
+  margin-top: 8px;
+  white-space: pre-wrap;
+  line-height: 1.4;
 }
 
 .panel-trace {
@@ -705,11 +751,14 @@ pre {
 
 .modal-card {
   width: min(560px, 100%);
+  max-height: min(88vh, 980px);
   background: color-mix(in srgb, var(--card) 94%, white 6%);
   border: 1px solid var(--border);
   border-radius: 12px;
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25);
   padding: 12px;
+  display: flex;
+  flex-direction: column;
 }
 
 .modal-header {
@@ -726,13 +775,39 @@ pre {
 
 .modal-body {
   display: grid;
-  gap: 8px;
+  gap: 12px;
+  overflow: auto;
+  padding-right: 4px;
 }
 
 .modal-actions {
   margin-top: 10px;
   display: flex;
   justify-content: flex-end;
+}
+
+.settings-section {
+  border: 1px solid color-mix(in srgb, var(--border) 80%, white);
+  border-radius: 10px;
+  padding: 10px;
+  background: color-mix(in srgb, var(--card) 96%, white 4%);
+  display: grid;
+  gap: 8px;
+}
+
+.settings-section h4 {
+  margin: 0;
+  font-size: 0.86rem;
+  letter-spacing: 0.2px;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.settings-note {
+  margin: 0;
+  font-size: 0.76rem;
+  color: var(--muted);
+  line-height: 1.35;
 }
 
 .file-list {

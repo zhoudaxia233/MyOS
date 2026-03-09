@@ -18,10 +18,11 @@ const mvpFlowBtn = document.getElementById("mvpFlowBtn");
 const demoModeBtn = document.getElementById("demoModeBtn");
 const learningDirectInput = document.getElementById("learningDirectInput");
 const learningTitleInput = document.getElementById("learningTitleInput");
-const learningSourceType = document.getElementById("learningSourceType");
-const learningConfidence = document.getElementById("learningConfidence");
+const learningCertainty = document.getElementById("learningCertainty");
 const learningSourceInput = document.getElementById("learningSourceInput");
 const learningResponseInput = document.getElementById("learningResponseInput");
+const auditQuickRunBtn = document.getElementById("auditQuickRunBtn");
+const auditGuide = document.getElementById("auditGuide");
 const entrypointTabs = document.querySelectorAll(".entrypoint-tab");
 const entrypointHint = document.getElementById("entrypointHint");
 const taskConsolePanel = document.getElementById("taskConsolePanel");
@@ -50,17 +51,25 @@ const settingsClose = document.getElementById("settingsClose");
 const settingsSave = document.getElementById("settingsSave");
 const settingsApiKey = document.getElementById("settingsApiKey");
 const settingsDeepseekApiKey = document.getElementById("settingsDeepseekApiKey");
+const settingsOpenaiBaseUrl = document.getElementById("settingsOpenaiBaseUrl");
+const settingsOpenaiModel = document.getElementById("settingsOpenaiModel");
 const settingsDefaultProvider = document.getElementById("settingsDefaultProvider");
 const settingsRoutingModel = document.getElementById("settingsRoutingModel");
-const settingsTaskModel = document.getElementById("settingsTaskModel");
 const settingsDeepseekModel = document.getElementById("settingsDeepseekModel");
 const settingsDeepseekBaseUrl = document.getElementById("settingsDeepseekBaseUrl");
+const settingsDecisionProvider = document.getElementById("settingsDecisionProvider");
+const settingsDecisionModel = document.getElementById("settingsDecisionModel");
+const settingsContentProvider = document.getElementById("settingsContentProvider");
+const settingsContentModel = document.getElementById("settingsContentModel");
+const settingsCognitionProvider = document.getElementById("settingsCognitionProvider");
+const settingsCognitionModel = document.getElementById("settingsCognitionModel");
 const settingsUiLanguage = document.getElementById("settingsUiLanguage");
 let latestOutputPath = null;
 let latestOutputProvider = null;
 let latestSuggestionId = null;
 let settingsCache = null;
 let uiLanguage = "zh";
+const LEARNING_SOURCE_DEFAULT = "notes";
 
 const I18N = {
   zh: {
@@ -80,6 +89,8 @@ const I18N = {
     task_placeholder: "描述你要做的事...",
     label_module: "模块",
     option_auto_route: "自动路由",
+    option_provider_auto: "自动（按设置）",
+    option_use_fallback: "使用全局默认",
     label_provider: "Provider",
     label_model: "模型",
     model_placeholder: "gpt-4.1-mini / deepseek-chat",
@@ -103,6 +114,12 @@ const I18N = {
     learning_text_placeholder: "粘贴 transcript、文章或你的总结...",
     label_title_optional: "标题（可选）",
     title_placeholder: "来源标题",
+    label_learning_certainty: "把握程度",
+    certainty_auto: "自动（系统判断）",
+    certainty_low: "低（先记为待验证）",
+    certainty_medium: "中（大体可靠）",
+    certainty_high: "高（高度确定）",
+    learning_quick_defaults: "快捷模式默认：来源类型=notes，把握程度=自动。",
     label_source_type: "来源类型",
     label_confidence: "置信度",
     btn_ingest_memory: "导入到记忆",
@@ -115,6 +132,19 @@ const I18N = {
     external_response_placeholder: "把外部模型 JSON 粘贴到这里...",
     btn_parse_queue: "解析到候选队列",
     audit_actions: "审计动作",
+    audit_start_title: "先跑一遍（推荐）",
+    audit_start_desc: "先点击一键审计，再按结果做手动动作。",
+    btn_audit_quick_run: "一键审计（校验 -> 7天指标 -> Owner报告）",
+    audit_guide_idle: "审计指引：先跑一键审计，再看右侧 Cognition Signals 和 Owner Todos。",
+    audit_guide_title: "一键审计执行摘要",
+    audit_guide_running: "进行中：正在依次执行校验、7天指标、Owner报告...",
+    audit_guide_done: "完成：先看右侧指标卡，再处理 Owner 待办（如果有）。",
+    audit_guide_failed: "一键审计失败：{error}",
+    audit_step_validate: "1) 校验：状态={status}",
+    audit_step_metrics: "2) 7天指标：输出={output_path}",
+    audit_step_owner: "3) Owner报告：输出={output_path}，待办={todo_count}",
+    audit_actions_primary: "手动动作（常用）",
+    audit_actions_secondary: "诊断 / 维护（按需）",
     audit_validate: "校验",
     audit_metrics: "7天指标",
     audit_owner_report: "7天 Owner 报告",
@@ -144,13 +174,26 @@ const I18N = {
     btn_reject: "拒绝",
     btn_resolve: "完成",
     settings_title: "设置",
+    settings_section_openai: "OpenAI",
+    settings_section_deepseek: "DeepSeek",
+    settings_section_routing: "路由与默认",
+    settings_section_profiles: "任务类型模型覆盖（可选）",
+    settings_section_ui: "界面",
     settings_openai_key: "OpenAI API Key",
+    settings_openai_base_url: "OpenAI Base URL",
+    settings_openai_model: "OpenAI 默认模型",
     settings_deepseek_key: "DeepSeek API Key",
-    settings_default_provider: "默认 Provider",
+    settings_default_provider: "全局回退 Provider",
     settings_routing_model: "路由模型（轻）",
-    settings_task_model: "任务模型（主）",
-    settings_deepseek_model: "DeepSeek 模型",
+    settings_deepseek_model: "DeepSeek 默认模型",
     settings_deepseek_base_url: "DeepSeek Base URL",
+    settings_profiles_note: "Provider/Model 留空则使用全局默认；在模块路由后生效。",
+    settings_decision_provider: "Decision Provider",
+    settings_decision_model: "Decision 模型",
+    settings_content_provider: "Content Provider",
+    settings_content_model: "Content 模型",
+    settings_cognition_provider: "Cognition Provider",
+    settings_cognition_model: "Cognition 模型",
     settings_ui_language: "界面语言",
     btn_save: "保存",
     settings_key_configured: "已配置（本地存储）",
@@ -179,6 +222,20 @@ const I18N = {
     msg_mvp_no_api: "未检测到 DeepSeek/OpenAI key，当前会走非 API 模式。",
     msg_task_required_inspect: "请先填写任务，再检查。",
     msg_task_required_run: "请先填写任务，再执行。",
+    msg_action_running: "正在执行动作：{action}",
+    msg_action_complete: "动作完成：{action}",
+    msg_action_failed: "动作失败：{error}",
+    msg_learning_text_required: "请先粘贴学习文本。",
+    msg_learning_source_required: "学习 Handoff 需要先填写来源链接 / 引用。",
+    msg_learning_packet_generating: "正在生成学习 Handoff 包...",
+    msg_learning_packet_ready: "Handoff 包已生成。复制 Output Preview 发给外部模型。",
+    msg_learning_packet_failed: "Handoff 包生成失败：{error}",
+    msg_learning_response_required: "请先粘贴外部模型 JSON 返回。",
+    msg_learning_importing: "正在导入 Handoff 响应到记忆与候选队列...",
+    msg_learning_import_done: "导入完成。候选队列 +{count}。",
+    msg_learning_import_failed: "Handoff 导入失败：{error}",
+    msg_learning_confidence_auto: "把握程度自动判断：{confidence}/10",
+    msg_learning_confidence_manual: "把握程度：{level}（{confidence}/10）",
     msg_no_suggestion_selected: "还没有 suggestion，请先执行任务。",
   },
   en: {
@@ -198,6 +255,8 @@ const I18N = {
     task_placeholder: "Describe what you want to do...",
     label_module: "Module",
     option_auto_route: "Auto route",
+    option_provider_auto: "auto (from settings)",
+    option_use_fallback: "Use fallback",
     label_provider: "Provider",
     label_model: "Model",
     model_placeholder: "gpt-4.1-mini / deepseek-chat",
@@ -221,6 +280,12 @@ const I18N = {
     learning_text_placeholder: "Paste transcript, article body, or your summary...",
     label_title_optional: "Title (optional)",
     title_placeholder: "Source title",
+    label_learning_certainty: "Certainty",
+    certainty_auto: "Auto (system inferred)",
+    certainty_low: "Low (needs verification)",
+    certainty_medium: "Medium (mostly reliable)",
+    certainty_high: "High (high confidence)",
+    learning_quick_defaults: "Quick mode defaults: source type = notes, certainty = auto.",
     label_source_type: "Source Type",
     label_confidence: "Confidence",
     btn_ingest_memory: "Ingest To Memory",
@@ -233,6 +298,19 @@ const I18N = {
     external_response_placeholder: "Paste external model JSON here...",
     btn_parse_queue: "Parse To Candidate Queue",
     audit_actions: "Audit Actions",
+    audit_start_title: "Start Here",
+    audit_start_desc: "Run quick audit first, then use manual actions based on results.",
+    btn_audit_quick_run: "Run Quick Audit (Validate -> Metrics -> Owner Report)",
+    audit_guide_idle: "Audit guide: run quick audit first, then check Cognition Signals and Owner Todos on the right.",
+    audit_guide_title: "Quick Audit Summary",
+    audit_guide_running: "Running: Validate -> Metrics 7D -> Owner Report...",
+    audit_guide_done: "Done: check metric cards first, then process Owner Todos if any.",
+    audit_guide_failed: "Quick audit failed: {error}",
+    audit_step_validate: "1) Validate: status={status}",
+    audit_step_metrics: "2) Metrics 7D: output={output_path}",
+    audit_step_owner: "3) Owner report: output={output_path}, todos={todo_count}",
+    audit_actions_primary: "Manual Actions (Common)",
+    audit_actions_secondary: "Diagnostics / Maintenance",
     audit_validate: "Validate",
     audit_metrics: "Metrics 7D",
     audit_owner_report: "Owner Report 7D",
@@ -262,13 +340,26 @@ const I18N = {
     btn_reject: "Reject",
     btn_resolve: "Resolve",
     settings_title: "Settings",
+    settings_section_openai: "OpenAI",
+    settings_section_deepseek: "DeepSeek",
+    settings_section_routing: "Routing & Defaults",
+    settings_section_profiles: "Task Profile Overrides (Optional)",
+    settings_section_ui: "Interface",
     settings_openai_key: "OpenAI API Key",
+    settings_openai_base_url: "OpenAI Base URL",
+    settings_openai_model: "OpenAI Default Model",
     settings_deepseek_key: "DeepSeek API Key",
-    settings_default_provider: "Default Provider",
+    settings_default_provider: "Fallback Provider",
     settings_routing_model: "Routing Model (lighter)",
-    settings_task_model: "Task Model (main)",
-    settings_deepseek_model: "DeepSeek Model",
+    settings_deepseek_model: "DeepSeek Default Model",
     settings_deepseek_base_url: "DeepSeek Base URL",
+    settings_profiles_note: "Leave provider/model empty to use fallback defaults; applied after module routing.",
+    settings_decision_provider: "Decision Provider",
+    settings_decision_model: "Decision Model",
+    settings_content_provider: "Content Provider",
+    settings_content_model: "Content Model",
+    settings_cognition_provider: "Cognition Provider",
+    settings_cognition_model: "Cognition Model",
     settings_ui_language: "UI Language",
     btn_save: "Save",
     settings_key_configured: "Configured (stored locally)",
@@ -295,6 +386,20 @@ const I18N = {
     msg_mvp_no_api: "No DeepSeek/OpenAI key found, running without direct API provider.",
     msg_task_required_inspect: "Task is required for inspect.",
     msg_task_required_run: "Task is required for run.",
+    msg_action_running: "Running action: {action}",
+    msg_action_complete: "Action complete: {action}",
+    msg_action_failed: "Action failed: {error}",
+    msg_learning_text_required: "Learning text is required. Paste transcript/article/notes first.",
+    msg_learning_source_required: "Source URL/reference is required for learning handoff packet.",
+    msg_learning_packet_generating: "Generating learning handoff packet...",
+    msg_learning_packet_ready: "Learning handoff packet ready. Copy Output Preview and send to external model.",
+    msg_learning_packet_failed: "Packet generation failed: {error}",
+    msg_learning_response_required: "Paste external LLM JSON response first.",
+    msg_learning_importing: "Importing handoff response into memory + candidate queue...",
+    msg_learning_import_done: "Imported learning handoff. Candidate queue +{count}.",
+    msg_learning_import_failed: "Handoff import failed: {error}",
+    msg_learning_confidence_auto: "Certainty auto-inferred: {confidence}/10",
+    msg_learning_confidence_manual: "Certainty: {level} ({confidence}/10)",
     msg_no_suggestion_selected: "No suggestion selected. Run a task first.",
     no_cognition_metrics: "No cognition metrics",
     run_metrics_first: "Run metrics first.",
@@ -356,6 +461,75 @@ function setDemoSummaryLines(lines) {
   }
   demoSummary.removeAttribute("data-i18n");
   demoSummary.textContent = lines.join("\n");
+}
+
+function setAuditGuideKey(key) {
+  if (!auditGuide) {
+    return;
+  }
+  auditGuide.setAttribute("data-i18n", key);
+  auditGuide.textContent = t(key);
+}
+
+function setAuditGuideLines(lines) {
+  if (!auditGuide) {
+    return;
+  }
+  auditGuide.removeAttribute("data-i18n");
+  auditGuide.textContent = lines.join("\n");
+}
+
+function clampInt(value, minimum, maximum) {
+  return Math.max(minimum, Math.min(maximum, Math.round(value)));
+}
+
+function inferLearningConfidence(text, sourceRef = "") {
+  const body = String(text || "");
+  const content = body.toLowerCase();
+  let score = 6;
+
+  if (sourceRef && /^https?:\/\//i.test(sourceRef)) {
+    score += 1;
+  }
+  if (body.length >= 1200) {
+    score += 2;
+  } else if (body.length >= 500) {
+    score += 1;
+  } else if (body.length <= 120) {
+    score -= 1;
+  }
+
+  const numberMatches = body.match(/\d+/g) || [];
+  if (numberMatches.length >= 3) {
+    score += 1;
+  }
+
+  const highCues = ["evidence", "metric", "experiment", "validated", "复盘", "数据", "验证", "实验", "证据", "步骤"];
+  const lowCues = ["maybe", "guess", "probably", "uncertain", "可能", "也许", "大概", "猜", "不确定", "感觉"];
+  const highHits = highCues.reduce((count, cue) => (content.includes(cue) ? count + 1 : count), 0);
+  const lowHits = lowCues.reduce((count, cue) => (content.includes(cue) ? count + 1 : count), 0);
+  if (highHits >= 2) {
+    score += 1;
+  }
+  if (lowHits >= 2) {
+    score -= 2;
+  }
+
+  return clampInt(score, 3, 9);
+}
+
+function resolveLearningConfidence(text, sourceRef = "") {
+  const mode = (learningCertainty && learningCertainty.value) || "auto";
+  if (mode === "low") {
+    return { mode, confidence: 4 };
+  }
+  if (mode === "medium") {
+    return { mode, confidence: 7 };
+  }
+  if (mode === "high") {
+    return { mode, confidence: 9 };
+  }
+  return { mode: "auto", confidence: inferLearningConfidence(text, sourceRef) };
 }
 
 function setLanguage(lang) {
@@ -979,14 +1153,18 @@ function renderActionResult(data) {
 
   if (data.output_preview) {
     latestOutputPath = data.output_path || latestOutputPath;
-    latestOutputProvider = providerSelect.value || latestOutputProvider;
+    if (providerSelect.value !== "auto") {
+      latestOutputProvider = providerSelect.value || latestOutputProvider;
+    }
     setPreview(data.output_preview);
     refreshOutputTokenMeta();
     return;
   }
   if (Array.isArray(data.runs) && data.runs.length > 0) {
     latestOutputPath = data.runs[0].output_path || latestOutputPath;
-    latestOutputProvider = providerSelect.value || latestOutputProvider;
+    if (providerSelect.value !== "auto") {
+      latestOutputProvider = providerSelect.value || latestOutputProvider;
+    }
     setPreview(data.runs[0].output_preview || "-");
     refreshOutputTokenMeta();
     return;
@@ -1033,10 +1211,11 @@ function renderActionResult(data) {
 
 function buildPayload() {
   const model = modelInput.value.trim();
+  const providerValue = providerSelect.value;
   return {
     task: taskInput.value.trim(),
     module: moduleSelect.value || null,
-    provider: providerSelect.value,
+    provider: providerValue === "auto" ? null : providerValue,
     model: model || null,
     with_retrieval: retrievalToggle.checked,
     retrieval_top_k: Number(retrievalTopK.value || 6),
@@ -1259,12 +1438,8 @@ async function loadStatus() {
       moduleSelect.appendChild(option);
     }
 
-    if (data.default_provider) {
-      providerSelect.value = data.default_provider;
-    }
-    if (data.default_model) {
-      modelInput.value = data.default_model;
-    }
+    providerSelect.value = "auto";
+    modelInput.value = "";
     if (data.ui_language) {
       setLanguage(data.ui_language);
       moduleSelect.innerHTML = `<option value="">${t("option_auto_route")}</option>`;
@@ -1289,15 +1464,23 @@ async function loadStatus() {
 }
 
 function applySettingsToForm(settings) {
+  const openaiModel = settings.openai_model || settings.task_model || "gpt-4.1-mini";
   settingsApiKey.value = "";
   settingsApiKey.placeholder = settings.has_openai_api_key ? t("settings_key_configured") : "sk-...";
   settingsDeepseekApiKey.value = "";
   settingsDeepseekApiKey.placeholder = settings.has_deepseek_api_key ? t("settings_key_configured") : "sk-...";
+  settingsOpenaiBaseUrl.value = settings.openai_base_url || "https://api.openai.com/v1";
+  settingsOpenaiModel.value = openaiModel;
   settingsDefaultProvider.value = settings.default_provider || "handoff";
   settingsRoutingModel.value = settings.routing_model || "gpt-4.1-nano";
-  settingsTaskModel.value = settings.task_model || "gpt-4.1-mini";
   settingsDeepseekModel.value = settings.deepseek_model || "deepseek-chat";
   settingsDeepseekBaseUrl.value = settings.deepseek_base_url || "https://api.deepseek.com/v1";
+  settingsDecisionProvider.value = settings.decision_provider || "";
+  settingsDecisionModel.value = settings.decision_model || "";
+  settingsContentProvider.value = settings.content_provider || "";
+  settingsContentModel.value = settings.content_model || "";
+  settingsCognitionProvider.value = settings.cognition_provider || "";
+  settingsCognitionModel.value = settings.cognition_model || "";
   settingsUiLanguage.value = settings.ui_language || "zh";
 }
 
@@ -1308,6 +1491,7 @@ async function loadSettings() {
     setLanguage(data.ui_language || "zh");
     setMvpGuideText("mvp_guide_idle");
     setDemoSummaryKey("demo_summary_idle");
+    setAuditGuideKey("audit_guide_idle");
     applySettingsToForm(data);
   } catch (err) {
     addBubble("system", `Settings load failed: ${err.message}`);
@@ -1331,9 +1515,16 @@ async function saveSettings() {
   const payload = {
     default_provider: settingsDefaultProvider.value,
     routing_model: settingsRoutingModel.value.trim() || "gpt-4.1-nano",
-    task_model: settingsTaskModel.value.trim() || "gpt-4.1-mini",
+    openai_model: settingsOpenaiModel.value.trim() || "gpt-4.1-mini",
+    openai_base_url: settingsOpenaiBaseUrl.value.trim() || "https://api.openai.com/v1",
     deepseek_model: settingsDeepseekModel.value.trim() || "deepseek-chat",
     deepseek_base_url: settingsDeepseekBaseUrl.value.trim() || "https://api.deepseek.com/v1",
+    decision_provider: settingsDecisionProvider.value.trim(),
+    decision_model: settingsDecisionModel.value.trim(),
+    content_provider: settingsContentProvider.value.trim(),
+    content_model: settingsContentModel.value.trim(),
+    cognition_provider: settingsCognitionProvider.value.trim(),
+    cognition_model: settingsCognitionModel.value.trim(),
     ui_language: settingsUiLanguage.value || "zh",
   };
   if (apiKey) {
@@ -1347,11 +1538,12 @@ async function saveSettings() {
     const data = await postJson("/api/settings", payload);
     settingsCache = data;
     setLanguage(data.ui_language || settingsUiLanguage.value || "zh");
-    providerSelect.value = data.default_provider || providerSelect.value;
-    if ((data.default_provider || "") === "deepseek") {
+    if (providerSelect.value === "deepseek") {
       modelInput.value = data.deepseek_model || modelInput.value;
-    } else {
-      modelInput.value = data.task_model || modelInput.value;
+    } else if (providerSelect.value === "openai") {
+      modelInput.value = data.openai_model || data.task_model || modelInput.value;
+    } else if (providerSelect.value === "auto") {
+      modelInput.value = "";
     }
     settingsApiKey.value = "";
     settingsDeepseekApiKey.value = "";
@@ -1410,7 +1602,7 @@ function selectPreferredApiProvider() {
   if (settingsCache && settingsCache.has_openai_api_key && providerSelect.querySelector('option[value="openai"]')) {
     providerSelect.value = "openai";
     if (!modelInput.value.trim() || modelInput.value.startsWith("deepseek-")) {
-      modelInput.value = settingsCache.task_model || "gpt-4.1-mini";
+      modelInput.value = settingsCache.openai_model || settingsCache.task_model || "gpt-4.1-mini";
     }
     return "openai";
   }
@@ -1537,6 +1729,45 @@ async function runDemoMode() {
   }
 }
 
+async function runAuditQuickRun() {
+  const lines = [t("audit_guide_title"), t("audit_guide_running")];
+  setAuditGuideLines(lines);
+  switchEntrypoint("audit");
+  addBubble("system", t("audit_guide_running"));
+
+  try {
+    const validateData = await postJson("/api/action", { action: "validate", strict: true });
+    renderActionResult(validateData);
+    lines.push(t("audit_step_validate", { status: validateData.status || "-" }));
+    setAuditGuideLines(lines);
+
+    const metricsData = await postJson("/api/action", { action: "metrics", window_days: 7 });
+    renderActionResult(metricsData);
+    lines.push(
+      t("audit_step_metrics", {
+        output_path: metricsData.output_path || "-",
+      })
+    );
+    setAuditGuideLines(lines);
+
+    const ownerData = await postJson("/api/action", { action: "owner_report", window_days: 7 });
+    renderActionResult(ownerData);
+    lines.push(
+      t("audit_step_owner", {
+        output_path: ownerData.output_path || "-",
+        todo_count: Array.isArray(ownerData.owner_todos) ? ownerData.owner_todos.length : 0,
+      })
+    );
+    lines.push(t("audit_guide_done"));
+    setAuditGuideLines(lines);
+    addBubble("system", t("audit_guide_done"));
+  } catch (err) {
+    lines.push(t("audit_guide_failed", { error: err.message }));
+    setAuditGuideLines(lines);
+    addBubble("system", t("audit_guide_failed", { error: err.message }));
+  }
+}
+
 async function reviewSuggestion(verdict) {
   const sid = String(latestSuggestionId || "").trim();
   if (!sid) {
@@ -1601,7 +1832,7 @@ async function runAction(action) {
   const learningText = learningDirectInput ? learningDirectInput.value.trim() : "";
   const payload = {
     action,
-    provider: providerSelect.value,
+    provider: providerSelect.value === "auto" ? null : providerSelect.value,
     model: modelInput.value.trim() || null,
     with_retrieval: retrievalToggle.checked,
     retrieval_top_k: Number(retrievalTopK.value || 6),
@@ -1639,15 +1870,27 @@ async function runAction(action) {
 
   if (action === "ingest_learning") {
     if (!learningText) {
-      addBubble("system", "Learning text is required. Paste transcript/article/notes first.");
+      addBubble("system", t("msg_learning_text_required"));
       return;
     }
+    const confidenceProfile = resolveLearningConfidence(learningText, learningSourceInput.value.trim());
     payload.task = learningText;
     payload.title = learningTitleInput.value.trim() || null;
-    payload.source_type = learningSourceType.value || "video";
+    payload.source_type = LEARNING_SOURCE_DEFAULT;
     payload.max_points = 6;
-    payload.confidence = Number(learningConfidence.value || 7);
+    payload.confidence = confidenceProfile.confidence;
     payload.tags = ["ui_one_click"];
+    if (confidenceProfile.mode === "auto") {
+      addBubble("system", t("msg_learning_confidence_auto", { confidence: confidenceProfile.confidence }));
+    } else {
+      addBubble(
+        "system",
+        t("msg_learning_confidence_manual", {
+          level: t(`certainty_${confidenceProfile.mode}`),
+          confidence: confidenceProfile.confidence,
+        })
+      );
+    }
     addUserTaskOnce(payload.title || learningText.slice(0, 120));
   }
 
@@ -1676,21 +1919,21 @@ async function runAction(action) {
     }
   }
 
-  addBubble("system", `Running action: ${payload.action}`);
+  addBubble("system", t("msg_action_running", { action: payload.action }));
 
   try {
     const data = await postJson("/api/action", payload);
     renderActionResult(data);
-    addBubble("system", `Action complete: ${data.action}`);
+    addBubble("system", t("msg_action_complete", { action: data.action }));
   } catch (err) {
-    addBubble("system", `Action failed: ${err.message}`);
+    addBubble("system", t("msg_action_failed", { error: err.message }));
   }
 }
 
 async function generateLearningHandoffPacket() {
   const sourceRef = learningSourceInput.value.trim();
   if (!sourceRef) {
-    addBubble("system", "Source URL/reference is required for learning handoff packet.");
+    addBubble("system", t("msg_learning_source_required"));
     return;
   }
 
@@ -1698,44 +1941,57 @@ async function generateLearningHandoffPacket() {
     action: "learning_handoff_packet",
     source_ref: sourceRef,
     title: learningTitleInput.value.trim() || null,
-    source_type: learningSourceType.value || "video",
+    source_type: LEARNING_SOURCE_DEFAULT,
     max_candidates_per_type: 3,
   };
 
-  addBubble("system", "Generating learning handoff packet...");
+  addBubble("system", t("msg_learning_packet_generating"));
   try {
     const data = await postJson("/api/action", payload);
     renderActionResult(data);
-    addBubble("system", "Learning handoff packet ready. Copy Output Preview and send to external model.");
+    addBubble("system", t("msg_learning_packet_ready"));
   } catch (err) {
-    addBubble("system", `Packet generation failed: ${err.message}`);
+    addBubble("system", t("msg_learning_packet_failed", { error: err.message }));
   }
 }
 
 async function importLearningHandoffResponse() {
   const responseText = learningResponseInput.value.trim();
   if (!responseText) {
-    addBubble("system", "Paste external LLM JSON response first.");
+    addBubble("system", t("msg_learning_response_required"));
     return;
   }
+  const sourceRef = learningSourceInput.value.trim();
+  const confidenceProfile = resolveLearningConfidence(responseText, sourceRef);
 
   const payload = {
     action: "learning_handoff_import",
     response_text: responseText,
-    source_ref: learningSourceInput.value.trim() || null,
+    source_ref: sourceRef || null,
     title: learningTitleInput.value.trim() || null,
-    source_type: learningSourceType.value || "video",
-    confidence: Number(learningConfidence.value || 7),
+    source_type: LEARNING_SOURCE_DEFAULT,
+    confidence: confidenceProfile.confidence,
     tags: ["ui_learning_handoff"],
   };
 
-  addBubble("system", "Importing handoff response into memory + candidate queue...");
+  if (confidenceProfile.mode === "auto") {
+    addBubble("system", t("msg_learning_confidence_auto", { confidence: confidenceProfile.confidence }));
+  } else {
+    addBubble(
+      "system",
+      t("msg_learning_confidence_manual", {
+        level: t(`certainty_${confidenceProfile.mode}`),
+        confidence: confidenceProfile.confidence,
+      })
+    );
+  }
+  addBubble("system", t("msg_learning_importing"));
   try {
     const data = await postJson("/api/action", payload);
     renderActionResult(data);
-    addBubble("system", `Imported learning handoff. Candidate queue +${data.candidate_total || 0}.`);
+    addBubble("system", t("msg_learning_import_done", { count: data.candidate_total || 0 }));
   } catch (err) {
-    addBubble("system", `Handoff import failed: ${err.message}`);
+    addBubble("system", t("msg_learning_import_failed", { error: err.message }));
   }
 }
 
@@ -1755,6 +2011,13 @@ if (demoModeBtn) {
   demoModeBtn.addEventListener("click", (event) => {
     event.preventDefault();
     runDemoMode();
+  });
+}
+
+if (auditQuickRunBtn) {
+  auditQuickRunBtn.addEventListener("click", (event) => {
+    event.preventDefault();
+    runAuditQuickRun();
   });
 }
 
@@ -1813,7 +2076,9 @@ copyOutputBtn.addEventListener("click", () => {
   copyLatestOutput();
 });
 providerSelect.addEventListener("change", () => {
-  if (providerSelect.value === "deepseek") {
+  if (providerSelect.value === "auto") {
+    modelInput.value = "";
+  } else if (providerSelect.value === "deepseek") {
     const current = modelInput.value.trim();
     if (!current || current.startsWith("gpt-")) {
       modelInput.value = (settingsCache && settingsCache.deepseek_model) || "deepseek-chat";
@@ -1821,10 +2086,11 @@ providerSelect.addEventListener("change", () => {
   } else if (providerSelect.value === "openai") {
     const current = modelInput.value.trim();
     if (!current || current.startsWith("deepseek-")) {
-      modelInput.value = (settingsCache && settingsCache.task_model) || "gpt-4.1-mini";
+      modelInput.value =
+        (settingsCache && (settingsCache.openai_model || settingsCache.task_model)) || "gpt-4.1-mini";
     }
   }
-  latestOutputProvider = providerSelect.value || latestOutputProvider;
+  latestOutputProvider = providerSelect.value === "auto" ? latestOutputProvider : providerSelect.value || latestOutputProvider;
   refreshOutputTokenMeta();
 });
 modelInput.addEventListener("change", () => {
@@ -1866,6 +2132,7 @@ suggestionRejectBtn.addEventListener("click", () => {
 setLanguage("zh");
 setMvpGuideText("mvp_guide_idle");
 setDemoSummaryKey("demo_summary_idle");
+setAuditGuideKey("audit_guide_idle");
 setStatus(t("status_connecting"), "pending", "status_connecting");
 initTheme();
 switchEntrypoint("task");

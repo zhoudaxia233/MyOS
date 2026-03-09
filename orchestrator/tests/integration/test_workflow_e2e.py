@@ -297,6 +297,10 @@ def test_e2e_cli_command_chain(monkeypatch, capsys) -> None:
         root = Path(td)
         _build_repo(root)
         monkeypatch.setattr(main, "repo_root", lambda: root)
+        monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+        monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
+        monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
+        monkeypatch.delenv("DEEPSEEK_BASE_URL", raising=False)
 
         rc = main.cmd_validate(Namespace(strict=True))
         assert rc == 0

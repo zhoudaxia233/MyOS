@@ -120,7 +120,48 @@ def _default_task_model(settings: dict, cfg: dict, provider: str) -> str:
     normalized = str(provider or "").strip().lower()
     if normalized == "deepseek":
         return str(settings.get("deepseek_model", "deepseek-chat")) or "deepseek-chat"
-    return str(settings.get("task_model", "")) or str(cfg.get("default_openai_model", "gpt-4.1-mini"))
+    openai_model = str(settings.get("openai_model", "")).strip() or str(settings.get("task_model", "")).strip()
+    return openai_model or str(cfg.get("default_openai_model", "gpt-4.1-mini"))
+
+
+def _module_override_provider(settings: dict, module: str) -> str | None:
+    key = f"{module}_provider"
+    provider = str(settings.get(key, "")).strip().lower()
+    if provider in {"dry-run", "handoff", "openai", "deepseek"}:
+        return provider
+    return None
+
+
+def _module_override_model(settings: dict, module: str) -> str | None:
+    key = f"{module}_model"
+    model = str(settings.get(key, "")).strip()
+    return model or None
+
+
+def _resolve_provider_model(
+    settings: dict,
+    cfg: dict,
+    module: str,
+    *,
+    provider_hint: str | None,
+    model_hint: str | None,
+) -> tuple[str, str]:
+    provider = _normalize_optional_str(provider_hint)
+    if provider and provider.lower() == "auto":
+        provider = None
+    if provider:
+        provider = provider.lower()
+    else:
+        provider = _module_override_provider(settings, module)
+    if not provider:
+        provider = str(settings.get("default_provider", "")).strip() or str(cfg.get("default_provider", "handoff"))
+
+    model = _normalize_optional_str(model_hint)
+    if not model:
+        model = _module_override_model(settings, module)
+    if not model:
+        model = _default_task_model(settings, cfg, provider)
+    return provider, model
 
 
 def _route_reason_for_log(route: dict) -> str:
@@ -429,8 +470,8 @@ def _execute_task(
     root: Path,
     task: str,
     forced_module: str | None,
-    provider: str,
-    model: str,
+    provider_hint: str | None,
+    model_hint: str | None,
     with_retrieval: bool,
     retrieval_top_k: int,
     skill_hint: str | None = None,
@@ -439,6 +480,14 @@ def _execute_task(
     cfg = load_runtime_config(root)
     route = select_route(task, forced_module=forced_module, repo_root=root)
     module = route["module"]
+    settings = load_settings(root)
+    provider, model = _resolve_provider_model(
+        settings,
+        cfg,
+        module,
+        provider_hint=provider_hint,
+        model_hint=model_hint,
+    )
     plan = plan_task(task, module, skill_hint=skill_hint, routine_id=routine_id, repo_root=root)
     bundle = load_context_bundle(
         root,
@@ -671,8 +720,8 @@ def _run_schedule_cycle(
     *,
     root: Path,
     cycle: str,
-    provider: str,
-    model: str,
+    provider_hint: str | None,
+    model_hint: str | None,
     with_retrieval: bool,
     retrieval_top_k: int,
     limit: int | None,
@@ -680,6 +729,8 @@ def _run_schedule_cycle(
     no_owner_report: bool,
 ) -> dict:
     routines = get_cycle(root, cycle)
+    settings = load_settings(root)
+    cfg = load_runtime_config(root)
     if limit is not None:
         routines = routines[:limit]
 
@@ -690,8 +741,8 @@ def _run_schedule_cycle(
             root=root,
             task=task,
             forced_module=routine["module"],
-            provider=provider,
-            model=model,
+            provider_hint=provider_hint,
+            model_hint=model_hint,
             with_retrieval=with_retrieval,
             retrieval_top_k=retrieval_top_k,
             skill_hint=routine["skill"],
@@ -706,7 +757,7 @@ def _run_schedule_cycle(
             "routine_id": routine["id"],
             "module": routine["module"],
             "skill": routine["skill"],
-            "provider": provider,
+            "provider": result["provider"],
             "result_path": result["output_path"],
         }
         log_schedule_run(root, schedule_record)
@@ -723,6 +774,13 @@ def _run_schedule_cycle(
 
     owner_output: dict[str, Any] | None = None
     if cycle == "weekly" and not no_owner_report:
+        owner_provider, _ = _resolve_provider_model(
+            settings,
+            cfg,
+            "decision",
+            provider_hint=provider_hint,
+            model_hint=model_hint,
+        )
         owner_output = _run_owner_report(root, window_days=owner_window, output_rel=None)
         schedule_record = {
             "id": next_id_for_rel_path(root, "sr", "orchestrator/logs/schedule_runs.jsonl"),
@@ -732,7 +790,7 @@ def _run_schedule_cycle(
             "routine_id": "rt_weekly_owner_report_auto",
             "module": "decision",
             "skill": "owner_report",
-            "provider": provider,
+            "provider": owner_provider,
             "result_path": owner_output["output_path"],
         }
         log_schedule_run(root, schedule_record)
@@ -745,7 +803,7 @@ def _run_schedule_cycle(
                 "routine_id": "rt_weekly_owner_todos_auto",
                 "module": "decision",
                 "skill": "owner_todos",
-                "provider": provider,
+                "provider": owner_provider,
                 "result_path": owner_output["owner_todos_path"],
             }
             log_schedule_run(root, todos_record)
@@ -769,6 +827,8 @@ def api_status(root: Path) -> dict:
         "repo_root": str(root),
         "default_provider": settings["default_provider"] or cfg["default_provider"],
         "default_model": _default_task_model(settings, cfg, settings["default_provider"] or cfg["default_provider"]),
+        "openai_model": settings.get("openai_model", settings.get("task_model", "gpt-4.1-mini")),
+        "openai_base_url": settings.get("openai_base_url", "https://api.openai.com/v1"),
         "routing_model": settings["routing_model"],
         "deepseek_model": settings.get("deepseek_model", "deepseek-chat"),
         "ui_language": settings.get("ui_language", "zh"),
@@ -797,14 +857,25 @@ def api_update_settings(root: Path, payload: dict[str, Any]) -> dict:
     updates: dict[str, str] = {}
     if "default_provider" in payload:
         updates["default_provider"] = str(payload.get("default_provider", ""))
-    if "task_model" in payload:
-        updates["task_model"] = str(payload.get("task_model", ""))
+    if "openai_model" in payload:
+        updates["openai_model"] = str(payload.get("openai_model", ""))
+    elif "task_model" in payload:
+        updates["openai_model"] = str(payload.get("task_model", ""))
     if "deepseek_model" in payload:
         updates["deepseek_model"] = str(payload.get("deepseek_model", ""))
     if "routing_model" in payload:
         updates["routing_model"] = str(payload.get("routing_model", ""))
+    if "openai_base_url" in payload:
+        updates["openai_base_url"] = str(payload.get("openai_base_url", ""))
     if "deepseek_base_url" in payload:
         updates["deepseek_base_url"] = str(payload.get("deepseek_base_url", ""))
+    for module_name in ("decision", "content", "cognition"):
+        provider_key = f"{module_name}_provider"
+        model_key = f"{module_name}_model"
+        if provider_key in payload:
+            updates[provider_key] = str(payload.get(provider_key, ""))
+        if model_key in payload:
+            updates[model_key] = str(payload.get(model_key, ""))
     if "ui_language" in payload:
         updates["ui_language"] = str(payload.get("ui_language", ""))
 
@@ -853,11 +924,9 @@ def api_run(root: Path, payload: dict[str, Any]) -> dict:
     if not task:
         raise ValueError("task is required")
 
-    cfg = load_runtime_config(root)
-    settings = load_settings(root)
     module = _normalize_optional_str(payload.get("module"))
-    provider = _normalize_optional_str(payload.get("provider")) or settings["default_provider"] or cfg["default_provider"]
-    model = _normalize_optional_str(payload.get("model")) or _default_task_model(settings, cfg, provider)
+    provider_hint = _normalize_optional_str(payload.get("provider"))
+    model_hint = _normalize_optional_str(payload.get("model"))
     with_retrieval = _coerce_bool(payload.get("with_retrieval"), default=False)
     retrieval_top_k = _coerce_int(payload.get("retrieval_top_k"), default=6, minimum=1, maximum=32)
 
@@ -865,8 +934,8 @@ def api_run(root: Path, payload: dict[str, Any]) -> dict:
         root=root,
         task=task,
         forced_module=module,
-        provider=provider,
-        model=model,
+        provider_hint=provider_hint,
+        model_hint=model_hint,
         with_retrieval=with_retrieval,
         retrieval_top_k=retrieval_top_k,
     )
@@ -877,9 +946,6 @@ def api_action(root: Path, payload: dict[str, Any]) -> dict:
     action = str(payload.get("action", "")).strip().lower()
     if not action:
         raise ValueError("action is required")
-
-    cfg = load_runtime_config(root)
-    settings = load_settings(root)
 
     if action == "validate":
         strict = _coerce_bool(payload.get("strict"), default=True)
@@ -956,10 +1022,8 @@ def api_action(root: Path, payload: dict[str, Any]) -> dict:
         if cycle not in {"daily", "weekly", "monthly"}:
             raise ValueError("cycle must be one of: daily, weekly, monthly")
 
-        provider = (
-            _normalize_optional_str(payload.get("provider")) or settings["default_provider"] or cfg["default_provider"]
-        )
-        model = _normalize_optional_str(payload.get("model")) or _default_task_model(settings, cfg, provider)
+        provider_hint = _normalize_optional_str(payload.get("provider"))
+        model_hint = _normalize_optional_str(payload.get("model"))
         with_retrieval = _coerce_bool(payload.get("with_retrieval"), default=False)
         retrieval_top_k = _coerce_int(payload.get("retrieval_top_k"), default=6, minimum=1, maximum=32)
         limit_raw = payload.get("limit")
@@ -970,8 +1034,8 @@ def api_action(root: Path, payload: dict[str, Any]) -> dict:
         result = _run_schedule_cycle(
             root=root,
             cycle=cycle,
-            provider=provider,
-            model=model,
+            provider_hint=provider_hint,
+            model_hint=model_hint,
             with_retrieval=with_retrieval,
             retrieval_top_k=retrieval_top_k,
             limit=limit,

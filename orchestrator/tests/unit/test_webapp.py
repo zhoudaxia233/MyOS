@@ -57,9 +57,11 @@ def test_api_status_reports_env_api_key(monkeypatch) -> None:
         assert data["has_openai_api_key"] is True
 
 
-def test_api_settings_roundtrip() -> None:
+def test_api_settings_roundtrip(monkeypatch) -> None:
     with TemporaryDirectory() as td:
         root = _copy_repo_subset(Path(td))
+        monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+        monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
         initial = api_get_settings(root)
         assert initial["ok"] is True
         assert initial["default_provider"] == "handoff"
@@ -74,10 +76,13 @@ def test_api_settings_roundtrip() -> None:
                 "openai_api_key": "sk-test",
                 "deepseek_api_key": "sk-deepseek",
                 "default_provider": "dry-run",
-                "task_model": "gpt-4.1-mini",
+                "openai_model": "gpt-4.1-mini",
+                "openai_base_url": "https://api.openai.com/v1",
                 "deepseek_model": "deepseek-chat",
                 "deepseek_base_url": "https://api.deepseek.com/v1",
                 "routing_model": "gpt-4.1-nano",
+                "decision_provider": "deepseek",
+                "decision_model": "deepseek-chat",
                 "ui_language": "en",
             },
         )
@@ -85,7 +90,11 @@ def test_api_settings_roundtrip() -> None:
         assert updated["default_provider"] == "dry-run"
         assert updated["has_openai_api_key"] is True
         assert updated["has_deepseek_api_key"] is True
+        assert updated["openai_model"] == "gpt-4.1-mini"
+        assert updated["openai_base_url"] == "https://api.openai.com/v1"
         assert updated["deepseek_model"] == "deepseek-chat"
+        assert updated["decision_provider"] == "deepseek"
+        assert updated["decision_model"] == "deepseek-chat"
         assert updated["ui_language"] == "en"
         assert "openai_api_key" not in updated
 
@@ -98,6 +107,31 @@ def test_api_settings_roundtrip() -> None:
         assert status["default_provider"] == "handoff"
         assert status["has_openai_api_key"] is True
         assert status["has_deepseek_api_key"] is True
+
+
+def test_api_run_uses_module_profile_provider_when_provider_is_auto() -> None:
+    with TemporaryDirectory() as td:
+        root = _copy_repo_subset(Path(td))
+        api_update_settings(
+            root,
+            {
+                "default_provider": "handoff",
+                "decision_provider": "dry-run",
+                "decision_model": "custom-decision-model",
+            },
+        )
+        run_result = api_run(
+            root,
+            {
+                "task": "run weekly decision review",
+                "provider": "auto",
+                "model": "",
+                "with_retrieval": False,
+            },
+        )
+        assert run_result["ok"] is True
+        assert run_result["module"] == "decision"
+        assert run_result["provider"] == "dry-run"
 
 
 def test_api_status_uses_deepseek_default_model_when_provider_is_deepseek() -> None:

@@ -54,9 +54,11 @@ def run_openai(task: str, module: str, plan: dict, bundle: dict, model: str) -> 
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
         raise RuntimeError("OPENAI_API_KEY is not set")
+    base_url = str(os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")).strip().rstrip("/")
+    endpoint = f"{base_url}/chat/completions"
 
     return _run_chat_completion(
-        endpoint="https://api.openai.com/v1/chat/completions",
+        endpoint=endpoint,
         api_key=api_key,
         system_prompt="You are an execution assistant for Personal Core OS.",
         model=model,

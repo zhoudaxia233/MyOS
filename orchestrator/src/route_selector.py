@@ -5,7 +5,7 @@ from pathlib import Path
 from llm_router import llm_route_trace
 from manifests import discover_module_manifests
 from router import route_trace
-from settings import get_openai_api_key, load_settings
+from settings import apply_openai_api_key_env, get_openai_api_key, load_settings
 
 
 def _available_modules(repo_root: Path) -> list[str]:
@@ -26,6 +26,7 @@ def select_route(task: str, forced_module: str | None, repo_root: Path) -> dict:
 
     if api_key and module_names:
         try:
+            apply_openai_api_key_env(repo_root)
             route = llm_route_trace(
                 task=task,
                 module_names=module_names,
