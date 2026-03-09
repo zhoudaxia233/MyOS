@@ -35,6 +35,9 @@ Keep rollout evolutionary: preserve existing extraction/distillation pipelines a
   - prioritize user-visible interaction and directly testable flows over invisible internal plumbing
 - Completed:
   - web Task Console now has one-click `Run MVP Flow (Inspect -> Run -> Review)` path for immediate end-to-end trial
+  - web Task Console now has `Run Demo Mode (Decision + Learning + Audit)` for 3-step visible capability walkthrough
+  - UI language setting (`zh | en`) with key onboarding hints following current language
+  - direct `deepseek` provider support with settings-driven API key/base URL/model for low-cost live runs
 - Next:
   - add explicit in-UI completion checklist for first successful run-through (inspect ok / run ok / suggestion reviewed)
 

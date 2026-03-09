@@ -15,6 +15,7 @@ const quickIngestBtn = document.getElementById("quickIngestBtn");
 const learningPacketBtn = document.getElementById("learningPacketBtn");
 const learningImportBtn = document.getElementById("learningImportBtn");
 const mvpFlowBtn = document.getElementById("mvpFlowBtn");
+const demoModeBtn = document.getElementById("demoModeBtn");
 const learningDirectInput = document.getElementById("learningDirectInput");
 const learningTitleInput = document.getElementById("learningTitleInput");
 const learningSourceType = document.getElementById("learningSourceType");
@@ -43,6 +44,7 @@ const learningCandidates = document.getElementById("learningCandidates");
 const candidatePipeline = document.getElementById("candidatePipeline");
 const suggestionReviewSummary = document.getElementById("suggestionReviewSummary");
 const mvpGuide = document.getElementById("mvpGuide");
+const demoSummary = document.getElementById("demoSummary");
 const settingsModal = document.getElementById("settingsModal");
 const settingsClose = document.getElementById("settingsClose");
 const settingsSave = document.getElementById("settingsSave");
@@ -90,6 +92,7 @@ const I18N = {
     starter_extract_patterns: "提取本周聊天模式",
     starter_write_story: "写一篇饭后 BTC 市场故事",
     btn_run_mvp: "一键跑通 MVP（检查 -> 执行 -> 复核）",
+    btn_run_demo: "运行演示模式（决策 + 学习 + 审计）",
     mvp_guide_idle: "新手提示：点击一键按钮后，依次看 Route / Plan / Result / Suggestion Detail。",
     mvp_guide_inspecting: "MVP 进行中：正在检查路由与计划...",
     mvp_guide_running: "MVP 进行中：正在执行任务并生成建议...",
@@ -156,6 +159,16 @@ const I18N = {
     msg_copy_failed: "复制失败：{error}",
     msg_no_output_yet: "暂无输出，请先执行任务。",
     msg_no_suggestion_selected: "还没有 suggestion，请先执行任务。",
+    demo_summary_idle: "演示摘要会显示在这里。",
+    demo_summary_title: "演示模式执行摘要",
+    demo_started: "演示模式开始：将自动执行 决策 -> 学习 -> 审计 三步。",
+    demo_done: "演示模式完成：你现在可以在审计台查看完整轨迹与报告。",
+    demo_failed: "演示模式失败：{error}",
+    demo_mode_provider: "执行 provider：{provider}",
+    demo_step_decision: "1) 决策：模块={module}，输出={output_path}，suggestion={suggestion_id}",
+    demo_step_learning: "2) 学习：新增 event={events}，insight={insights}",
+    demo_step_audit: "3) 审计：owner_report={output_path}，fail 指标={fails}",
+    demo_none: "无",
     no_cognition_metrics: "暂无认知指标",
     run_metrics_first: "先运行 Metrics 7D。",
     msg_mvp_started: "MVP 已开始：检查 -> 执行 -> 建议详情。",
@@ -197,6 +210,7 @@ const I18N = {
     starter_extract_patterns: "Extract Chat Patterns",
     starter_write_story: "Write After-Meal Story",
     btn_run_mvp: "Run MVP Flow (Inspect -> Run -> Review)",
+    btn_run_demo: "Run Demo Mode (Decision + Learning + Audit)",
     mvp_guide_idle: "Quick start: click the MVP button, then check Route / Plan / Result / Suggestion Detail in order.",
     mvp_guide_inspecting: "MVP in progress: inspecting route and plan...",
     mvp_guide_running: "MVP in progress: running task and generating suggestion...",
@@ -263,6 +277,16 @@ const I18N = {
     msg_copy_failed: "Copy failed: {error}",
     msg_no_output_yet: "No output yet. Run a task first.",
     msg_no_suggestion_selected: "No suggestion selected. Run a task first.",
+    demo_summary_idle: "Demo summary will appear here.",
+    demo_summary_title: "Demo Mode Summary",
+    demo_started: "Demo mode started: Decision -> Learning -> Audit will run automatically.",
+    demo_done: "Demo mode completed. Check Audit Console for full traces and report.",
+    demo_failed: "Demo mode failed: {error}",
+    demo_mode_provider: "Execution provider: {provider}",
+    demo_step_decision: "1) Decision: module={module}, output={output_path}, suggestion={suggestion_id}",
+    demo_step_learning: "2) Learning: appended event={events}, insight={insights}",
+    demo_step_audit: "3) Audit: owner_report={output_path}, fail metrics={fails}",
+    demo_none: "none",
     msg_mvp_started: "MVP flow started: Inspect -> Run -> Suggestion detail.",
     msg_mvp_inspect_ready: "MVP inspect ready: {module} -> {skill}",
     msg_mvp_complete: "MVP flow complete. Review Suggestion Detail and click Accept/Modify/Reject.",
@@ -316,6 +340,22 @@ function setMvpGuideText(key) {
   }
   mvpGuide.setAttribute("data-i18n", key);
   mvpGuide.textContent = t(key);
+}
+
+function setDemoSummaryKey(key) {
+  if (!demoSummary) {
+    return;
+  }
+  demoSummary.setAttribute("data-i18n", key);
+  demoSummary.textContent = t(key);
+}
+
+function setDemoSummaryLines(lines) {
+  if (!demoSummary) {
+    return;
+  }
+  demoSummary.removeAttribute("data-i18n");
+  demoSummary.textContent = lines.join("\n");
 }
 
 function setLanguage(lang) {
@@ -1267,6 +1307,7 @@ async function loadSettings() {
     settingsCache = data;
     setLanguage(data.ui_language || "zh");
     setMvpGuideText("mvp_guide_idle");
+    setDemoSummaryKey("demo_summary_idle");
     applySettingsToForm(data);
   } catch (err) {
     addBubble("system", `Settings load failed: ${err.message}`);
@@ -1358,6 +1399,24 @@ async function runTask() {
   }
 }
 
+function selectPreferredApiProvider() {
+  if (settingsCache && settingsCache.has_deepseek_api_key && providerSelect.querySelector('option[value="deepseek"]')) {
+    providerSelect.value = "deepseek";
+    if (!modelInput.value.trim() || modelInput.value.includes("gpt-")) {
+      modelInput.value = settingsCache.deepseek_model || "deepseek-chat";
+    }
+    return "deepseek";
+  }
+  if (settingsCache && settingsCache.has_openai_api_key && providerSelect.querySelector('option[value="openai"]')) {
+    providerSelect.value = "openai";
+    if (!modelInput.value.trim() || modelInput.value.startsWith("deepseek-")) {
+      modelInput.value = settingsCache.task_model || "gpt-4.1-mini";
+    }
+    return "openai";
+  }
+  return providerSelect.value || "handoff";
+}
+
 async function runMvpFlow() {
   if (!settingsCache) {
     await loadSettings();
@@ -1365,24 +1424,14 @@ async function runMvpFlow() {
   const demoTask = "run weekly decision review and output top 3 owner actions with risk notes";
   taskInput.value = demoTask;
 
-  if (settingsCache && settingsCache.has_deepseek_api_key && providerSelect.querySelector('option[value="deepseek"]')) {
-    providerSelect.value = "deepseek";
-    if (!modelInput.value.trim() || modelInput.value.includes("gpt-")) {
-      modelInput.value = settingsCache.deepseek_model || "deepseek-chat";
-    }
-  } else if (settingsCache && settingsCache.has_openai_api_key && providerSelect.querySelector('option[value="openai"]')) {
-    providerSelect.value = "openai";
-    if (!modelInput.value.trim()) {
-      modelInput.value = settingsCache.task_model || "gpt-4.1-mini";
-    }
-  }
+  const preferredProvider = selectPreferredApiProvider();
   retrievalToggle.checked = false;
   moduleSelect.value = "";
 
   addUserTaskOnce(demoTask);
   setMvpGuideText("mvp_guide_inspecting");
   addBubble("system", t("msg_mvp_started"));
-  addBubble("system", t("msg_mvp_mode", { provider: providerSelect.value || "handoff" }));
+  addBubble("system", t("msg_mvp_mode", { provider: preferredProvider }));
   if (!settingsCache || (!settingsCache.has_deepseek_api_key && !settingsCache.has_openai_api_key)) {
     addBubble("system", t("msg_mvp_no_api"));
   }
@@ -1406,6 +1455,85 @@ async function runMvpFlow() {
   } catch (err) {
     setMvpGuideText("mvp_guide_idle");
     addBubble("system", t("msg_mvp_failed", { error: err.message }));
+  }
+}
+
+async function runDemoMode() {
+  if (!settingsCache) {
+    await loadSettings();
+  }
+
+  const preferredProvider = selectPreferredApiProvider();
+  retrievalToggle.checked = false;
+  moduleSelect.value = "";
+
+  const summaryLines = [t("demo_summary_title"), t("demo_mode_provider", { provider: preferredProvider })];
+  setDemoSummaryLines(summaryLines);
+  addBubble("system", t("demo_started"));
+  if (!settingsCache || (!settingsCache.has_deepseek_api_key && !settingsCache.has_openai_api_key)) {
+    addBubble("system", t("msg_mvp_no_api"));
+  }
+
+  try {
+    const decisionTask = "请输出本周决策复盘，并给出3条按优先级排序的风险控制动作。";
+    taskInput.value = decisionTask;
+    addUserTaskOnce(decisionTask);
+
+    const inspectPayload = buildPayload();
+    const inspectData = await postJson("/api/inspect", inspectPayload);
+    renderInspectResult(inspectData);
+
+    const runData = await postJson("/api/run", inspectPayload);
+    renderRunResult(runData);
+    if (runData.suggestion_id) {
+      await loadSuggestionDetail(runData.suggestion_id);
+    }
+    summaryLines.push(
+      t("demo_step_decision", {
+        module: runData.module || "-",
+        output_path: runData.output_path || "-",
+        suggestion_id: runData.suggestion_id || "-",
+      })
+    );
+    setDemoSummaryLines(summaryLines);
+
+    const learningPayload = {
+      action: "ingest_learning",
+      task: "学习样本：高风险决策先写反证条件；情绪波动时先做低负荷执行任务；每周复盘记录触发点与修正动作。",
+      title: "Demo 学习样本",
+      source_type: "notes",
+      max_points: 6,
+      confidence: 8,
+      tags: ["demo_mode"],
+    };
+    const learningData = await postJson("/api/action", learningPayload);
+    renderActionResult(learningData);
+    summaryLines.push(
+      t("demo_step_learning", {
+        events: learningData.appended_events || 0,
+        insights: learningData.appended_insights || 0,
+      })
+    );
+    setDemoSummaryLines(summaryLines);
+
+    const auditData = await postJson("/api/action", { action: "owner_report", window_days: 7 });
+    renderActionResult(auditData);
+    const failMetrics = Object.entries(auditData.summary || {})
+      .filter((entry) => entry[1] === "fail")
+      .map((entry) => entry[0]);
+    summaryLines.push(
+      t("demo_step_audit", {
+        output_path: auditData.output_path || "-",
+        fails: failMetrics.length > 0 ? failMetrics.join(", ") : t("demo_none"),
+      })
+    );
+    setDemoSummaryLines(summaryLines);
+    switchEntrypoint("audit");
+    addBubble("system", t("demo_done"));
+  } catch (err) {
+    summaryLines.push(t("demo_failed", { error: err.message }));
+    setDemoSummaryLines(summaryLines);
+    addBubble("system", t("demo_failed", { error: err.message }));
   }
 }
 
@@ -1623,6 +1751,13 @@ if (mvpFlowBtn) {
   });
 }
 
+if (demoModeBtn) {
+  demoModeBtn.addEventListener("click", (event) => {
+    event.preventDefault();
+    runDemoMode();
+  });
+}
+
 taskForm.addEventListener("submit", (event) => {
   event.preventDefault();
   runTask();
@@ -1730,6 +1865,7 @@ suggestionRejectBtn.addEventListener("click", () => {
 
 setLanguage("zh");
 setMvpGuideText("mvp_guide_idle");
+setDemoSummaryKey("demo_summary_idle");
 setStatus(t("status_connecting"), "pending", "status_connecting");
 initTheme();
 switchEntrypoint("task");
