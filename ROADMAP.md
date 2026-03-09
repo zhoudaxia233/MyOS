@@ -170,6 +170,172 @@ Do not refactor yet:
 - Existing memory distillation, pattern extraction, cognition extraction pipelines
 - Decision gate and owner report control loops
 
+### Handoff-First Interaction Track (Token-Efficient UX) (2026-03-09)
+
+Intent:
+
+- Keep `handoff` as the default low-cost execution path to control token spend.
+- Preserve direct `openai` / API execution as an optional high-leverage path.
+- Make both modes share one operator flow, one trace model, and one audit story.
+
+Operator policy baseline:
+
+- Default mode remains `handoff`; API mode is explicit opt-in per task/session.
+- No hidden full-context API calls inside a handoff workflow.
+- No split-product UX where handoff feels like a degraded fallback path.
+
+Unified interaction contract (single flow across modes):
+
+1. Draft task -> inspect route/plan/context.
+2. Select depth/budget profile (`lite | standard | deep`).
+3. Execute:
+   - handoff mode: generate packet + copy + paste structured response.
+   - API mode: run provider directly.
+4. Parse/validate/trace with the same review surface.
+5. Review/promote/log outcomes with the same governance controls.
+
+Roadmap milestones:
+
+#### HF-1 - Unified Session State Model
+
+- Add explicit session-level state model shared by handoff/API:
+  - `draft -> inspected -> packet_ready|api_running -> response_ready -> reviewed -> finalized`
+- Add stable `session_id` and `interaction_mode` fields to runtime/suggestion traces.
+- Make web trace render session progression instead of only final action snapshots.
+
+Exit criteria:
+
+- One session timeline can be replayed regardless of execution mode.
+
+#### HF-2 - Token Budget Controls for Handoff
+
+- Add packet depth profiles: `lite`, `standard`, `deep`.
+- Add packet token estimate before copy, with budget warning thresholds.
+- Add delta handoff mode for follow-up turns (send only changed context + unresolved questions).
+
+Exit criteria:
+
+- Owner can bound handoff payload size intentionally before each external call.
+
+#### HF-3 - Robust Structured Paste-Back
+
+- Keep strict JSON response contract for external LLM output.
+- Add tolerant parse-repair for minor formatting issues (without changing semantic fields).
+- Add clear field-level validation errors and retry guidance in UI.
+
+Exit criteria:
+
+- Most paste-back failures are recoverable in UI without manual log surgery.
+
+#### HF-4 - Seamless Mode Switching
+
+- Allow switching `handoff <-> openai` inside the same session without losing trace continuity.
+- Keep shared review/promote actions and identical governance gates after mode switch.
+- Add budget-triggered suggestion path: when API budget risk is high, suggest handoff continuation.
+
+Exit criteria:
+
+- Mode switch does not force operator to restart workflow or lose audit context.
+
+#### HF-5 - Cost and UX Auditability
+
+- Add interaction efficiency telemetry:
+  - packet size estimates, mode usage ratio, parse retry rate, time-to-finalized
+- Surface these in owner report / audit console as first-class UX-health signals.
+
+Exit criteria:
+
+- Owner can verify that handoff-first operation improves cost predictability without UX regression.
+
+Explicit non-goals for this track:
+
+- No OpenClaw-style heavy always-on token streaming requirement.
+- No API-only redesign that sidelines handoff workflow.
+- No bypass of existing candidate review/promotion governance.
+
+### Lightweight State-Task Matching Heuristic (Yerkes-Dodson) (2026-03-09)
+
+Design source:
+
+- `docs/STATE_TASK_MATCHING_HEURISTIC.md`
+
+Intent:
+
+- Add a lightweight state-task matching heuristic in orchestration/decision paths.
+- Improve recommendation quality under cognitive mismatch.
+- Reduce default "add pressure" responses when progress is low.
+
+Scope boundary:
+
+- Keep this as scheduling/decision hygiene logic, not a standalone psychology module.
+- Use coarse buckets only:
+  - state: `low_activation | stable_activation | high_activation | unknown`
+  - task load: `low | medium | high` (+ reversibility and execution mode hints)
+- Prefer explicit rules and neutral operational language.
+
+Milestones:
+
+#### ST-1 - Minimal State + Task Profile Contract
+
+- Add design-level contract for:
+  - `state_hint`
+  - `task_cognitive_profile`
+  - `state_task_match`
+- Keep all fields coarse and auditable; avoid pseudo-precision.
+
+Exit criteria:
+
+- Planning path can represent state-task fit with simple categories.
+
+#### ST-2 - Inspect/Run Recommendation Layer
+
+- Before execution recommendation, run state-task fit check.
+- If mismatch:
+  - high activation + high-load task -> lower-load/convergent alternatives first
+  - low activation + medium/high-load task -> warm-up starter tasks first
+
+Exit criteria:
+
+- Inspect output can explain task switch suggestion using fit rationale tags.
+
+#### ST-3 - Deep Work Protection + Decision Hygiene
+
+- Recommend high-load deep work only when state is sufficiently stable.
+- For high activation + hard-to-reverse decision contexts:
+  - suggest defer/notes/reversible tasks before major commitment.
+
+Exit criteria:
+
+- System avoids encouraging irreversible strategic moves under overloaded state by default.
+
+#### ST-4 - Low-Friction Check-In + Cadence Integration
+
+- Add optional short check-in (`low/stable/high`) only when state is unclear or mismatch repeats.
+- Integrate fit signal with cadence task ordering (execution-first vs deep-work-first).
+
+Exit criteria:
+
+- No heavy journaling workflow; one-step state hint is sufficient when needed.
+
+#### ST-5 - Anti-Self-Blame Correction Loop
+
+- When repeated stalls occur on complex tasks, include mismatch-first diagnosis:
+  - needs activation
+  - needs down-regulation
+  - needs task-class switch
+- Keep wording operational and non-moralizing.
+
+Exit criteria:
+
+- Recommendation language avoids implicit laziness/discipline framing in mismatch cases.
+
+Explicit non-goals for this capability:
+
+- No large psychology subsystem.
+- No fake precision scoring (`arousal = 73.2` style outputs).
+- No dashboard-heavy implementation before practical recommendation value is proven.
+- No therapy-style persona or paternalistic tone.
+
 ## Version Timeline
 
 ## v0.1 (Completed)
@@ -334,6 +500,35 @@ Do not refactor yet:
    - Added cognition routing keywords and weighted matching in manifest/routes fallback
    - Added weekly cadence routine `rt_weekly_equilibration_review`
    - Added web quick action for disequilibrium detection
+
+## v1.4-handoff-first-interaction (Planned)
+
+1. Unified handoff/API interaction loop
+   - Shared session state machine and trace model across both execution modes
+   - Consistent inspect -> execute -> review flow in web UI
+2. Token-aware handoff ergonomics
+   - Packet depth profiles (`lite | standard | deep`) with pre-copy token estimates
+   - Delta handoff support for follow-up turns
+3. Robust structured import UX
+   - Better paste-back validation and repair hints
+   - Higher completion rate for handoff loops without leaving the UI
+4. Cost governance visibility
+   - Owner-report metrics for token efficiency and interaction friction
+
+## v1.5-state-task-matching (Planned)
+
+1. Lightweight Yerkes-Dodson scheduling heuristic
+   - Coarse state buckets (`low/stable/high/unknown`) and coarse task cognitive profiles
+   - State-task fit recommendation in inspect/run flows (no heavy scoring engine)
+2. Deep-work protection and decision hygiene
+   - Avoid default high-load recommendations when overloaded
+   - Encourage defer/reversible paths for high-activation major decisions
+3. Low-friction operational UX
+   - Optional one-step check-in only when needed
+   - Neutral operator phrasing (no therapeutic or moralizing framing)
+4. Anti-overengineering guardrails
+   - Keep rules explicit, practical, and maintainable
+   - Avoid pseudo-scientific precision and dashboard bloat
 
 ## v0.7-plugin-contract (Planned)
 
