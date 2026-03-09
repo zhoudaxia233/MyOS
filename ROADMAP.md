@@ -39,8 +39,9 @@ Keep rollout evolutionary: preserve existing extraction/distillation pipelines a
   - web trace panel support for full suggestion detail view
   - clearer `invoked_rules` / `invoked_traits` fields in suggestion records
   - bridge suggestion detail to owner verdict/correction actions (`suggestion_id` as first-class review handle)
+  - owner report + audit quick filters now include suggestion review summary/trend (`accept|modify|reject`, correction ratio, 7d vs 30d)
 - Next:
-  - integrate verdict/correction trend summaries into owner report and audit quick filters
+  - close Stage 1 with lightweight replay ergonomics for session-level trace continuity (feeds HF-1)
 - Exit criteria:
   - end-to-end trace from task input to suggestion, run record, output artifact, and loaded context
   - owner can inspect why a recommendation was produced
@@ -151,6 +152,10 @@ Completed in this iteration:
   - `load_context_bundle` now appends `orchestrator://promoted_candidates_ready`
   - only promoted candidates past maturity window are injected into runtime context by module
   - cooling (not-yet-ready) promoted items are excluded by default
+- Added promotion consumption tuning baseline:
+  - promoted candidate loading now supports intent-aware ranking from current task text
+  - when intent terms match, context load prioritizes matched promoted candidates
+  - when no intent match exists, loading falls back to recent-ready candidates (no empty context drop)
 - Added minimal UI evolution toward three-entrypoint model:
   - Task Console / Learning Console / Audit Console selector
   - Learning Console direct ingest and handoff controls
@@ -161,7 +166,6 @@ Completed in this iteration:
 
 Remaining next:
 
-- Promotion consumption tuning: ranking and intent-aware filtering for loaded ready candidates
 - Dedicated Audit Console candidate-review panel (batch triage, filters by type/source/age)
 - Owner-tunable readiness policy (per-candidate-type maturity hours + explicit override path)
 

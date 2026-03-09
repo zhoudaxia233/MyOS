@@ -194,7 +194,13 @@ def execute_task(
     route = select_route(task, forced_module=forced_module, repo_root=root)
     module = route["module"]
     plan = plan_task(task, module, skill_hint=skill_hint, routine_id=routine_id, repo_root=root)
-    bundle = load_context_bundle(root, module, cfg["max_context_chars"], skill_path=plan["skill"])
+    bundle = load_context_bundle(
+        root,
+        module,
+        cfg["max_context_chars"],
+        skill_path=plan["skill"],
+        intent_text=task,
+    )
 
     hits: list[dict] = []
     if with_retrieval:
@@ -272,7 +278,13 @@ def cmd_inspect(args: argparse.Namespace) -> int:
     route = select_route(args.task, forced_module=args.module, repo_root=root)
     module = route["module"]
     plan = plan_task(args.task, module, repo_root=root)
-    bundle = load_context_bundle(root, module, cfg["max_context_chars"], skill_path=plan["skill"])
+    bundle = load_context_bundle(
+        root,
+        module,
+        cfg["max_context_chars"],
+        skill_path=plan["skill"],
+        intent_text=args.task,
+    )
 
     if args.with_retrieval:
         hits = _retrieval_hits(root, args.task, module, args.retrieval_top_k)

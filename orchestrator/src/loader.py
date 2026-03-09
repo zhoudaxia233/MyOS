@@ -8,6 +8,7 @@ from pathlib import Path
 from learning_console import PROMOTION_MATURITY_HOURS
 
 PATH_RE = re.compile(r"(?:core|modules|routines|orchestrator)/[A-Za-z0-9_./-]+\.(?:md|yaml|yml|jsonl|json)")
+TOKEN_RE = re.compile(r"[a-z0-9_]+")
 PROMOTED_CONTEXT_LIMIT = 12
 PROMOTED_CONTEXT_SINK_PATHS: dict[str, list[str]] = {
     "memory": ["modules/memory/logs/insight_candidates.jsonl"],
@@ -18,6 +19,42 @@ PROMOTED_CONTEXT_SINK_PATHS: dict[str, list[str]] = {
     "profile": ["modules/profile/logs/profile_trait_candidates.jsonl"],
     "cognition": ["modules/cognition/logs/schema_candidates.jsonl"],
     "principles": ["modules/principles/logs/principle_candidates.jsonl"],
+}
+INTENT_STOPWORDS = {
+    "the",
+    "and",
+    "for",
+    "with",
+    "that",
+    "this",
+    "from",
+    "into",
+    "your",
+    "about",
+    "task",
+    "tasks",
+    "work",
+    "need",
+    "want",
+    "should",
+    "would",
+    "could",
+    "maybe",
+    "then",
+    "than",
+    "when",
+    "where",
+    "what",
+    "which",
+    "while",
+    "just",
+    "also",
+    "only",
+    "very",
+    "more",
+    "less",
+    "make",
+    "done",
 }
 
 
@@ -111,7 +148,64 @@ def _clip(text: str, limit: int) -> str:
     return value[: max(0, limit - 3)] + "..."
 
 
-def _build_promoted_context(repo_root: Path, module: str, now: datetime) -> str:
+def _intent_terms(text: str | None, *, limit: int = 12) -> list[str]:
+    terms: list[str] = []
+    seen: set[str] = set()
+    for token in TOKEN_RE.findall(str(text or "").lower()):
+        if len(token) < 3:
+            continue
+        if token in INTENT_STOPWORDS:
+            continue
+        if token in seen:
+            continue
+        seen.add(token)
+        terms.append(token)
+        if len(terms) >= max(1, int(limit)):
+            break
+    return terms
+
+
+def _candidate_terms(row: dict) -> set[str]:
+    text = " ".join(
+        [
+            str(row.get("candidate_type", "")).strip(),
+            str(row.get("title", "")).strip(),
+            str(row.get("statement", "")).strip(),
+            str(row.get("source_material_ref", "")).strip(),
+        ]
+    )
+    out: set[str] = set()
+    for token in TOKEN_RE.findall(text.lower()):
+        if len(token) < 3:
+            continue
+        if token in INTENT_STOPWORDS:
+            continue
+        out.add(token)
+    return out
+
+
+def _rank_promoted_rows(rows: list[dict], intent_terms: list[str]) -> tuple[list[tuple[dict, int]], bool]:
+    terms = set(intent_terms)
+    scored: list[tuple[int, datetime, dict]] = []
+    for row in rows:
+        overlap = 0
+        if terms:
+            overlap = len(terms.intersection(_candidate_terms(row)))
+        created = _parse_iso8601(str(row.get("created_at", "")).strip())
+        if created is None:
+            created = datetime(1970, 1, 1, tzinfo=timezone.utc)
+        scored.append((overlap, created, row))
+
+    has_matches = any(item[0] > 0 for item in scored)
+    if terms and has_matches:
+        scored = [item for item in scored if item[0] > 0]
+
+    scored.sort(key=lambda item: (item[0], item[1]), reverse=True)
+    ranked = [(row, overlap) for overlap, _, row in scored]
+    return ranked, has_matches
+
+
+def _build_promoted_context(repo_root: Path, module: str, now: datetime, intent_text: str | None = None) -> str:
     sink_paths = PROMOTED_CONTEXT_SINK_PATHS.get(module, [])
     if not sink_paths:
         return ""
@@ -134,27 +228,44 @@ def _build_promoted_context(repo_root: Path, module: str, now: datetime) -> str:
     if not rows:
         return ""
 
-    rows.sort(key=lambda row: str(row.get("created_at", "")), reverse=True)
+    intent_terms = _intent_terms(intent_text)
+    ranked_rows, has_intent_matches = _rank_promoted_rows(rows, intent_terms)
+
     lines = [
         "# Promoted Candidates (Ready)",
         "",
         f"- module: {module}",
         f"- maturity_hours: {PROMOTION_MATURITY_HOURS}",
         f"- source_count: {len(rows)}",
-        "",
+        f"- selected_count: {len(ranked_rows)}",
     ]
-    for row in rows[:PROMOTED_CONTEXT_LIMIT]:
+    if intent_terms:
+        lines.append(f"- intent_terms: {', '.join(intent_terms)}")
+        lines.append(f"- intent_filter: {'matched_only' if has_intent_matches else 'recent_fallback'}")
+    lines.extend(
+        [
+            "",
+        ]
+    )
+    for row, overlap in ranked_rows[:PROMOTED_CONTEXT_LIMIT]:
         candidate_type = str(row.get("candidate_type", "")).strip() or "unknown"
         title = _clip(str(row.get("title", "")).strip() or "candidate", 96)
         statement = _clip(str(row.get("statement", "")).strip(), 280)
+        match_tag = f" [match={overlap}]" if intent_terms else ""
         if statement:
-            lines.append(f"- [{candidate_type}] {title}: {statement}")
+            lines.append(f"- [{candidate_type}] {title}{match_tag}: {statement}")
         else:
-            lines.append(f"- [{candidate_type}] {title}")
+            lines.append(f"- [{candidate_type}] {title}{match_tag}")
     return "\n".join(lines)
 
 
-def load_context_bundle(repo_root: Path, module: str, max_chars: int, skill_path: str | None = None) -> dict:
+def load_context_bundle(
+    repo_root: Path,
+    module: str,
+    max_chars: int,
+    skill_path: str | None = None,
+    intent_text: str | None = None,
+) -> dict:
     module_file = f"modules/{module}/MODULE.md"
     files = ["core/ROUTER.md", module_file]
     dynamic_refs: list[str] = []
@@ -183,7 +294,12 @@ def load_context_bundle(repo_root: Path, module: str, max_chars: int, skill_path
             break
 
     if budget > 0:
-        promoted_text = _build_promoted_context(repo_root, module, now=datetime.now(timezone.utc))
+        promoted_text = _build_promoted_context(
+            repo_root,
+            module,
+            now=datetime.now(timezone.utc),
+            intent_text=intent_text,
+        )
         if promoted_text:
             if len(promoted_text) > budget:
                 promoted_text = promoted_text[: max(0, budget)]

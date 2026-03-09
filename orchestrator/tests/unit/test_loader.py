@@ -140,3 +140,109 @@ def test_load_context_bundle_includes_only_ready_promoted_candidates() -> None:
         content = promoted["content"]
         assert "Ready rule" in content
         assert "Cooling rule" not in content
+
+
+def test_load_context_bundle_promoted_candidates_intent_ranking_and_fallback() -> None:
+    with TemporaryDirectory() as td:
+        root = Path(td)
+        (root / "core").mkdir(parents=True, exist_ok=True)
+        (root / "core/ROUTER.md").write_text("router", encoding="utf-8")
+
+        (root / "modules/decision").mkdir(parents=True, exist_ok=True)
+        (root / "modules/decision/MODULE.md").write_text("decision module", encoding="utf-8")
+
+        _write_jsonl(
+            root / "modules/decision/logs/learning_candidate_promotions.jsonl",
+            "learning_candidate_promotions",
+            ["id", "created_at", "status", "candidate_ref", "promotion_target"],
+            [
+                {
+                    "id": "lp_high",
+                    "created_at": "2020-03-07T00:00:00Z",
+                    "status": "active",
+                    "candidate_ref": "lc_high",
+                    "promotion_target": "decision",
+                },
+                {
+                    "id": "lp_low",
+                    "created_at": "2020-03-08T00:00:00Z",
+                    "status": "active",
+                    "candidate_ref": "lc_low",
+                    "promotion_target": "decision",
+                },
+                {
+                    "id": "lp_none",
+                    "created_at": "2020-03-09T00:00:00Z",
+                    "status": "active",
+                    "candidate_ref": "lc_none",
+                    "promotion_target": "decision",
+                },
+            ],
+        )
+        _write_jsonl(
+            root / "modules/decision/logs/rule_candidates.jsonl",
+            "rule_candidates",
+            ["id", "created_at", "status", "candidate_type", "title", "statement", "promotion_ref"],
+            [
+                {
+                    "id": "rc_high",
+                    "created_at": "2020-03-07T00:05:00Z",
+                    "status": "active",
+                    "candidate_type": "rule",
+                    "title": "Risk cooldown rule",
+                    "statement": "Delay irreversible decision when risk and cooldown signals spike.",
+                    "promotion_ref": "lp_high",
+                },
+                {
+                    "id": "rc_low",
+                    "created_at": "2020-03-08T00:05:00Z",
+                    "status": "active",
+                    "candidate_type": "rule",
+                    "title": "Decision checklist",
+                    "statement": "Use quick review before committing.",
+                    "promotion_ref": "lp_low",
+                },
+                {
+                    "id": "rc_none",
+                    "created_at": "2020-03-09T00:05:00Z",
+                    "status": "active",
+                    "candidate_type": "rule",
+                    "title": "Admin cleanup",
+                    "statement": "Clear inbox and archive old logs.",
+                    "promotion_ref": "lp_none",
+                },
+            ],
+        )
+        _write_jsonl(
+            root / "modules/decision/logs/skill_candidates.jsonl",
+            "skill_candidates",
+            ["id", "created_at", "status", "candidate_type", "title", "statement", "promotion_ref"],
+            [],
+        )
+
+        intent_bundle = load_context_bundle(
+            root,
+            module="decision",
+            max_chars=10000,
+            intent_text="risk cooldown decision",
+        )
+        files = intent_bundle["files"]
+        promoted = next(f for f in files if f["path"] == "orchestrator://promoted_candidates_ready")
+        content = promoted["content"]
+        assert "intent_filter: matched_only" in content
+        assert "Risk cooldown rule" in content
+        assert "Decision checklist" in content
+        assert "Admin cleanup" not in content
+        assert content.index("Risk cooldown rule") < content.index("Decision checklist")
+
+        fallback_bundle = load_context_bundle(
+            root,
+            module="decision",
+            max_chars=10000,
+            intent_text="biochemistry molecule synthesis",
+        )
+        fallback_files = fallback_bundle["files"]
+        fallback_promoted = next(f for f in fallback_files if f["path"] == "orchestrator://promoted_candidates_ready")
+        fallback_content = fallback_promoted["content"]
+        assert "intent_filter: recent_fallback" in fallback_content
+        assert "Admin cleanup" in fallback_content
