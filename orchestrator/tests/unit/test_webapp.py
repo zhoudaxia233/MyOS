@@ -7,7 +7,17 @@ from tempfile import TemporaryDirectory
 
 import pytest
 
-from webapp import api_action, api_get_settings, api_inspect, api_output, api_output_meta, api_run, api_status, api_update_settings
+from webapp import (
+    api_action,
+    api_get_settings,
+    api_inspect,
+    api_output,
+    api_output_meta,
+    api_run,
+    api_status,
+    api_suggestion,
+    api_update_settings,
+)
 
 
 def _copy_repo_subset(dst_root: Path) -> Path:
@@ -138,6 +148,25 @@ def test_api_inspect_and_run_writes_output() -> None:
         assert suggestion_record["run_ref"] == run_record["id"]
         assert suggestion_record["object_type"] == "system"
         assert suggestion_record["proposal_target"] is None
+
+        suggestion_detail = api_suggestion(root, run_result["suggestion_id"])
+        assert suggestion_detail["ok"] is True
+        assert suggestion_detail["suggestion"]["id"] == run_result["suggestion_id"]
+        assert suggestion_detail["suggestion"]["run_ref"] == run_record["id"]
+        assert suggestion_detail["run"] is not None
+        assert suggestion_detail["run"]["id"] == run_record["id"]
+        assert suggestion_detail["output_path"] == run_result["output_path"]
+        assert isinstance(suggestion_detail["output_preview"], str)
+        assert len(suggestion_detail["output_preview"]) > 0
+
+
+def test_api_suggestion_rejects_missing_or_unknown_id() -> None:
+    with TemporaryDirectory() as td:
+        root = _copy_repo_subset(Path(td))
+        with pytest.raises(ValueError):
+            api_suggestion(root, "")
+        with pytest.raises(ValueError):
+            api_suggestion(root, "sg_missing")
 
 
 def test_api_action_validate_metrics_and_schedule() -> None:

@@ -278,6 +278,68 @@ def api_output_meta(root: Path, rel_path: str, model: str | None = None) -> dict
     }
 
 
+def _read_jsonl_records(path: Path) -> list[dict]:
+    if not path.exists() or not path.is_file():
+        return []
+    rows: list[dict] = []
+    for i, raw in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+        line = raw.strip()
+        if not line:
+            continue
+        if i == 1 and '"_schema"' in line:
+            continue
+        try:
+            obj = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(obj, dict):
+            rows.append(obj)
+    return rows
+
+
+def _find_jsonl_record_by_id(path: Path, record_id: str) -> dict | None:
+    rid = str(record_id).strip()
+    if not rid:
+        return None
+    for row in reversed(_read_jsonl_records(path)):
+        if str(row.get("id", "")).strip() == rid:
+            return row
+    return None
+
+
+def api_suggestion(root: Path, suggestion_id: str) -> dict:
+    sid = str(suggestion_id).strip()
+    if not sid:
+        raise ValueError("id is required")
+
+    suggestions_path = root / "orchestrator" / "logs" / "suggestions.jsonl"
+    suggestion = _find_jsonl_record_by_id(suggestions_path, sid)
+    if suggestion is None:
+        raise ValueError(f"suggestion not found: {sid}")
+
+    run_ref = str(suggestion.get("run_ref", "")).strip()
+    run_record: dict[str, Any] | None = None
+    if run_ref:
+        run_record = _find_jsonl_record_by_id(root / "orchestrator" / "logs" / "runs.jsonl", run_ref)
+
+    output_preview = None
+    output_path = _normalize_optional_str(suggestion.get("recommendation_path"))
+    if output_path:
+        try:
+            path = _safe_output_file(root, output_path)
+            output_preview = _preview_text(path.read_text(encoding="utf-8"), max_chars=4000)
+        except ValueError:
+            output_preview = None
+
+    return {
+        "ok": True,
+        "suggestion": suggestion,
+        "run": run_record,
+        "output_path": output_path,
+        "output_preview": output_preview,
+    }
+
+
 def _inspect_task(
     *,
     root: Path,
@@ -1032,6 +1094,11 @@ def _make_handler(root: Path, static_root: Path) -> type[BaseHTTPRequestHandler]
                     rel_path = query.get("path", [""])[0]
                     model = _normalize_optional_str(query.get("model", [""])[0])
                     self._send_json(200, api_output_meta(root, rel_path, model))
+                    return
+                if path == "/api/suggestion":
+                    query = parse_qs(parsed.query)
+                    suggestion_id = query.get("id", [""])[0]
+                    self._send_json(200, api_suggestion(root, suggestion_id))
                     return
 
                 self._send_json(404, {"ok": False, "error": "not found"})

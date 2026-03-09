@@ -30,6 +30,7 @@ const routeTrace = document.getElementById("routeTrace");
 const planTrace = document.getElementById("planTrace");
 const loadedFiles = document.getElementById("loadedFiles");
 const resultTrace = document.getElementById("resultTrace");
+const suggestionTrace = document.getElementById("suggestionTrace");
 const outputPreview = document.getElementById("outputPreview");
 const outputTokenMeta = document.getElementById("outputTokenMeta");
 const cognitionCards = document.getElementById("cognitionCards");
@@ -45,6 +46,7 @@ const settingsRoutingModel = document.getElementById("settingsRoutingModel");
 const settingsTaskModel = document.getElementById("settingsTaskModel");
 let latestOutputPath = null;
 let latestOutputProvider = null;
+let latestSuggestionId = null;
 let settingsCache = null;
 
 function addBubble(role, text) {
@@ -418,9 +420,38 @@ function renderInspectResult(data) {
   planTrace.textContent = planLines.join("\n");
 
   renderLoadedFiles(data.loaded_files || []);
+  suggestionTrace.textContent = "-";
   if (!data.output_preview) {
     setPreview("-");
     setOutputTokenMeta("-");
+  }
+}
+
+function renderSuggestionDetail(data) {
+  if (!data || typeof data !== "object" || !data.suggestion || typeof data.suggestion !== "object") {
+    suggestionTrace.textContent = "-";
+    return;
+  }
+  const payload = {
+    suggestion: data.suggestion,
+    run: data.run || null,
+    output_path: data.output_path || null,
+    output_preview: data.output_preview || null,
+  };
+  suggestionTrace.textContent = JSON.stringify(payload, null, 2);
+}
+
+async function loadSuggestionDetail(suggestionId) {
+  const sid = String(suggestionId || "").trim();
+  if (!sid) {
+    suggestionTrace.textContent = "-";
+    return;
+  }
+  try {
+    const data = await getJson(`/api/suggestion?id=${encodeURIComponent(sid)}`);
+    renderSuggestionDetail(data);
+  } catch (err) {
+    suggestionTrace.textContent = `load_failed: ${err.message}`;
   }
 }
 
@@ -428,6 +459,7 @@ function renderRunResult(data) {
   renderInspectResult(data);
   latestOutputPath = data.output_path || null;
   latestOutputProvider = data.provider || providerSelect.value || null;
+  latestSuggestionId = data.suggestion_id || null;
   const lines = [
     `output_path: ${data.output_path}`,
     `output_hash: ${data.output_hash}`,
@@ -439,6 +471,7 @@ function renderRunResult(data) {
   resultTrace.textContent = lines.join("\n");
   setPreview(data.output_preview || "-");
   refreshOutputTokenMeta();
+  loadSuggestionDetail(latestSuggestionId);
 }
 
 function renderActionResult(data) {
