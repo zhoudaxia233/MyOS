@@ -280,8 +280,12 @@
         <button id="settingsClose" class="icon-btn" type="button" aria-label="Close settings" title="Close settings">✕</button>
       </div>
       <div class="modal-body">
+        <p class="settings-note settings-intro" data-i18n="settings_intro">
+          只需配置一个 API Key 并保存即可。其余选项建议先保持默认。
+        </p>
         <section class="settings-section">
-          <h4 data-i18n="settings_section_openai">OpenAI</h4>
+          <h4 data-i18n="settings_section_openai">OpenAI（可选）</h4>
+          <p class="settings-note" data-i18n="settings_provider_tip">配置任意一个直连模型即可直接生成结果。</p>
           <label class="control">
             <span data-i18n="settings_openai_key">OpenAI API Key</span>
             <input id="settingsApiKey" type="password" placeholder="sk-..." autocomplete="off">
@@ -297,7 +301,8 @@
         </section>
 
         <section class="settings-section">
-          <h4 data-i18n="settings_section_deepseek">DeepSeek</h4>
+          <h4 data-i18n="settings_section_deepseek">DeepSeek（可选）</h4>
+          <p class="settings-note" data-i18n="settings_provider_tip">配置任意一个直连模型即可直接生成结果。</p>
           <label class="control">
             <span data-i18n="settings_deepseek_key">DeepSeek API Key</span>
             <input id="settingsDeepseekApiKey" type="password" placeholder="sk-..." autocomplete="off">
@@ -313,65 +318,66 @@
         </section>
 
         <section class="settings-section">
-          <h4 data-i18n="settings_section_routing">Routing</h4>
+          <h4 data-i18n="settings_section_routing">默认执行方式</h4>
+          <p class="settings-note" data-i18n="settings_routing_note">不确定就保持系统自动；只有当你想固定模式时再修改。</p>
           <label class="control">
-            <span data-i18n="settings_default_provider">Fallback Provider</span>
+            <span data-i18n="settings_default_provider">默认执行方式</span>
             <select id="settingsDefaultProvider">
-              <option value="dry-run">dry-run</option>
-              <option value="handoff">handoff</option>
-              <option value="openai">openai</option>
-              <option value="deepseek">deepseek</option>
+              <option value="dry-run" data-i18n="option_mode_dry_run">离线演练（不调用 API）</option>
+              <option value="handoff" data-i18n="option_mode_handoff">外部协作（复制请求包）</option>
+              <option value="openai" data-i18n="option_mode_openai">OpenAI（直连）</option>
+              <option value="deepseek" data-i18n="option_mode_deepseek">DeepSeek（直连）</option>
             </select>
           </label>
           <label class="control">
-            <span data-i18n="settings_routing_model">Routing Model (lighter)</span>
+            <span data-i18n="settings_routing_model">自动分配模型（高级）</span>
             <input id="settingsRoutingModel" type="text" placeholder="gpt-4.1-nano">
           </label>
         </section>
 
         <section class="settings-section">
-          <h4 data-i18n="settings_section_profiles">Task Profiles (Optional Override)</h4>
-          <p class="settings-note" data-i18n="settings_profiles_note">Leave provider/model empty to use fallback defaults. These apply after module routing.</p>
+          <h4 data-i18n="settings_section_profiles">高级：按任务类型覆盖（可选）</h4>
+          <p class="settings-note" data-i18n="settings_profiles_note">大多数用户不需要改这里。留空即可沿用默认执行方式。</p>
           <label class="control">
-            <span data-i18n="settings_decision_provider">Decision Provider</span>
+            <span data-i18n="settings_decision_provider">决策类任务执行方式</span>
             <select id="settingsDecisionProvider">
-              <option value="" data-i18n="option_use_fallback">Use fallback</option>
-              <option value="dry-run">dry-run</option>
-              <option value="handoff">handoff</option>
-              <option value="openai">openai</option>
-              <option value="deepseek">deepseek</option>
+              <option value="" data-i18n="option_use_fallback">使用全局默认</option>
+              <option value="dry-run" data-i18n="option_mode_dry_run">离线演练（不调用 API）</option>
+              <option value="handoff" data-i18n="option_mode_handoff">外部协作（复制请求包）</option>
+              <option value="openai" data-i18n="option_mode_openai">OpenAI（直连）</option>
+              <option value="deepseek" data-i18n="option_mode_deepseek">DeepSeek（直连）</option>
             </select>
           </label>
           <label class="control">
-            <span data-i18n="settings_decision_model">Decision Model</span>
+            <span data-i18n="settings_decision_model">决策类任务模型</span>
             <input id="settingsDecisionModel" type="text" placeholder="">
           </label>
           <label class="control">
-            <span data-i18n="settings_content_provider">Content Provider</span>
+            <span data-i18n="settings_content_provider">内容类任务执行方式</span>
             <select id="settingsContentProvider">
-              <option value="" data-i18n="option_use_fallback">Use fallback</option>
-              <option value="dry-run">dry-run</option>
-              <option value="handoff">handoff</option>
-              <option value="openai">openai</option>
-              <option value="deepseek">deepseek</option>
+              <option value="" data-i18n="option_use_fallback">使用全局默认</option>
+              <option value="dry-run" data-i18n="option_mode_dry_run">离线演练（不调用 API）</option>
+              <option value="handoff" data-i18n="option_mode_handoff">外部协作（复制请求包）</option>
+              <option value="openai" data-i18n="option_mode_openai">OpenAI（直连）</option>
+              <option value="deepseek" data-i18n="option_mode_deepseek">DeepSeek（直连）</option>
             </select>
           </label>
           <label class="control">
-            <span data-i18n="settings_content_model">Content Model</span>
+            <span data-i18n="settings_content_model">内容类任务模型</span>
             <input id="settingsContentModel" type="text" placeholder="">
           </label>
           <label class="control">
-            <span data-i18n="settings_cognition_provider">Cognition Provider</span>
+            <span data-i18n="settings_cognition_provider">学习类任务执行方式</span>
             <select id="settingsCognitionProvider">
-              <option value="" data-i18n="option_use_fallback">Use fallback</option>
-              <option value="dry-run">dry-run</option>
-              <option value="handoff">handoff</option>
-              <option value="openai">openai</option>
-              <option value="deepseek">deepseek</option>
+              <option value="" data-i18n="option_use_fallback">使用全局默认</option>
+              <option value="dry-run" data-i18n="option_mode_dry_run">离线演练（不调用 API）</option>
+              <option value="handoff" data-i18n="option_mode_handoff">外部协作（复制请求包）</option>
+              <option value="openai" data-i18n="option_mode_openai">OpenAI（直连）</option>
+              <option value="deepseek" data-i18n="option_mode_deepseek">DeepSeek（直连）</option>
             </select>
           </label>
           <label class="control">
-            <span data-i18n="settings_cognition_model">Cognition Model</span>
+            <span data-i18n="settings_cognition_model">学习类任务模型</span>
             <input id="settingsCognitionModel" type="text" placeholder="">
           </label>
         </section>

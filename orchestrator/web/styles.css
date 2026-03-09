@@ -1117,7 +1117,7 @@ pre {
   font-size: 0.86rem;
   letter-spacing: 0.2px;
   color: var(--muted);
-  text-transform: uppercase;
+  font-weight: 700;
 }
 
 .settings-note {
@@ -1125,6 +1125,14 @@ pre {
   font-size: 0.76rem;
   color: var(--muted);
   line-height: 1.35;
+}
+
+.settings-intro {
+  border: 1px solid color-mix(in srgb, var(--accent) 36%, var(--border));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent) 10%, var(--card) 90%);
+  color: var(--accent-ink);
+  padding: 8px 10px;
 }
 
 .file-list {
