@@ -10,6 +10,10 @@ This document defines the next operator-facing model for MyOS using three first-
 
 This is an additive evolution, not a rewrite. Existing extraction and distillation pipelines remain first-class upstream inputs.
 
+Positioning baseline:
+
+- `docs/MYOS_POSITIONING_CHARTER.md` is the governing north star for this operator model.
+
 ## 2) Repo-Grounded Assessment (Phase 0)
 
 ### 2.1 What already exists for Task Console
@@ -56,7 +60,7 @@ Existing capabilities:
 Assessment:
 
 - Foundations are strong.
-- But operator UX is fragmented: "Learning Capture" is a secondary button, not a first-class console.
+- Learning is now surfaced as a first-class `Learning & Evolution` workspace tab, but audit-side lifecycle/review ergonomics still need refinement.
 - No standardized low-cost "external LLM handoff -> paste-back -> candidate queue" flow existed before this iteration.
 
 ### 2.3 What already exists for Audit Console

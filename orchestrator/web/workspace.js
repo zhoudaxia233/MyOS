@@ -79,24 +79,24 @@ const I18N = {
   zh: {
     doc_title: "Personal Core OS | 工作台",
     app_title: "Personal Core OS",
-    app_subtitle: "工作台（任务 + 学习）",
+    app_subtitle: "工作台（任务 + 学习与进化）",
     nav_workspace: "工作台",
     nav_audit: "审计中心",
     status_connecting: "连接中...",
     status_connected: "已连接",
     status_offline: "离线",
     hero_title: "你想让我帮你做什么？",
-    hero_desc: "你说目标，我给结果、关键结论和下一步动作。任务输入和学习更新都在这里。",
+    hero_desc: "你说目标，我给结果、关键结论和下一步动作。任务输入和学习与进化都在这里。",
     quick_use_title: "30 秒上手",
     quick_use_step_1: "输入你希望得到的结果（例如“给我下周3件最重要的事”）。",
     quick_use_step_2: "点击“开始执行”。",
     quick_use_step_3: "先看右侧“执行结果”摘要，再决定是否看完整 Markdown。",
-    quick_use_step_4: "如果你有新经验/资料，切到上方“学习更新”标签补充到系统里。",
+    quick_use_step_4: "如果你有新经验/资料，切到上方“学习与进化”标签补充到系统里。",
     workspace_tab_task: "任务执行",
-    workspace_tab_learning: "学习更新",
+    workspace_tab_learning: "学习与进化",
     section_task: "任务输入",
     task_intro: "在这里输入你要的结果，执行后在右侧查看结果。",
-    section_learning: "学习更新",
+    section_learning: "学习与进化",
     label_task: "任务",
     task_placeholder: "例如：总结我本周做了什么、哪里做得好/不好、下周3件重点事",
     btn_run: "开始执行",
@@ -132,6 +132,11 @@ const I18N = {
     starter_extract_patterns: "目标拆解行动清单",
     starter_write_story: "风险检查+应对动作",
     learning_intro: "把你新的经验、资料、文章要点放进系统，帮助后续任务更贴合你。",
+    learning_flow_title: "学习会怎么进入系统",
+    learning_flow_step_1: "直接输入：写入 memory_events + memory_insights（可检索）。",
+    learning_flow_step_2: "外部辅助：生成学习请求包，导入 JSON 后进入候选队列。",
+    learning_flow_step_3: "候选需在审计中心复核并晋升后，才会进入运行时上下文。",
+    btn_go_audit_candidates: "去审计中心审核候选",
     learning_direct_title: "直接学习输入",
     label_learning_text: "学习文本",
     learning_text_placeholder: "粘贴你的复盘、文章摘要、会议纪要...",
@@ -259,12 +264,17 @@ const I18N = {
     msg_learning_confidence_auto: "把握程度自动判断：{confidence}/10",
     msg_learning_confidence_manual: "把握程度：{level}（{confidence}/10）",
     msg_learning_ingest_done: "学习记录已保存：新增 event={events}，insight={insights}",
+    msg_learning_ingest_where: "写入位置：modules/memory/logs/memory_events.jsonl 与 memory_insights.jsonl。",
+    msg_learning_ingest_stage_note: "这一步属于 Imported（记忆层吸收），不会直接改写 judgment core。",
+    msg_learning_import_where: "下一步：到审计中心执行 Accept/Modify/Reject，并按需 Promote。",
+    msg_learning_import_lifecycle: "生命周期：Imported +1，Candidate +{count}（rule={rule} insight={insight} skill={skill} trait={trait} principle={principle} schema={schema}）。",
+    msg_learning_import_runtime_gate: "注意：Promoted 项仍需成熟期（默认 24h）后才会进入 runtime context。",
     msg_learning_ingest_failed: "学习保存失败：{error}",
   },
   en: {
     doc_title: "Personal Core OS | Workspace",
     app_title: "Personal Core OS",
-    app_subtitle: "Workspace (Task + Learning)",
+    app_subtitle: "Workspace (Task + Learning & Evolution)",
     nav_workspace: "Workspace",
     nav_audit: "Audit Center",
     status_connecting: "Connecting...",
@@ -276,12 +286,12 @@ const I18N = {
     quick_use_step_1: "Describe the outcome you want (for example: top 3 priorities for next week).",
     quick_use_step_2: "Click Run.",
     quick_use_step_3: "Read the result summary first, then open markdown only if needed.",
-    quick_use_step_4: "If you have new notes or experience, switch to the Learning tab and add them.",
+    quick_use_step_4: "If you have new notes or experience, switch to Learning & Evolution and add them.",
     workspace_tab_task: "Task",
-    workspace_tab_learning: "Learning",
+    workspace_tab_learning: "Learning & Evolution",
     section_task: "Task Input",
     task_intro: "Describe the output you want here. Results will appear on the right.",
-    section_learning: "Learning",
+    section_learning: "Learning & Evolution",
     label_task: "Task",
     task_placeholder: "Example: summarize my week, what worked/failed, and top 3 priorities for next week",
     btn_run: "Run",
@@ -317,6 +327,11 @@ const I18N = {
     starter_extract_patterns: "Break Goals Into Action List",
     starter_write_story: "Risk Check + Response Actions",
     learning_intro: "Feed your new experiences and notes into the system so future tasks fit you better.",
+    learning_flow_title: "How Learning Enters MyOS",
+    learning_flow_step_1: "Direct input writes to memory_events + memory_insights (searchable).",
+    learning_flow_step_2: "External assist generates a learning packet; imported JSON enters candidate queue.",
+    learning_flow_step_3: "Candidates enter runtime context only after audit review and promotion.",
+    btn_go_audit_candidates: "Review Candidates In Audit Center",
     learning_direct_title: "Direct Learning Input",
     label_learning_text: "Learning Text",
     learning_text_placeholder: "Paste your review notes, summaries, or memo...",
@@ -444,6 +459,11 @@ const I18N = {
     msg_learning_confidence_auto: "Certainty auto-inferred: {confidence}/10",
     msg_learning_confidence_manual: "Certainty: {level} ({confidence}/10)",
     msg_learning_ingest_done: "Learning saved: new event={events}, insight={insights}",
+    msg_learning_ingest_where: "Written to modules/memory/logs/memory_events.jsonl and memory_insights.jsonl.",
+    msg_learning_ingest_stage_note: "This is Imported memory absorption only and does not overwrite judgment core.",
+    msg_learning_import_where: "Next: review candidates in Audit Center (Accept/Modify/Reject, then Promote as needed).",
+    msg_learning_import_lifecycle: "Lifecycle update: Imported +1, Candidate +{count} (rule={rule} insight={insight} skill={skill} trait={trait} principle={principle} schema={schema}).",
+    msg_learning_import_runtime_gate: "Promoted artifacts still require maturity (default 24h) before runtime context injection.",
     msg_learning_ingest_failed: "Learning save failed: {error}",
   },
 };
@@ -1310,6 +1330,20 @@ async function runTask() {
   }
 }
 
+function buildLearningImportSummary(data) {
+  const counts = data && typeof data === "object" && data.candidate_counts ? data.candidate_counts : {};
+  const total = Number(data && data.candidate_total ? data.candidate_total : 0);
+  return t("msg_learning_import_lifecycle", {
+    count: total,
+    rule: Number(counts.rule || 0),
+    insight: Number(counts.insight || 0),
+    skill: Number(counts.skill || 0),
+    trait: Number(counts.profile_trait || 0),
+    principle: Number(counts.principle || 0),
+    schema: Number(counts.cognition_revision || 0),
+  });
+}
+
 async function runLearningIngest() {
   switchWorkspaceTab("learning");
   const learningText = learningDirectInput.value.trim();
@@ -1347,12 +1381,14 @@ async function runLearningIngest() {
   try {
     const data = await postJson("/api/action", payload);
     renderActionPreview(data);
-    setResultSummary(
+    setResultSummary([
       t("msg_learning_ingest_done", {
         events: data.appended_events || 0,
         insights: data.appended_insights || 0,
-      })
-    );
+      }),
+      t("msg_learning_ingest_where"),
+      t("msg_learning_ingest_stage_note"),
+    ].join("\n"));
     addBubble(
       "system",
       t("msg_learning_ingest_done", {
@@ -1429,7 +1465,12 @@ async function importLearningHandoffResponse() {
   try {
     const data = await postJson("/api/action", payload);
     renderActionPreview(data);
-    setResultSummary(t("msg_learning_import_done", { count: data.candidate_total || 0 }));
+    setResultSummary([
+      t("msg_learning_import_done", { count: data.candidate_total || 0 }),
+      buildLearningImportSummary(data),
+      t("msg_learning_import_where"),
+      t("msg_learning_import_runtime_gate"),
+    ].join("\n"));
     addBubble("system", t("msg_learning_import_done", { count: data.candidate_total || 0 }));
   } catch (err) {
     addBubble("system", t("msg_learning_import_failed", { error: err.message }));

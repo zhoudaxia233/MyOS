@@ -70,3 +70,23 @@ Use short entries with a stable definition and optional examples.
 
 - **Boundary Classification**: Operational routing of a new record to memory/decision/profile/cognition/principles.
   - Example: Apply `core/BOUNDARY_RULES.md` before appending new records.
+
+### Example Entry
+
+- **Cyber-Self Layer**: A thin personal layer that preserves owner judgment continuity and governance across changing external models/agents.
+  - Example: Keep principles, risk boundaries, and promotion logic stable while provider adapters are replaceable.
+
+### Example Entry
+
+- **Judgment Core**: Durable owner-endorsed principles, defaults, heuristics, anti-patterns, and risk/style invariants that should resist noisy overwrite.
+  - Example: Promote new rules only after explicit review and approval records.
+
+### Example Entry
+
+- **Learning Membrane**: The controlled boundary where external material becomes reviewable candidates before any long-term promotion.
+  - Example: Use `candidate -> reviewed -> promoted|rejected` lifecycle with append-only audit trail.
+
+### Example Entry
+
+- **Audited Absorption**: Learning policy that requires extraction, owner verdict, and promotion history instead of silent state mutation.
+  - Example: External handoff imports enter candidate queues first, not canonical SSOT files directly.

@@ -1040,11 +1040,22 @@ def summarize_learning_pipeline(
     now: datetime | None = None,
 ) -> dict[str, Any]:
     now = now or datetime.now(timezone.utc)
+    import_path = repo_root / "modules" / "memory" / "logs" / "learning_imports.jsonl"
     candidate_path = repo_root / "orchestrator" / "logs" / "learning_candidates.jsonl"
     verdict_path = repo_root / "modules" / "decision" / "logs" / "learning_candidate_verdicts.jsonl"
     promotion_path = repo_root / "modules" / "decision" / "logs" / "learning_candidate_promotions.jsonl"
 
+    imports = _window_filter(_read_jsonl(import_path), now, window_days)
     candidates = _read_jsonl(candidate_path)
+    candidates_window = _window_filter(
+        [
+            row
+            for row in candidates
+            if str(row.get("status", "")).strip().lower() == "active"
+        ],
+        now,
+        window_days,
+    )
     verdicts = _window_filter(_read_jsonl(verdict_path), now, window_days)
     promotions = _window_filter(_read_jsonl(promotion_path), now, window_days)
     reviewed_candidate_refs = set(_active_verdict_map(repo_root).keys())
@@ -1066,11 +1077,22 @@ def summarize_learning_pipeline(
     reviewed_total = sum(verdict_counter.values())
     accepted_total = verdict_counter.get("accept", 0)
     promoted_total = len(promotions)
+    active_runtime_total = 0
+    readiness_window_hours = PROMOTION_MATURITY_HOURS
+    for row in promotions:
+        created = _parse_iso8601(str(row.get("created_at", "")).strip())
+        if created is None:
+            continue
+        age_hours = max(0.0, (now - created).total_seconds() / 3600.0)
+        if age_hours >= readiness_window_hours:
+            active_runtime_total += 1
     promotion_conversion_rate = (promoted_total / accepted_total) if accepted_total > 0 else 0.0
     promotion_readiness = summarize_promotion_readiness(repo_root, now=now)
 
     return {
         "window_days": window_days,
+        "imported_total": len(imports),
+        "candidate_total": len(candidates_window),
         "pending_total": len(pending_rows),
         "pending_by_type": dict(pending_by_type),
         "reviewed_total": reviewed_total,
@@ -1083,6 +1105,13 @@ def summarize_learning_pipeline(
         "promoted_by_target": dict(promotion_by_target),
         "promotion_conversion_rate": round(promotion_conversion_rate, 3),
         "promotion_readiness": promotion_readiness,
+        "lifecycle": {
+            "imported": len(imports),
+            "candidate": len(candidates_window),
+            "reviewed": reviewed_total,
+            "promoted": promoted_total,
+            "active_runtime": active_runtime_total,
+        },
     }
 
 
@@ -1235,28 +1264,111 @@ def summarize_learning_pipeline_trend(
     }
 
 
-def list_recent_learning_candidates(repo_root: Path, *, limit: int = 20) -> list[dict[str, Any]]:
+def list_recent_learning_candidates(
+    repo_root: Path,
+    *,
+    limit: int = 20,
+    include_resolved: bool = False,
+) -> list[dict[str, Any]]:
     path = repo_root / "orchestrator" / "logs" / "learning_candidates.jsonl"
     rows = _read_jsonl(path)
-    resolved = set(_active_verdict_map(repo_root).keys())
-    filtered = [
-        row
-        for row in rows
-        if str(row.get("status", "")).strip().lower() == "active"
-        and str(row.get("candidate_state", "")).strip().lower() == "pending_review"
-        and str(row.get("id", "")).strip() not in resolved
-    ]
-    filtered.sort(key=lambda row: str(row.get("created_at", "")), reverse=True)
+    verdict_map = _active_verdict_map(repo_root)
+    promotion_map = _active_promotion_map(repo_root)
+    now = datetime.now(timezone.utc)
+    maturity_hours = max(0, int(PROMOTION_MATURITY_HOURS))
+
+    stage_rank = {
+        "candidate": 1,
+        "reviewed": 2,
+        "promoted": 3,
+        "active_runtime": 4,
+    }
+
+    staged_rows: list[tuple[int, str, dict[str, Any]]] = []
+    for row in rows:
+        if str(row.get("status", "")).strip().lower() != "active":
+            continue
+        candidate_state = str(row.get("candidate_state", "")).strip().lower()
+        if not include_resolved and candidate_state != "pending_review":
+            continue
+        candidate_id = str(row.get("id", "")).strip()
+        if not candidate_id:
+            continue
+        verdict_row = verdict_map.get(candidate_id)
+        promotion_row = promotion_map.get(candidate_id)
+
+        lifecycle_stage = "candidate"
+        verdict = None
+        owner_note = None
+        modified_statement = None
+        can_review = True
+        can_promote = False
+        runtime_hours_remaining: int | None = None
+
+        if promotion_row is not None:
+            can_review = False
+            can_promote = False
+            created = _parse_iso8601(str(promotion_row.get("created_at", "")).strip())
+            if created is None:
+                lifecycle_stage = "promoted"
+                runtime_hours_remaining = maturity_hours
+            else:
+                age_hours = max(0.0, (now - created).total_seconds() / 3600.0)
+                if age_hours >= maturity_hours:
+                    lifecycle_stage = "active_runtime"
+                    runtime_hours_remaining = 0
+                else:
+                    lifecycle_stage = "promoted"
+                    runtime_hours_remaining = max(0, int(ceil(maturity_hours - age_hours)))
+        elif verdict_row is not None:
+            lifecycle_stage = "reviewed"
+            verdict = str(verdict_row.get("verdict", "")).strip().lower() or None
+            owner_note = str(verdict_row.get("owner_note", "")).strip() or None
+            modified_statement = str(verdict_row.get("modified_statement", "")).strip() or None
+            can_review = False
+            can_promote = verdict == "accept"
+
+        if not include_resolved and lifecycle_stage != "candidate":
+            continue
+
+        evidence_list = [str(item).strip() for item in row.get("evidence", []) if str(item).strip()]
+        evidence_preview = " | ".join(evidence_list[:2]) if evidence_list else None
+        source_refs = [str(item).strip() for item in row.get("source_refs", []) if str(item).strip()]
+        source_import_ref = next((ref for ref in source_refs if ref.startswith("li_")), None)
+
+        out_row = {
+            "id": candidate_id,
+            "candidate_type": str(row.get("candidate_type", "")).strip(),
+            "title": str(row.get("title", "")).strip(),
+            "statement": str(row.get("statement", "")).strip(),
+            "rationale": str(row.get("rationale", "")).strip() if row.get("rationale") is not None else None,
+            "evidence": evidence_list[:3],
+            "evidence_preview": evidence_preview,
+            "confidence": _coerce_confidence(row.get("confidence"), default=7),
+            "proposal_target": str(row.get("proposal_target", "")).strip() or None,
+            "created_at": str(row.get("created_at", "")).strip(),
+            "candidate_state": str(row.get("candidate_state", "")).strip(),
+            "source_material_ref": str(row.get("source_material_ref", "")).strip() or None,
+            "source_refs": source_refs[:5],
+            "source_import_ref": source_import_ref,
+            "lifecycle_stage": lifecycle_stage,
+            "verdict": verdict,
+            "owner_note": owner_note,
+            "modified_statement": modified_statement,
+            "can_review": can_review,
+            "can_promote": can_promote,
+            "runtime_hours_remaining": runtime_hours_remaining,
+            "promotion_target": str(promotion_row.get("promotion_target", "")).strip() if promotion_row else None,
+            "runtime_active": lifecycle_stage == "active_runtime",
+        }
+        staged_rows.append((stage_rank.get(lifecycle_stage, 9), str(row.get("created_at", "")), out_row))
+
+    if include_resolved:
+        staged_rows.sort(key=lambda item: item[1], reverse=True)
+        staged_rows.sort(key=lambda item: item[0])
+    else:
+        staged_rows.sort(key=lambda item: item[1], reverse=True)
     out: list[dict[str, Any]] = []
-    for row in filtered[: max(1, min(limit, 100))]:
-        out.append(
-            {
-                "id": str(row.get("id", "")).strip(),
-                "candidate_type": str(row.get("candidate_type", "")).strip(),
-                "title": str(row.get("title", "")).strip(),
-                "proposal_target": str(row.get("proposal_target", "")).strip() or None,
-                "created_at": str(row.get("created_at", "")).strip(),
-                "candidate_state": str(row.get("candidate_state", "")).strip(),
-            }
-        )
+    for _, _, row in staged_rows[: max(1, min(limit, 100))]:
+        out.append(row)
     return out

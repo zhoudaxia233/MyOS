@@ -16,6 +16,18 @@
 - 判断层锚定在可追溯记忆与 guardrail 约束
 - 行动要优先对齐长期方向，而不是被短期噪音牵引
 
+## 定位宪章
+
+MyOS 的长期定位是一个薄层、模型无关的 cyber-self 层，而不是通用大而全 AI 平台。
+
+- 把你的判断核心作为可治理、可持续的长期状态来保护
+- 学习必须走审计吸收流程（`candidate -> review -> promote/reject`）
+- 通过可替换适配层连接外部模型与 agent 生态
+
+官方定位宪章：
+
+- `docs/MYOS_POSITIONING_CHARTER.md`
+
 ## 长期不变原则
 
 1. 执行与判断解耦
@@ -37,6 +49,7 @@
 
 - `ROADMAP.md`（已包含 Cyber-self suggestion mirror 渐进路线）
 - `docs/OPERATOR_MODEL_THREE_CONSOLES.md`（三入口操作模型与 Learning Handoff 流程）
+- `docs/MYOS_POSITIONING_CHARTER.md`（长期定位、架构红线与决策门）
 
 ## 架构要点
 
@@ -173,7 +186,7 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py web --open-browser
 - 当 Module = Auto route 且已配置 API key 时，模块选择会走模型路由
 - 若模型路由失败，会自动回退到 manifest/关键词路由并保留审计原因
 - `handoff` 模式下，Output Preview 会显示复制块的 token 消耗（有 `tiktoken` 时精确计数，否则估算）
-- 独立 `Learning Capture` 区域，含 `Ingest To Memory` 专属按钮
+- 独立 `Learning & Evolution` 入口：支持直接导入与 handoff 导入（候选治理在审计中心完成）
 - 一键动作：validate、metrics、owner report、disequilibrium 检测、weekly cycle、retrieval index
 
 ### 1) 先拿最小上下文
@@ -316,7 +329,9 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "run weekly dec
 1. 先接入外部学习内容（视频/文章/书）：
    - `python3 /Users/closears/MyOS/orchestrator/src/main.py ingest-learning --input <learning_notes.md|txt|json> --source-type video --max-points 6 --confidence 7`
    - 使用 `modules/memory/skills/ingest_learning_asset.md`，把内容沉淀为 `memory_events` + `memory_insights`。
-   - UI 一键路径：把总结粘贴到 Task 输入框，点击 `One-Click Ingest Learning`。
+   - UI 路径：进入 Workspace 的 `Learning & Evolution` 标签后二选一：
+     - 直接导入：`Save Learning Note`（仅 Imported 记忆吸收）；
+     - Handoff 导入：`Generate Learning Packet` -> 粘贴外部 JSON -> `Import Learning Candidates`。
 2. 再导入聊天导出（推荐）：
    - `python3 /Users/closears/MyOS/orchestrator/src/main.py ingest-chat --input <chat_export.json|jsonl|md|txt> --max-events 50`
 3. 需要时补充手工 memory event（`ingest_memory.md`）

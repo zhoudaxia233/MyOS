@@ -12,6 +12,17 @@ Use this checklist before merging changes.
 - [ ] `core/RULES.md` includes no-fabrication and append-only integrity rules
 - [ ] `core/SCHEMAS.md` defines ID and timestamp conventions
 
+## Positioning Charter Alignment
+
+- [ ] Change aligns with `docs/MYOS_POSITIONING_CHARTER.md`
+- [ ] Change keeps MyOS thin (no commodity model/tool/orchestration rebuild)
+- [ ] Change remains model-agnostic (no hard lock-in to one provider memory/persona/tool framework)
+- [ ] Learning changes keep audited absorption (`candidate -> review -> promote/reject`)
+- [ ] Change does not silently overwrite long-term truths from noisy inputs
+- [ ] Existing extraction/distillation pipelines remain preserved and first-class
+- [ ] Operator UX clarity improves or preserves Task Console / Learning Console / Audit Console model
+- [ ] Delegation/autonomy changes keep transparent staged path (suggestion -> audit -> learning -> bounded delegation)
+
 ## Progressive Disclosure
 
 - [ ] Agent flow starts from `core/ROUTER.md`

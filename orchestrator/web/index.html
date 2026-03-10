@@ -13,7 +13,7 @@
   <header class="topbar workspace-topbar">
     <div class="title-wrap">
       <h1 data-i18n="app_title">Personal Core OS</h1>
-      <p data-i18n="app_subtitle">工作台（任务 + 学习）</p>
+      <p data-i18n="app_subtitle">工作台（任务 + 学习与进化）</p>
     </div>
     <nav class="workspace-nav" aria-label="Primary navigation">
       <a class="workspace-nav-link active" href="/" data-i18n="nav_workspace">工作台</a>
@@ -30,7 +30,7 @@
     <section class="card workspace-main">
       <div class="workspace-intro">
         <h2 data-i18n="hero_title">你想让我帮你做什么？</h2>
-        <p data-i18n="hero_desc">任务执行和学习更新都在这里。审计与治理能力在审计中心。</p>
+        <p data-i18n="hero_desc">任务执行和学习与进化都在这里。审计与治理能力在审计中心。</p>
       </div>
 
       <section id="modeGuide" class="mode-guide" aria-live="polite">-</section>
@@ -40,13 +40,13 @@
           <li data-i18n="quick_use_step_1">输入你希望得到的结果（例如“给我下周3件最重要的事”）。</li>
           <li data-i18n="quick_use_step_2">点击“开始执行”。</li>
           <li data-i18n="quick_use_step_3">先看右侧“执行结果”摘要，再决定是否看完整 Markdown。</li>
-          <li data-i18n="quick_use_step_4">如果你有新经验/资料，用下方“学习更新”补充到系统里。</li>
+          <li data-i18n="quick_use_step_4">如果你有新经验/资料，用下方“学习与进化”补充到系统里。</li>
         </ol>
       </section>
 
       <section class="entrypoint-tabs workspace-entry-tabs" aria-label="Workspace sections">
         <button class="entrypoint-tab workspace-tab active" type="button" data-workspace-tab="task" data-i18n="workspace_tab_task">任务执行</button>
-        <button class="entrypoint-tab workspace-tab" type="button" data-workspace-tab="learning" data-i18n="workspace_tab_learning">学习更新</button>
+        <button class="entrypoint-tab workspace-tab" type="button" data-workspace-tab="learning" data-i18n="workspace_tab_learning">学习与进化</button>
       </section>
 
       <section id="workspaceTaskPanel" class="workspace-panel active">
@@ -122,8 +122,18 @@
 
       <section id="workspaceLearningPanel" class="workspace-panel">
         <section class="workspace-section learning-section">
-          <h3 data-i18n="section_learning">学习更新</h3>
+          <h3 data-i18n="section_learning">学习与进化</h3>
           <p class="helper-note" data-i18n="learning_intro">把你新的经验、资料、文章要点放进系统，帮助后续任务更贴合你。</p>
+
+          <section class="learning-flow-guide">
+            <h4 data-i18n="learning_flow_title">学习会怎么进入系统</h4>
+            <ol class="learning-flow-list">
+              <li data-i18n="learning_flow_step_1">直接输入：写入 memory_events + memory_insights（可检索）。</li>
+              <li data-i18n="learning_flow_step_2">外部辅助：生成学习请求包，导入 JSON 后进入候选队列。</li>
+              <li data-i18n="learning_flow_step_3">候选需在审计中心复核并晋升后，才会进入运行时上下文。</li>
+            </ol>
+            <a class="btn secondary nav-btn" href="/audit.html" data-i18n="btn_go_audit_candidates">去审计中心审核候选</a>
+          </section>
 
           <div class="learning-grid">
             <section class="learning-card">

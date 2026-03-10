@@ -5,6 +5,7 @@ This repository is a plugin-based Personal Core OS: a small stable kernel (`core
 ## System Intent
 
 - Separate execution from judgment while keeping both aligned over time.
+- Keep MyOS thin and model-agnostic: preserve personal governance layers while attaching to replaceable external model/agent systems.
 - Execution-heavy tasks route to domain modules (`content`, `memory` ingest workflows).
 - Judgment and direction tasks route to `decision`, `profile`, and `principles`.
 - Owner operating defaults are anchored in profile SSOT; operational learning is accumulated in memory logs.

@@ -10,6 +10,15 @@ These rules apply across all modules and tasks.
 - Respect module boundaries and progressive disclosure.
 - Use the module's canonical data files as SSOT; do not duplicate canonical content into skills or logs.
 
+## Positioning and Governance
+
+- Treat MyOS as a thin, model-agnostic cyber-self layer, not a generic monolithic agent platform.
+- Do not propose or implement rewrites of commodity model reasoning, generic tool-use infrastructure, or broad orchestration shells.
+- Preserve owner judgment core (principles, defaults, heuristics, anti-patterns, risk boundaries, style invariants) against noisy overwrite.
+- Learning ingestion must follow audited absorption: `candidate -> owner review -> promote/reject`, with append-only history.
+- Preserve and elevate existing extraction/distillation pipelines as first-class upstream substrate.
+- Prefer transparency and inspectability before autonomy expansion; do not skip staged delegation governance.
+
 ## Logging and Data Integrity
 
 - Any change to logs must be append-only and preserve history.

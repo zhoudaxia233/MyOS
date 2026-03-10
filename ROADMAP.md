@@ -25,6 +25,23 @@ The system is a stable, extensible operating center where:
 - From isolated tasks to cadence-driven operations (daily/weekly/monthly loops)
 - From scattered tools to a unified control center (orchestrator + UI)
 
+### Positioning Charter Baseline (2026-03-10)
+
+The long-term architecture baseline is codified in:
+
+- `docs/MYOS_POSITIONING_CHARTER.md`
+
+Mandatory alignment gate for roadmap items:
+
+- keep MyOS thin (do not rebuild commodity model/tool/orchestration layers)
+- keep MyOS model-agnostic (provider adapters are replaceable)
+- preserve judgment core durability and governance logic
+- enforce audited absorption (`candidate -> review -> promote/reject`) for learning
+- keep three-entrypoint operator clarity (Task / Learning / Audit)
+- preserve existing extraction/distillation pipelines as first-class substrate
+
+Any roadmap item that fails this gate should be treated as drift and redesigned before implementation.
+
 ### Current Execution Roadmap
 
 Keep rollout evolutionary: preserve existing extraction/distillation pipelines as first-class upstream inputs.
@@ -40,6 +57,45 @@ Keep rollout evolutionary: preserve existing extraction/distillation pipelines a
   - direct `deepseek` provider support with settings-driven API key/base URL/model for low-cost live runs
 - Next:
   - add explicit in-UI completion checklist for first successful run-through (inspect ok / run ok / suggestion reviewed)
+
+#### Learning Operator Clarity Slice (2026-03-10)
+
+- Analysis completed (repo-grounded, end-to-end):
+  - workspace learning entry + handoff path + candidate governance path were reviewed across UI/API/log layers
+  - key files inspected: `orchestrator/web/index.html`, `orchestrator/web/workspace.js`, `orchestrator/web/audit.html`, `orchestrator/web/app.js`, `orchestrator/src/webapp.py`, `orchestrator/src/learning_ingest.py`, `orchestrator/src/learning_console.py`, `orchestrator/src/loader.py`
+- Small high-leverage UX improvement shipped:
+  - learning panel now includes visible 3-step flow guide (direct ingest -> handoff import -> audit/promotion)
+  - added direct CTA link from learning panel to audit center candidate review
+  - post-ingest and post-import summaries now explicitly state write targets / next governance step
+  - changed files: `orchestrator/web/index.html`, `orchestrator/web/workspace.js`, `orchestrator/web/styles.css`
+- Remaining next slice:
+  - align stale docs/onboarding language with current learning UI (remove old “task box one-click ingest” wording)
+  - add audit-side candidate triage quality-of-life filters (type/source/age) without backend rewrite
+  - keep extraction/distillation substrate unchanged; focus on operator discoverability and governance ergonomics
+
+#### Learning Lifecycle Clarity Slice (2026-03-10, Iteration 2)
+
+- Accomplished in this iteration:
+  - audit UI now exposes explicit lifecycle strip: `Imported -> Candidate -> Reviewed -> Promoted -> Active Runtime`
+  - candidate cards upgraded to evidence-first review cards (statement/source/rationale/evidence/confidence/status/next action)
+  - replaced prompt/confirm-heavy candidate governance with modal-based review/promotion flow (`Accept/Modify/Reject/Promote`)
+  - added audit empty-state density control: when no owner todos/candidates/lifecycle signals, manual action clusters are hidden and replaced by a clear “start from workspace learning or quick audit” guidance block
+  - moved diagnostics/review-filter actions behind collapsed fold by default to reduce first-screen button overload
+  - backend payload enrichment only (no architecture rewrite):
+    - `list_recent_learning_candidates(..., include_resolved=True)` now returns lifecycle stage + review/promotion/runtime metadata
+    - `summarize_learning_pipeline` now exposes lifecycle counts for UI rendering
+  - workspace post-import guidance now explicitly states lifecycle progression, review requirements, and runtime maturity gate
+  - terminology normalization landed in UI/docs:
+    - `Learning & Evolution` wording on workspace/audit/docs
+    - removed stale “Task box one-click ingest / Learning Capture button” references in README surfaces
+- What remains next:
+  - add candidate triage filters/sorts in audit (`type/source/stage/age`) for higher-volume queues
+  - add evidence drill-down panel (raw snippet context) without changing candidate governance contracts
+  - add lightweight batch review actions for low-risk homogeneous candidates
+- Deferred intentionally (do not refactor yet):
+  - no changes to learning ingestion architecture, extraction pipeline, or promotion/maturity safeguards
+  - no auto-promotion/autonomous learning path
+  - no provider-coupled memory/runtime rewrite
 
 #### Stage 1 - Transparent Suggestion Pipeline (Current)
 
@@ -115,6 +171,7 @@ Keep rollout evolutionary: preserve existing extraction/distillation pipelines a
 - No greenfield rewrite
 - No removal of extraction/distillation pipelines
 - No collapse into generic note app or pure RAG assistant
+- No drift into a broad "do everything" automation platform clone
 - No direct overwrite of long-term truths from noisy inputs
 - No high-risk autonomy without owner oversight
 

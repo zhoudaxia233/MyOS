@@ -23,6 +23,10 @@ const learningSourceInput = document.getElementById("learningSourceInput");
 const learningResponseInput = document.getElementById("learningResponseInput");
 const auditQuickRunBtn = document.getElementById("auditQuickRunBtn");
 const auditGuide = document.getElementById("auditGuide");
+const auditZeroState = document.getElementById("auditZeroState");
+const auditManualActions = document.getElementById("auditManualActions");
+const auditShowManualBtn = document.getElementById("auditShowManualBtn");
+const auditAdvancedActions = document.getElementById("auditAdvancedActions");
 const entrypointTabs = document.querySelectorAll(".entrypoint-tab");
 const entrypointHint = document.getElementById("entrypointHint");
 const taskConsolePanel = document.getElementById("taskConsolePanel");
@@ -42,6 +46,7 @@ const suggestionRejectBtn = document.getElementById("suggestionRejectBtn");
 const cognitionCards = document.getElementById("cognitionCards");
 const ownerTodos = document.getElementById("ownerTodos");
 const learningCandidates = document.getElementById("learningCandidates");
+const learningLifecycle = document.getElementById("learningLifecycle");
 const candidatePipeline = document.getElementById("candidatePipeline");
 const suggestionReviewSummary = document.getElementById("suggestionReviewSummary");
 const mvpGuide = document.getElementById("mvpGuide");
@@ -64,11 +69,27 @@ const settingsContentModel = document.getElementById("settingsContentModel");
 const settingsCognitionProvider = document.getElementById("settingsCognitionProvider");
 const settingsCognitionModel = document.getElementById("settingsCognitionModel");
 const settingsUiLanguage = document.getElementById("settingsUiLanguage");
+const learningReviewModal = document.getElementById("learningReviewModal");
+const learningReviewTitle = document.getElementById("learningReviewTitle");
+const learningReviewMeta = document.getElementById("learningReviewMeta");
+const learningReviewNote = document.getElementById("learningReviewNote");
+const learningReviewStatementWrap = document.getElementById("learningReviewStatementWrap");
+const learningReviewStatement = document.getElementById("learningReviewStatement");
+const learningReviewSubmit = document.getElementById("learningReviewSubmit");
+const learningReviewCancel = document.getElementById("learningReviewCancel");
+const learningReviewClose = document.getElementById("learningReviewClose");
 let latestOutputPath = null;
 let latestOutputProvider = null;
 let latestSuggestionId = null;
 let settingsCache = null;
 let uiLanguage = "zh";
+let learningReviewDraft = null;
+let auditManualForcedVisible = false;
+let auditUiSnapshot = {
+  owner_todos: [],
+  learning_candidates: [],
+  candidate_pipeline_summary: {},
+};
 const LEARNING_SOURCE_DEFAULT = "notes";
 
 const I18N = {
@@ -82,11 +103,11 @@ const I18N = {
     status_connected: "已连接",
     status_offline: "离线",
     tab_task: "任务执行",
-    tab_learning: "学习输入",
+    tab_learning: "学习与进化",
     tab_audit: "审计台",
     hint_task: "这是任务执行入口（可选）。常规治理请切换到审计台。",
-    hint_learning: "学习输入已迁移到工作台。这里主要做审计与候选治理。",
-    hint_audit: "在这里做漂移检查、报告复核和学习候选治理。",
+    hint_learning: "学习与进化已迁移到工作台。这里主要做审计与候选治理。",
+    hint_audit: "在这里做漂移检查、报告复核和 Learning & Evolution 候选治理。",
     label_task: "任务",
     task_placeholder: "描述你要做的事...",
     label_module: "模块",
@@ -138,6 +159,9 @@ const I18N = {
     audit_start_desc: "先点击一键审计，再按结果做手动动作。",
     btn_audit_quick_run: "一键审计（校验 -> 7天指标 -> Owner报告）",
     audit_guide_idle: "审计指引：先跑一键审计，再看右侧 Cognition Signals 和 Owner Todos。",
+    audit_zero_state_desc: "当前没有候选待办或 Owner 待办。建议先去工作台输入学习素材，或先跑一次一键审计。",
+    btn_go_workspace_learning: "去工作台学习与进化",
+    btn_show_manual_actions: "仍然显示全部手动动作",
     audit_guide_title: "一键审计执行摘要",
     audit_guide_running: "进行中：正在依次执行校验、7天指标、Owner报告...",
     audit_guide_done: "完成：先看右侧指标卡，再处理 Owner 待办（如果有）。",
@@ -146,6 +170,7 @@ const I18N = {
     audit_step_metrics: "2) 7天指标：输出={output_path}",
     audit_step_owner: "3) Owner报告：输出={output_path}，待办={todo_count}",
     audit_actions_primary: "手动动作（常用）",
+    audit_actions_secondary_fold: "诊断 / 维护与复核筛选（按需展开）",
     audit_actions_secondary: "诊断 / 维护（按需）",
     audit_validate: "校验",
     audit_metrics: "7天指标",
@@ -162,7 +187,9 @@ const I18N = {
     execution_trace: "执行轨迹",
     trace_cognition_signals: "认知信号（7天）",
     trace_owner_todos: "Owner 待办",
-    trace_learning_candidates: "学习候选（待审核）",
+    trace_learning_lifecycle: "学习生命周期",
+    trace_learning_lifecycle_note: "任何内容都不会直接进入运行时上下文。必须先 Review，再 Promote；Promote 后仍需成熟期。",
+    trace_learning_candidates: "学习候选与状态队列",
     trace_candidate_pipeline: "候选管道（30天 + 趋势）",
     trace_suggestion_reviews: "建议复核（30天 + 趋势）",
     trace_route: "路由",
@@ -174,7 +201,46 @@ const I18N = {
     btn_accept: "接受",
     btn_modify: "修改",
     btn_reject: "拒绝",
+    btn_promote: "Promote",
     btn_resolve: "完成",
+    lifecycle_step_imported: "Imported",
+    lifecycle_step_candidate: "Candidate",
+    lifecycle_step_reviewed: "Reviewed",
+    lifecycle_step_promoted: "Promoted",
+    lifecycle_step_active_runtime: "Active Runtime",
+    lifecycle_stage_candidate: "Candidate",
+    lifecycle_stage_reviewed_accept: "Reviewed: Accept",
+    lifecycle_stage_reviewed_modify: "Reviewed: Modify",
+    lifecycle_stage_reviewed_reject: "Reviewed: Reject",
+    lifecycle_stage_promoted: "Promoted (Cooling)",
+    lifecycle_stage_active_runtime: "Active Runtime",
+    candidate_label_statement: "陈述",
+    candidate_label_type: "类型",
+    candidate_label_target: "目标层",
+    candidate_label_source: "来源",
+    candidate_label_rationale: "提取理由",
+    candidate_label_evidence: "证据",
+    candidate_label_confidence: "置信度",
+    candidate_label_status: "当前状态",
+    candidate_source_unknown: "未提供来源",
+    candidate_evidence_none: "无证据片段",
+    candidate_next_review: "下一步：执行 Review（Accept / Modify / Reject）。",
+    candidate_next_promote: "下一步：可 Promote 进入治理成熟期。",
+    candidate_next_rework: "下一步：修改后会生成新的 Candidate 等待复核。",
+    candidate_next_reject: "已拒绝：不会进入判断核心。",
+    candidate_next_cooling: "已 Promote，成熟期剩余约 {hours} 小时，之后才可进入 runtime context。",
+    candidate_next_runtime: "已进入 runtime context（成熟完成）。",
+    learning_review_modal_title_accept: "Accept Candidate",
+    learning_review_modal_title_modify: "Modify Candidate",
+    learning_review_modal_title_reject: "Reject Candidate",
+    learning_review_modal_title_promote: "Promote Candidate",
+    learning_review_modal_title: "复核候选",
+    learning_review_owner_note: "Owner Note",
+    learning_review_note_placeholder: "写下你的判断依据...",
+    learning_review_modified_statement: "Modified Statement",
+    learning_review_statement_placeholder: "输入修改后的候选陈述...",
+    learning_review_cancel: "取消",
+    learning_review_submit: "提交",
     settings_title: "连接与偏好设置",
     settings_intro: "只需配置一个 API Key 并保存即可。其余选项建议先保持默认。",
     settings_section_openai: "OpenAI（可选）",
@@ -234,6 +300,15 @@ const I18N = {
     msg_action_running: "正在执行动作：{action}",
     msg_action_complete: "动作完成：{action}",
     msg_action_failed: "动作失败：{error}",
+    msg_owner_todo_resolved: "已完成 Owner Todo：{id}",
+    msg_owner_todo_resolve_failed: "完成 Owner Todo 失败：{error}",
+    msg_review_note_required: "复核需要 Owner Note。",
+    msg_modify_statement_required: "Modify 需要填写 Modified Statement。",
+    msg_candidate_review_done: "候选已复核：{id} -> {verdict}",
+    msg_candidate_review_failed: "候选复核失败：{error}",
+    msg_promotion_note_required: "Promote 需要 Approval Note。",
+    msg_candidate_promoted_done: "候选已 Promote：{id} -> {target}",
+    msg_candidate_promote_failed: "候选 Promote 失败：{error}",
     msg_learning_text_required: "请先粘贴学习文本。",
     msg_learning_source_required: "学习 Handoff 需要先填写来源链接 / 引用。",
     msg_learning_packet_generating: "正在生成学习 Handoff 包...",
@@ -257,11 +332,11 @@ const I18N = {
     status_connected: "Connected",
     status_offline: "Offline",
     tab_task: "Task",
-    tab_learning: "Learning Input",
+    tab_learning: "Learning & Evolution",
     tab_audit: "Audit Console",
     hint_task: "Task execution entry (optional). For governance, switch to Audit Console.",
-    hint_learning: "Learning input has moved to Workspace. This page is for audit and candidate governance.",
-    hint_audit: "Review drift, reports, and learning candidates before promoting changes.",
+    hint_learning: "Learning & Evolution has moved to Workspace. This page is for audit and candidate governance.",
+    hint_audit: "Review drift, reports, and Learning & Evolution candidates before promoting into judgment core.",
     label_task: "Task",
     task_placeholder: "Describe what you want to do...",
     label_module: "Module",
@@ -313,6 +388,9 @@ const I18N = {
     audit_start_desc: "Run quick audit first, then use manual actions based on results.",
     btn_audit_quick_run: "Run Quick Audit (Validate -> Metrics -> Owner Report)",
     audit_guide_idle: "Audit guide: run quick audit first, then check Cognition Signals and Owner Todos on the right.",
+    audit_zero_state_desc: "No owner todos or learning candidates yet. Start from Workspace learning input or run quick audit first.",
+    btn_go_workspace_learning: "Go To Workspace Learning",
+    btn_show_manual_actions: "Show Manual Actions Anyway",
     audit_guide_title: "Quick Audit Summary",
     audit_guide_running: "Running: Validate -> Metrics 7D -> Owner Report...",
     audit_guide_done: "Done: check metric cards first, then process Owner Todos if any.",
@@ -321,6 +399,7 @@ const I18N = {
     audit_step_metrics: "2) Metrics 7D: output={output_path}",
     audit_step_owner: "3) Owner report: output={output_path}, todos={todo_count}",
     audit_actions_primary: "Manual Actions (Common)",
+    audit_actions_secondary_fold: "Diagnostics / Maintenance + Review Filters (Expand When Needed)",
     audit_actions_secondary: "Diagnostics / Maintenance",
     audit_validate: "Validate",
     audit_metrics: "Metrics 7D",
@@ -337,7 +416,9 @@ const I18N = {
     execution_trace: "Execution Trace",
     trace_cognition_signals: "Cognition Signals (7D)",
     trace_owner_todos: "Owner Todos",
-    trace_learning_candidates: "Learning Candidates (To Review)",
+    trace_learning_lifecycle: "Learning Lifecycle",
+    trace_learning_lifecycle_note: "Nothing enters runtime context until reviewed and promoted; promoted items still require maturity time.",
+    trace_learning_candidates: "Learning Candidate Lifecycle Queue",
     trace_candidate_pipeline: "Candidate Pipeline (30D + Trend)",
     trace_suggestion_reviews: "Suggestion Reviews (30D + Trend)",
     trace_route: "Route",
@@ -349,7 +430,46 @@ const I18N = {
     btn_accept: "Accept",
     btn_modify: "Modify",
     btn_reject: "Reject",
+    btn_promote: "Promote",
     btn_resolve: "Resolve",
+    lifecycle_step_imported: "Imported",
+    lifecycle_step_candidate: "Candidate",
+    lifecycle_step_reviewed: "Reviewed",
+    lifecycle_step_promoted: "Promoted",
+    lifecycle_step_active_runtime: "Active Runtime",
+    lifecycle_stage_candidate: "Candidate",
+    lifecycle_stage_reviewed_accept: "Reviewed: Accept",
+    lifecycle_stage_reviewed_modify: "Reviewed: Modify",
+    lifecycle_stage_reviewed_reject: "Reviewed: Reject",
+    lifecycle_stage_promoted: "Promoted (Cooling)",
+    lifecycle_stage_active_runtime: "Active Runtime",
+    candidate_label_statement: "Statement",
+    candidate_label_type: "Type",
+    candidate_label_target: "Target Layer",
+    candidate_label_source: "Source",
+    candidate_label_rationale: "Why Extracted",
+    candidate_label_evidence: "Evidence",
+    candidate_label_confidence: "Confidence",
+    candidate_label_status: "Status",
+    candidate_source_unknown: "No source reference",
+    candidate_evidence_none: "No evidence snippet",
+    candidate_next_review: "Next: review this candidate (Accept / Modify / Reject).",
+    candidate_next_promote: "Next: promote this accepted candidate.",
+    candidate_next_rework: "Next: modified statement creates a new review candidate.",
+    candidate_next_reject: "Rejected: does not enter judgment core.",
+    candidate_next_cooling: "Promoted and cooling. About {hours}h remaining before runtime context.",
+    candidate_next_runtime: "Active in runtime context (maturity complete).",
+    learning_review_modal_title_accept: "Accept Candidate",
+    learning_review_modal_title_modify: "Modify Candidate",
+    learning_review_modal_title_reject: "Reject Candidate",
+    learning_review_modal_title_promote: "Promote Candidate",
+    learning_review_modal_title: "Review Candidate",
+    learning_review_owner_note: "Owner Note",
+    learning_review_note_placeholder: "Write your owner rationale...",
+    learning_review_modified_statement: "Modified Statement",
+    learning_review_statement_placeholder: "Refine the candidate statement...",
+    learning_review_cancel: "Cancel",
+    learning_review_submit: "Submit",
     settings_title: "Connection & Preferences",
     settings_intro: "You only need one API key and Save. Keep everything else as default first.",
     settings_section_openai: "OpenAI (Optional)",
@@ -407,6 +527,15 @@ const I18N = {
     msg_action_running: "Running action: {action}",
     msg_action_complete: "Action complete: {action}",
     msg_action_failed: "Action failed: {error}",
+    msg_owner_todo_resolved: "Owner todo resolved: {id}",
+    msg_owner_todo_resolve_failed: "Resolve owner todo failed: {error}",
+    msg_review_note_required: "Owner note is required for review.",
+    msg_modify_statement_required: "Modified statement is required for modify verdict.",
+    msg_candidate_review_done: "Candidate reviewed: {id} -> {verdict}",
+    msg_candidate_review_failed: "Candidate review failed: {error}",
+    msg_promotion_note_required: "Approval note is required for promotion.",
+    msg_candidate_promoted_done: "Candidate promoted: {id} -> {target}",
+    msg_candidate_promote_failed: "Candidate promotion failed: {error}",
     msg_learning_text_required: "Learning text is required. Paste transcript/article/notes first.",
     msg_learning_source_required: "Source URL/reference is required for learning handoff packet.",
     msg_learning_packet_generating: "Generating learning handoff packet...",
@@ -495,6 +624,61 @@ function setAuditGuideLines(lines) {
   }
   auditGuide.removeAttribute("data-i18n");
   auditGuide.textContent = lines.join("\n");
+}
+
+function refreshAuditUiSnapshot(data) {
+  if (!data || typeof data !== "object") {
+    return;
+  }
+  if (Array.isArray(data.owner_todos)) {
+    auditUiSnapshot.owner_todos = data.owner_todos;
+  }
+  if (Array.isArray(data.learning_candidates)) {
+    auditUiSnapshot.learning_candidates = data.learning_candidates;
+  }
+  if (data.candidate_pipeline_summary && typeof data.candidate_pipeline_summary === "object") {
+    auditUiSnapshot.candidate_pipeline_summary = data.candidate_pipeline_summary;
+  }
+  updateAuditConsoleDensity();
+}
+
+function hasRealOwnerTodos(items) {
+  if (!Array.isArray(items)) {
+    return false;
+  }
+  return items.some((item) => item && typeof item === "object" && String(item.id || "").trim());
+}
+
+function hasRealLearningCandidates(items) {
+  if (!Array.isArray(items)) {
+    return false;
+  }
+  return items.some((item) => item && typeof item === "object" && String(item.id || "").trim());
+}
+
+function hasLifecycleSignals(summary) {
+  if (!summary || typeof summary !== "object") {
+    return false;
+  }
+  const lifecycle = summary.lifecycle && typeof summary.lifecycle === "object" ? summary.lifecycle : {};
+  const keys = ["imported", "candidate", "reviewed", "promoted", "active_runtime"];
+  return keys.some((key) => Number(lifecycle[key] || 0) > 0);
+}
+
+function updateAuditConsoleDensity() {
+  if (!auditZeroState || !auditManualActions) {
+    return;
+  }
+  const empty =
+    !hasRealOwnerTodos(auditUiSnapshot.owner_todos) &&
+    !hasRealLearningCandidates(auditUiSnapshot.learning_candidates) &&
+    !hasLifecycleSignals(auditUiSnapshot.candidate_pipeline_summary);
+  const showZero = empty && !auditManualForcedVisible;
+  auditZeroState.hidden = !showZero;
+  auditManualActions.hidden = showZero;
+  if (auditAdvancedActions && showZero) {
+    auditAdvancedActions.open = false;
+  }
 }
 
 function clampInt(value, minimum, maximum) {
@@ -706,6 +890,76 @@ function renderOwnerTodos(items) {
   }
 }
 
+function lifecycleStageLabel(item) {
+  const stage = String(item.lifecycle_stage || "candidate");
+  const verdict = String(item.verdict || "").toLowerCase();
+  if (stage === "candidate") {
+    return t("lifecycle_stage_candidate");
+  }
+  if (stage === "reviewed" && verdict === "accept") {
+    return t("lifecycle_stage_reviewed_accept");
+  }
+  if (stage === "reviewed" && verdict === "modify") {
+    return t("lifecycle_stage_reviewed_modify");
+  }
+  if (stage === "reviewed" && verdict === "reject") {
+    return t("lifecycle_stage_reviewed_reject");
+  }
+  if (stage === "promoted") {
+    return t("lifecycle_stage_promoted");
+  }
+  return t("lifecycle_stage_active_runtime");
+}
+
+function lifecycleNextAction(item) {
+  const stage = String(item.lifecycle_stage || "candidate");
+  const verdict = String(item.verdict || "").toLowerCase();
+  if (stage === "candidate") {
+    return t("candidate_next_review");
+  }
+  if (stage === "reviewed" && verdict === "accept") {
+    return t("candidate_next_promote");
+  }
+  if (stage === "reviewed" && verdict === "modify") {
+    return t("candidate_next_rework");
+  }
+  if (stage === "reviewed" && verdict === "reject") {
+    return t("candidate_next_reject");
+  }
+  if (stage === "promoted") {
+    return t("candidate_next_cooling", { hours: Number(item.runtime_hours_remaining || 0) });
+  }
+  return t("candidate_next_runtime");
+}
+
+function renderLearningLifecycle(summary) {
+  if (!learningLifecycle) {
+    return;
+  }
+  const lifecycle = summary && typeof summary === "object" ? summary.lifecycle || {} : {};
+  const rows = [
+    { key: "imported", label: t("lifecycle_step_imported") },
+    { key: "candidate", label: t("lifecycle_step_candidate") },
+    { key: "reviewed", label: t("lifecycle_step_reviewed") },
+    { key: "promoted", label: t("lifecycle_step_promoted") },
+    { key: "active_runtime", label: t("lifecycle_step_active_runtime") },
+  ];
+  learningLifecycle.innerHTML = "";
+  for (const row of rows) {
+    const card = document.createElement("div");
+    card.className = "learning-stage-card";
+    const name = document.createElement("div");
+    name.className = "learning-stage-name";
+    name.textContent = row.label;
+    const value = document.createElement("div");
+    value.className = "learning-stage-value";
+    value.textContent = String(Number(lifecycle[row.key] || 0));
+    card.appendChild(name);
+    card.appendChild(value);
+    learningLifecycle.appendChild(card);
+  }
+}
+
 function renderLearningCandidates(items) {
   learningCandidates.innerHTML = "";
   if (!Array.isArray(items) || items.length === 0) {
@@ -718,56 +972,104 @@ function renderLearningCandidates(items) {
 
   for (const item of items) {
     const wrap = document.createElement("div");
-    wrap.className = "todo-item";
+    wrap.className = `todo-item learning-candidate-card stage-${String(item.lifecycle_stage || "candidate")}`;
 
     const head = document.createElement("div");
     head.className = "todo-head";
     const metric = document.createElement("span");
     metric.className = "todo-metric";
     metric.textContent = item.candidate_type || "candidate";
-    const reason = document.createElement("span");
-    reason.className = "todo-reason";
-    reason.textContent = item.proposal_target ? `target: ${item.proposal_target}` : "";
+    const status = document.createElement("span");
+    status.className = "todo-reason lifecycle-badge";
+    status.textContent = lifecycleStageLabel(item);
     head.appendChild(metric);
-    head.appendChild(reason);
+    head.appendChild(status);
 
-    const action = document.createElement("div");
-    action.className = "todo-action";
-    action.textContent = item.title || item.id || "-";
+    const title = document.createElement("div");
+    title.className = "todo-action";
+    title.textContent = item.title || item.id || "-";
+
+    const statement = document.createElement("div");
+    statement.className = "candidate-statement";
+    statement.textContent = `${t("candidate_label_statement")}: ${item.statement || "-"}`;
+
+    const meta = document.createElement("div");
+    meta.className = "candidate-meta";
+    const sourceRef = item.source_material_ref || item.source_import_ref || t("candidate_source_unknown");
+    const confidence = typeof item.confidence === "number" ? `${item.confidence}/10` : "-";
+    const rationale = item.rationale || "-";
+    const evidence = item.evidence_preview || t("candidate_evidence_none");
+    const target = item.proposal_target ? `${item.proposal_target}` : "-";
+    const rows = [
+      [t("candidate_label_type"), item.candidate_type || "-"],
+      [t("candidate_label_target"), target],
+      [t("candidate_label_source"), sourceRef],
+      [t("candidate_label_confidence"), confidence],
+      [t("candidate_label_rationale"), rationale],
+      [t("candidate_label_evidence"), evidence],
+      [t("candidate_label_status"), lifecycleNextAction(item)],
+    ];
+    for (const row of rows) {
+      const line = document.createElement("div");
+      const label = document.createElement("strong");
+      label.textContent = `${row[0]}: `;
+      const value = document.createElement("span");
+      value.textContent = String(row[1]);
+      line.appendChild(label);
+      line.appendChild(value);
+      meta.appendChild(line);
+    }
 
     const actions = document.createElement("div");
     actions.className = "todo-actions";
 
-    const acceptBtn = document.createElement("button");
-    acceptBtn.className = "todo-resolve-btn";
-    acceptBtn.type = "button";
-    acceptBtn.textContent = t("btn_accept");
-    acceptBtn.addEventListener("click", () => {
-      reviewLearningCandidate(item.id, "accept");
-    });
-
-    const rejectBtn = document.createElement("button");
-    rejectBtn.className = "todo-resolve-btn";
-    rejectBtn.type = "button";
-    rejectBtn.textContent = t("btn_reject");
-    rejectBtn.addEventListener("click", () => {
-      reviewLearningCandidate(item.id, "reject");
-    });
-
-    const modifyBtn = document.createElement("button");
-    modifyBtn.className = "todo-resolve-btn";
-    modifyBtn.type = "button";
-    modifyBtn.textContent = t("btn_modify");
-    modifyBtn.addEventListener("click", () => {
-      reviewLearningCandidate(item.id, "modify");
-    });
-
-    actions.appendChild(acceptBtn);
-    actions.appendChild(rejectBtn);
-    actions.appendChild(modifyBtn);
+    if (item.can_review) {
+      const acceptBtn = document.createElement("button");
+      acceptBtn.className = "todo-resolve-btn";
+      acceptBtn.type = "button";
+      acceptBtn.textContent = t("btn_accept");
+      acceptBtn.addEventListener("click", () => {
+        openLearningReviewModal(item, "accept");
+      });
+      const rejectBtn = document.createElement("button");
+      rejectBtn.className = "todo-resolve-btn";
+      rejectBtn.type = "button";
+      rejectBtn.textContent = t("btn_reject");
+      rejectBtn.addEventListener("click", () => {
+        openLearningReviewModal(item, "reject");
+      });
+      const modifyBtn = document.createElement("button");
+      modifyBtn.className = "todo-resolve-btn";
+      modifyBtn.type = "button";
+      modifyBtn.textContent = t("btn_modify");
+      modifyBtn.addEventListener("click", () => {
+        openLearningReviewModal(item, "modify");
+      });
+      actions.appendChild(acceptBtn);
+      actions.appendChild(rejectBtn);
+      actions.appendChild(modifyBtn);
+    } else if (item.can_promote) {
+      const promoteBtn = document.createElement("button");
+      promoteBtn.className = "todo-resolve-btn";
+      promoteBtn.type = "button";
+      promoteBtn.textContent = t("btn_promote");
+      promoteBtn.addEventListener("click", () => {
+        openLearningReviewModal(item, "promote");
+      });
+      actions.appendChild(promoteBtn);
+    } else if (item.lifecycle_stage === "promoted") {
+      const coolingBtn = document.createElement("button");
+      coolingBtn.className = "todo-resolve-btn";
+      coolingBtn.type = "button";
+      coolingBtn.disabled = true;
+      coolingBtn.textContent = t("lifecycle_stage_promoted");
+      actions.appendChild(coolingBtn);
+    }
 
     wrap.appendChild(head);
-    wrap.appendChild(action);
+    wrap.appendChild(title);
+    wrap.appendChild(statement);
+    wrap.appendChild(meta);
     wrap.appendChild(actions);
     learningCandidates.appendChild(wrap);
   }
@@ -776,12 +1078,16 @@ function renderLearningCandidates(items) {
 function renderCandidatePipelineSummary(summary, trend = null) {
   if (!summary || typeof summary !== "object") {
     candidatePipeline.textContent = "-";
+    renderLearningLifecycle(null);
     return;
   }
+  renderLearningLifecycle(summary);
   const trendSummary = trend && typeof trend === "object" ? trend : null;
   const verdicts = summary.verdicts || {};
+  const lifecycle = summary.lifecycle || {};
   const lines = [
     `window_days: ${summary.window_days || 30}`,
+    `lifecycle: imported=${Number(lifecycle.imported || 0)} candidate=${Number(lifecycle.candidate || 0)} reviewed=${Number(lifecycle.reviewed || 0)} promoted=${Number(lifecycle.promoted || 0)} active_runtime=${Number(lifecycle.active_runtime || 0)}`,
     `pending_total: ${summary.pending_total || 0}`,
     `reviewed_total: ${summary.reviewed_total || 0}`,
     `verdicts: accept=${verdicts.accept || 0} modify=${verdicts.modify || 0} reject=${verdicts.reject || 0}`,
@@ -1072,6 +1378,7 @@ function renderRunResult(data) {
 }
 
 function renderActionResult(data) {
+  refreshAuditUiSnapshot(data);
   const out = [];
   out.push(`action: ${data.action}`);
 
@@ -1341,13 +1648,99 @@ async function resolveOwnerTodo(todoId) {
     if (Array.isArray(data.owner_todos)) {
       renderOwnerTodos(data.owner_todos);
     }
-    addBubble("system", `Resolved owner todo: ${data.resolved_todo}`);
+    addBubble("system", t("msg_owner_todo_resolved", { id: data.resolved_todo || id }));
   } catch (err) {
-    addBubble("system", `Resolve failed: ${err.message}`);
+    addBubble("system", t("msg_owner_todo_resolve_failed", { error: err.message }));
   }
 }
 
-async function reviewLearningCandidate(candidateId, verdict) {
+function openLearningReviewModal(item, mode) {
+  if (
+    !learningReviewModal ||
+    !learningReviewTitle ||
+    !learningReviewMeta ||
+    !learningReviewNote ||
+    !learningReviewStatementWrap ||
+    !learningReviewStatement
+  ) {
+    return;
+  }
+  const verdict = String(mode || "").trim().toLowerCase();
+  if (!["accept", "modify", "reject", "promote"].includes(verdict)) {
+    return;
+  }
+  learningReviewDraft = {
+    id: String(item.id || "").trim(),
+    verdict,
+    statement: String(item.statement || "").trim(),
+    title: String(item.title || item.id || "").trim(),
+    target: String(item.proposal_target || "").trim(),
+    candidate_type: String(item.candidate_type || "").trim(),
+  };
+  const titleMap = {
+    accept: "learning_review_modal_title_accept",
+    modify: "learning_review_modal_title_modify",
+    reject: "learning_review_modal_title_reject",
+    promote: "learning_review_modal_title_promote",
+  };
+  learningReviewTitle.textContent = t(titleMap[verdict] || "learning_review_modal_title");
+  learningReviewMeta.textContent =
+    `${learningReviewDraft.title} | ${learningReviewDraft.candidate_type || "candidate"} | ` +
+    `target=${learningReviewDraft.target || "-"}`;
+  const defaultNotes = {
+    accept: uiLanguage === "zh" ? "与当前判断核心一致，建议保留。" : "Aligned with current judgment core.",
+    modify: uiLanguage === "zh" ? "方向可用，但表达需收紧。" : "Useful direction but wording needs tightening.",
+    reject: uiLanguage === "zh" ? "与当前判断核心不一致，拒绝晋升。" : "Not aligned with current judgment core.",
+    promote: uiLanguage === "zh" ? "已完成复核，批准 Promote。" : "Reviewed and approved for promotion.",
+  };
+  learningReviewNote.value = defaultNotes[verdict] || "";
+  const needsStatement = verdict === "modify";
+  learningReviewStatementWrap.hidden = !needsStatement;
+  learningReviewStatement.value = needsStatement ? learningReviewDraft.statement : "";
+  learningReviewModal.classList.remove("hidden");
+  learningReviewNote.focus();
+}
+
+function closeLearningReviewModal() {
+  if (!learningReviewModal) {
+    return;
+  }
+  learningReviewDraft = null;
+  learningReviewModal.classList.add("hidden");
+}
+
+async function submitLearningReviewModal() {
+  if (!learningReviewDraft || !learningReviewNote || !learningReviewStatement) {
+    return;
+  }
+  const id = String(learningReviewDraft.id || "").trim();
+  const verdict = String(learningReviewDraft.verdict || "").trim().toLowerCase();
+  const ownerNote = String(learningReviewNote.value || "").trim();
+  const modifiedStatement = String(learningReviewStatement.value || "").trim();
+
+  if (!id) {
+    closeLearningReviewModal();
+    return;
+  }
+  if (!ownerNote) {
+    addBubble("system", t("msg_review_note_required"));
+    return;
+  }
+  if (verdict === "modify" && !modifiedStatement) {
+    addBubble("system", t("msg_modify_statement_required"));
+    return;
+  }
+
+  if (verdict === "promote") {
+    await promoteLearningCandidate(id, ownerNote);
+    closeLearningReviewModal();
+    return;
+  }
+  await reviewLearningCandidate(id, verdict, ownerNote, verdict === "modify" ? modifiedStatement : null);
+  closeLearningReviewModal();
+}
+
+async function reviewLearningCandidate(candidateId, verdict, ownerNote, modifiedStatement = null) {
   const id = String(candidateId || "").trim();
   if (!id) {
     return;
@@ -1356,25 +1749,14 @@ async function reviewLearningCandidate(candidateId, verdict) {
   if (!["accept", "modify", "reject"].includes(choice)) {
     return;
   }
-
-  let ownerNote = "";
-  let modifiedStatement = null;
-  if (choice === "accept") {
-    ownerNote = window.prompt("Accept note:", "Accepted as aligned with current judgment.") || "";
-  } else if (choice === "reject") {
-    ownerNote = window.prompt("Reject reason:", "Not aligned with my operating model.") || "";
-  } else {
-    ownerNote = window.prompt("Modify reason:", "Useful idea but needs stricter wording.") || "";
-    modifiedStatement = window.prompt("Modified statement:", "") || "";
-  }
-
-  ownerNote = ownerNote.trim();
-  if (!ownerNote) {
-    addBubble("system", "Review skipped: note is required.");
+  const note = String(ownerNote || "").trim();
+  if (!note) {
+    addBubble("system", t("msg_review_note_required"));
     return;
   }
-  if (choice === "modify" && !String(modifiedStatement || "").trim()) {
-    addBubble("system", "Modify skipped: modified statement is required.");
+  const revised = modifiedStatement !== null ? String(modifiedStatement || "").trim() : null;
+  if (choice === "modify" && !revised) {
+    addBubble("system", t("msg_modify_statement_required"));
     return;
   }
 
@@ -1383,31 +1765,24 @@ async function reviewLearningCandidate(candidateId, verdict) {
       action: "review_learning_candidate",
       candidate_id: id,
       verdict: choice,
-      owner_note: ownerNote,
-      modified_statement: modifiedStatement,
+      owner_note: note,
+      modified_statement: revised,
     });
     renderActionResult(data);
-    addBubble("system", `Candidate reviewed: ${id} -> ${choice}`);
-    if (choice === "accept") {
-      const doPromote = window.confirm("Promote this accepted candidate now?");
-      if (doPromote) {
-        await promoteLearningCandidate(id);
-      }
-    }
+    addBubble("system", t("msg_candidate_review_done", { id, verdict: choice }));
   } catch (err) {
-    addBubble("system", `Candidate review failed: ${err.message}`);
+    addBubble("system", t("msg_candidate_review_failed", { error: err.message }));
   }
 }
 
-async function promoteLearningCandidate(candidateId) {
+async function promoteLearningCandidate(candidateId, approvalNote) {
   const id = String(candidateId || "").trim();
   if (!id) {
     return;
   }
-  const approvalNote = window.prompt("Promotion approval note:", "Approved for promotion after owner review.");
-  const note = approvalNote ? approvalNote.trim() : "";
+  const note = String(approvalNote || "").trim();
   if (!note) {
-    addBubble("system", "Promotion skipped: approval note is required.");
+    addBubble("system", t("msg_promotion_note_required"));
     return;
   }
 
@@ -1418,9 +1793,9 @@ async function promoteLearningCandidate(candidateId) {
       approval_note: note,
     });
     renderActionResult(data);
-    addBubble("system", `Candidate promoted: ${id} -> ${data.promotion_target}`);
+    addBubble("system", t("msg_candidate_promoted_done", { id, target: data.promotion_target || "-" }));
   } catch (err) {
-    addBubble("system", `Candidate promotion failed: ${err.message}`);
+    addBubble("system", t("msg_candidate_promote_failed", { error: err.message }));
   }
 }
 
@@ -1479,6 +1854,7 @@ async function loadStatus() {
     renderLearningCandidates(data.learning_candidates || []);
     renderCandidatePipelineSummary(data.candidate_pipeline_summary || {}, data.candidate_pipeline_trend || null);
     renderSuggestionReviewSummary(data.suggestion_review_summary || {}, data.suggestion_review_trend || null);
+    refreshAuditUiSnapshot(data);
 
     setStatus(t("status_connected"), "ok", "status_connected");
   } catch (err) {
@@ -2044,6 +2420,12 @@ if (auditQuickRunBtn) {
     runAuditQuickRun();
   });
 }
+if (auditShowManualBtn) {
+  auditShowManualBtn.addEventListener("click", () => {
+    auditManualForcedVisible = true;
+    updateAuditConsoleDensity();
+  });
+}
 
 taskForm.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -2134,6 +2516,28 @@ settingsModal.addEventListener("click", (event) => {
     closeSettingsModal();
   }
 });
+if (learningReviewClose) {
+  learningReviewClose.addEventListener("click", () => {
+    closeLearningReviewModal();
+  });
+}
+if (learningReviewCancel) {
+  learningReviewCancel.addEventListener("click", () => {
+    closeLearningReviewModal();
+  });
+}
+if (learningReviewSubmit) {
+  learningReviewSubmit.addEventListener("click", () => {
+    submitLearningReviewModal();
+  });
+}
+if (learningReviewModal) {
+  learningReviewModal.addEventListener("click", (event) => {
+    if (event.target === learningReviewModal) {
+      closeLearningReviewModal();
+    }
+  });
+}
 if (quickIngestBtn) {
   quickIngestBtn.addEventListener("click", () => {
     runAction("ingest_learning");
@@ -2167,6 +2571,7 @@ setStatus(t("status_connecting"), "pending", "status_connecting");
 initTheme();
 switchEntrypoint("audit");
 setSuggestionReviewEnabled(false);
+updateAuditConsoleDensity();
 loadStatus();
 loadSettings();
 setOutputTokenMeta("-");

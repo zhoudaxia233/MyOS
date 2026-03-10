@@ -16,6 +16,18 @@ Separate execution from judgment while keeping both aligned over time.
 - Judgment is anchored in durable memory and guardrails
 - Actions are pulled toward long-term direction over short-term noise
 
+## Positioning Charter
+
+MyOS is a thin, model-agnostic cyber-self layer, not a monolithic generic AI platform.
+
+- Preserve owner judgment core as durable, governed state
+- Learn through audited absorption (`candidate -> review -> promote/reject`)
+- Attach to external models/agents through replaceable adapters
+
+Canonical charter:
+
+- `docs/MYOS_POSITIONING_CHARTER.md`
+
 ## Enduring Principles
 
 1. Keep execution and judgment decoupled.
@@ -37,6 +49,7 @@ Actionable stage-by-stage plan:
 
 - `ROADMAP.md` (includes staged evolution path toward a transparent cyber-self suggestion mirror)
 - `docs/OPERATOR_MODEL_THREE_CONSOLES.md` (three-entrypoint operator model and learning handoff flow)
+- `docs/MYOS_POSITIONING_CHARTER.md` (long-term positioning and architecture red lines)
 
 ## Core Architecture
 
@@ -182,7 +195,7 @@ You get a local chat-like control center with:
 - with Module = Auto route, configured API key triggers model-based module selection
 - route selection auto-falls back to manifest/keyword routing if model routing fails
 - in `handoff` mode, Output Preview shows token usage for the copy block (`tiktoken` exact when available, otherwise estimate)
-- dedicated `Learning Capture` bar with `Ingest To Memory`
+- dedicated `Learning & Evolution` tab with direct ingest + handoff import (candidate queue is reviewed in Audit Center)
 - quick actions: validate, metrics, owner report, disequilibrium detection, weekly cycle, retrieval index
 
 ### 1) Get a route and minimal context bundle
@@ -325,7 +338,9 @@ python3 /Users/closears/MyOS/orchestrator/src/main.py run --task "run weekly dec
 1. Ingest external learning assets:
    - `python3 /Users/closears/MyOS/orchestrator/src/main.py ingest-learning --input <learning_notes.md|txt|json> --source-type video --max-points 6 --confidence 7`
    - Skill reference: `modules/memory/skills/ingest_learning_asset.md`
-   - UI one-click path: paste summary in Task box, then click `One-Click Ingest Learning`.
+   - UI path: open Workspace `Learning & Evolution` tab, then either:
+     - direct ingest via `Save Learning Note` (Imported memory only), or
+     - handoff import via `Generate Learning Packet` -> paste external JSON -> `Import Learning Candidates`.
 2. Import chat export into memory events:
    - `python3 /Users/closears/MyOS/orchestrator/src/main.py ingest-chat --input <chat_export.json|jsonl|md|txt> --max-events 50`
 3. Ingest extra reflection events (`ingest_memory.md`) when needed

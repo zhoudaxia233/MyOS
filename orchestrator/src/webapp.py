@@ -837,7 +837,7 @@ def api_status(root: Path) -> dict:
         "modules": modules,
         "cognition_cards": cognition_cards,
         "owner_todos": list_open_owner_todos(root),
-        "learning_candidates": list_recent_learning_candidates(root, limit=8),
+        "learning_candidates": list_recent_learning_candidates(root, limit=12, include_resolved=True),
         "candidate_pipeline_summary": summarize_learning_pipeline(root, window_days=30),
         "candidate_pipeline_trend": summarize_learning_pipeline_trend(root),
         "suggestion_review_summary": summarize_suggestion_reviews(root, window_days=30, limit=12),
@@ -1205,7 +1205,7 @@ def api_action(root: Path, payload: dict[str, Any]) -> dict:
             "ok": True,
             "action": action,
             **result,
-            "learning_candidates": list_recent_learning_candidates(root, limit=8),
+            "learning_candidates": list_recent_learning_candidates(root, limit=12, include_resolved=True),
             "candidate_pipeline_summary": summarize_learning_pipeline(root, window_days=30),
             "candidate_pipeline_trend": summarize_learning_pipeline_trend(root),
         }
@@ -1226,7 +1226,7 @@ def api_action(root: Path, payload: dict[str, Any]) -> dict:
             "ok": True,
             "action": action,
             **result,
-            "learning_candidates": list_recent_learning_candidates(root, limit=8),
+            "learning_candidates": list_recent_learning_candidates(root, limit=12, include_resolved=True),
             "candidate_pipeline_summary": summarize_learning_pipeline(root, window_days=30),
             "candidate_pipeline_trend": summarize_learning_pipeline_trend(root),
         }
@@ -1243,7 +1243,7 @@ def api_action(root: Path, payload: dict[str, Any]) -> dict:
             "ok": True,
             "action": action,
             **result,
-            "learning_candidates": list_recent_learning_candidates(root, limit=8),
+            "learning_candidates": list_recent_learning_candidates(root, limit=12, include_resolved=True),
             "candidate_pipeline_summary": summarize_learning_pipeline(root, window_days=30),
             "candidate_pipeline_trend": summarize_learning_pipeline_trend(root),
         }
