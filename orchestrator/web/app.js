@@ -1,4 +1,7 @@
 const chatLog = document.getElementById("chatLog");
+const latestMessage = document.getElementById("latestMessage");
+const chatLogWrap = document.getElementById("chatLogWrap");
+const toggleMessagesBtn = document.getElementById("toggleMessagesBtn");
 const taskForm = document.getElementById("taskForm");
 const taskInput = document.getElementById("taskInput");
 const moduleSelect = document.getElementById("moduleSelect");
@@ -85,6 +88,8 @@ let settingsCache = null;
 let uiLanguage = "zh";
 let learningReviewDraft = null;
 let auditManualForcedVisible = false;
+let messagesExpanded = false;
+let latestMessagePayload = { role: null, text: "" };
 let auditUiSnapshot = {
   owner_todos: [],
   learning_candidates: [],
@@ -107,7 +112,7 @@ const I18N = {
     tab_audit: "审计台",
     hint_task: "这是任务执行入口（可选）。常规治理请切换到审计台。",
     hint_learning: "学习与进化已迁移到工作台。这里主要做审计与候选治理。",
-    hint_audit: "在这里做漂移检查、报告复核和 Learning & Evolution 候选治理。",
+    hint_audit: "在这里做漂移检查、报告复核和学习与进化候选治理。",
     label_task: "任务",
     task_placeholder: "描述你要做的事...",
     label_module: "模块",
@@ -158,8 +163,8 @@ const I18N = {
     audit_start_title: "先跑一遍（推荐）",
     audit_start_desc: "先点击一键审计，再按结果做手动动作。",
     btn_audit_quick_run: "一键审计（校验 -> 7天指标 -> Owner报告）",
-    audit_guide_idle: "审计指引：先跑一键审计，再看右侧 Cognition Signals 和 Owner Todos。",
-    audit_zero_state_desc: "当前没有候选待办或 Owner 待办。建议先去工作台输入学习素材，或先跑一次一键审计。",
+    audit_guide_idle: "审计指引：先跑一键审计，再看右侧认知信号和待办。",
+    audit_zero_state_desc: "当前没有候选待办或待办任务。建议先去工作台输入学习素材，或先跑一次一键审计。",
     btn_go_workspace_learning: "去工作台学习与进化",
     btn_show_manual_actions: "仍然显示全部手动动作",
     audit_guide_title: "一键审计执行摘要",
@@ -185,10 +190,16 @@ const I18N = {
     filter_modify: "修改",
     filter_reject: "拒绝",
     execution_trace: "执行轨迹",
+    trace_messages: "系统消息",
+    messages_idle: "暂无系统消息。",
+    messages_prefix_system: "系统：",
+    messages_prefix_user: "你：",
+    btn_expand_messages: "展开历史",
+    btn_collapse_messages: "收起历史",
     trace_cognition_signals: "认知信号（7天）",
-    trace_owner_todos: "Owner 待办",
+    trace_owner_todos: "待办",
     trace_learning_lifecycle: "学习生命周期",
-    trace_learning_lifecycle_note: "任何内容都不会直接进入运行时上下文。必须先 Review，再 Promote；Promote 后仍需成熟期。",
+    trace_learning_lifecycle_note: "任何内容都不会直接进入运行时上下文。必须先复核，再晋升；晋升后仍需成熟期。",
     trace_learning_candidates: "学习候选与状态队列",
     trace_candidate_pipeline: "候选管道（30天 + 趋势）",
     trace_suggestion_reviews: "建议复核（30天 + 趋势）",
@@ -201,19 +212,19 @@ const I18N = {
     btn_accept: "接受",
     btn_modify: "修改",
     btn_reject: "拒绝",
-    btn_promote: "Promote",
+    btn_promote: "晋升",
     btn_resolve: "完成",
-    lifecycle_step_imported: "Imported",
-    lifecycle_step_candidate: "Candidate",
-    lifecycle_step_reviewed: "Reviewed",
-    lifecycle_step_promoted: "Promoted",
-    lifecycle_step_active_runtime: "Active Runtime",
-    lifecycle_stage_candidate: "Candidate",
-    lifecycle_stage_reviewed_accept: "Reviewed: Accept",
-    lifecycle_stage_reviewed_modify: "Reviewed: Modify",
-    lifecycle_stage_reviewed_reject: "Reviewed: Reject",
-    lifecycle_stage_promoted: "Promoted (Cooling)",
-    lifecycle_stage_active_runtime: "Active Runtime",
+    lifecycle_step_imported: "已导入",
+    lifecycle_step_candidate: "候选中",
+    lifecycle_step_reviewed: "已复核",
+    lifecycle_step_promoted: "已晋升",
+    lifecycle_step_active_runtime: "运行中",
+    lifecycle_stage_candidate: "候选中",
+    lifecycle_stage_reviewed_accept: "已复核：接受",
+    lifecycle_stage_reviewed_modify: "已复核：修改",
+    lifecycle_stage_reviewed_reject: "已复核：拒绝",
+    lifecycle_stage_promoted: "已晋升（冷却中）",
+    lifecycle_stage_active_runtime: "运行中",
     candidate_label_statement: "陈述",
     candidate_label_type: "类型",
     candidate_label_target: "目标层",
@@ -224,20 +235,20 @@ const I18N = {
     candidate_label_status: "当前状态",
     candidate_source_unknown: "未提供来源",
     candidate_evidence_none: "无证据片段",
-    candidate_next_review: "下一步：执行 Review（Accept / Modify / Reject）。",
-    candidate_next_promote: "下一步：可 Promote 进入治理成熟期。",
-    candidate_next_rework: "下一步：修改后会生成新的 Candidate 等待复核。",
+    candidate_next_review: "下一步：执行复核（接受 / 修改 / 拒绝）。",
+    candidate_next_promote: "下一步：可晋升进入治理成熟期。",
+    candidate_next_rework: "下一步：修改后会生成新的候选条目等待复核。",
     candidate_next_reject: "已拒绝：不会进入判断核心。",
-    candidate_next_cooling: "已 Promote，成熟期剩余约 {hours} 小时，之后才可进入 runtime context。",
-    candidate_next_runtime: "已进入 runtime context（成熟完成）。",
-    learning_review_modal_title_accept: "Accept Candidate",
-    learning_review_modal_title_modify: "Modify Candidate",
-    learning_review_modal_title_reject: "Reject Candidate",
-    learning_review_modal_title_promote: "Promote Candidate",
+    candidate_next_cooling: "已晋升，成熟期剩余约 {hours} 小时，之后才可进入运行时上下文。",
+    candidate_next_runtime: "已进入运行时上下文（成熟完成）。",
+    learning_review_modal_title_accept: "接受候选",
+    learning_review_modal_title_modify: "修改候选",
+    learning_review_modal_title_reject: "拒绝候选",
+    learning_review_modal_title_promote: "晋升候选",
     learning_review_modal_title: "复核候选",
-    learning_review_owner_note: "Owner Note",
+    learning_review_owner_note: "复核备注",
     learning_review_note_placeholder: "写下你的判断依据...",
-    learning_review_modified_statement: "Modified Statement",
+    learning_review_modified_statement: "修改后的陈述",
     learning_review_statement_placeholder: "输入修改后的候选陈述...",
     learning_review_cancel: "取消",
     learning_review_submit: "提交",
@@ -288,7 +299,7 @@ const I18N = {
     demo_step_audit: "3) 审计：owner_report={output_path}，fail 指标={fails}",
     demo_none: "无",
     no_cognition_metrics: "暂无认知指标",
-    run_metrics_first: "先运行 Metrics 7D。",
+    run_metrics_first: "请先运行 7天指标。",
     msg_mvp_started: "MVP 已开始：检查 -> 执行 -> 建议详情。",
     msg_mvp_inspect_ready: "MVP 检查完成：{module} -> {skill}",
     msg_mvp_complete: "MVP 完成。请在 Suggestion Detail 区域做 Accept/Modify/Reject。",
@@ -302,13 +313,13 @@ const I18N = {
     msg_action_failed: "动作失败：{error}",
     msg_owner_todo_resolved: "已完成 Owner Todo：{id}",
     msg_owner_todo_resolve_failed: "完成 Owner Todo 失败：{error}",
-    msg_review_note_required: "复核需要 Owner Note。",
-    msg_modify_statement_required: "Modify 需要填写 Modified Statement。",
+    msg_review_note_required: "复核需要填写备注。",
+    msg_modify_statement_required: "选择“修改”时必须填写修改后的陈述。",
     msg_candidate_review_done: "候选已复核：{id} -> {verdict}",
     msg_candidate_review_failed: "候选复核失败：{error}",
-    msg_promotion_note_required: "Promote 需要 Approval Note。",
-    msg_candidate_promoted_done: "候选已 Promote：{id} -> {target}",
-    msg_candidate_promote_failed: "候选 Promote 失败：{error}",
+    msg_promotion_note_required: "晋升需要填写审批备注。",
+    msg_candidate_promoted_done: "候选已晋升：{id} -> {target}",
+    msg_candidate_promote_failed: "候选晋升失败：{error}",
     msg_learning_text_required: "请先粘贴学习文本。",
     msg_learning_source_required: "学习 Handoff 需要先填写来源链接 / 引用。",
     msg_learning_packet_generating: "正在生成学习 Handoff 包...",
@@ -414,6 +425,12 @@ const I18N = {
     filter_modify: "Modify",
     filter_reject: "Reject",
     execution_trace: "Execution Trace",
+    trace_messages: "System Messages",
+    messages_idle: "No system messages yet.",
+    messages_prefix_system: "System: ",
+    messages_prefix_user: "You: ",
+    btn_expand_messages: "Show History",
+    btn_collapse_messages: "Hide History",
     trace_cognition_signals: "Cognition Signals (7D)",
     trace_owner_todos: "Owner Todos",
     trace_learning_lifecycle: "Learning Lifecycle",
@@ -734,6 +751,35 @@ function resolveLearningConfidence(text, sourceRef = "") {
   return { mode: "auto", confidence: inferLearningConfidence(text, sourceRef) };
 }
 
+function setMessagePanelExpanded(expanded) {
+  if (!chatLogWrap || !toggleMessagesBtn) {
+    return;
+  }
+  messagesExpanded = Boolean(expanded);
+  chatLogWrap.classList.toggle("expanded", messagesExpanded);
+  const key = messagesExpanded ? "btn_collapse_messages" : "btn_expand_messages";
+  toggleMessagesBtn.setAttribute("data-i18n", key);
+  toggleMessagesBtn.textContent = t(key);
+  toggleMessagesBtn.setAttribute("aria-expanded", messagesExpanded ? "true" : "false");
+}
+
+function renderLatestMessage() {
+  if (!latestMessage) {
+    return;
+  }
+  const raw = String(latestMessagePayload.text || "").trim();
+  if (!raw) {
+    latestMessage.setAttribute("data-i18n", "messages_idle");
+    latestMessage.textContent = t("messages_idle");
+    return;
+  }
+  const compact = raw.replace(/\s+/g, " ");
+  const clipped = compact.length > 180 ? `${compact.slice(0, 177)}...` : compact;
+  const prefix = latestMessagePayload.role === "user" ? t("messages_prefix_user") : t("messages_prefix_system");
+  latestMessage.removeAttribute("data-i18n");
+  latestMessage.textContent = `${prefix}${clipped}`;
+}
+
 function setLanguage(lang) {
   uiLanguage = lang === "en" ? "en" : "zh";
   applyI18n();
@@ -741,6 +787,8 @@ function setLanguage(lang) {
   if (autoOption) {
     autoOption.textContent = t("option_auto_route");
   }
+  renderLatestMessage();
+  setMessagePanelExpanded(messagesExpanded);
 }
 
 function addBubble(role, text) {
@@ -749,6 +797,11 @@ function addBubble(role, text) {
   div.textContent = text;
   chatLog.appendChild(div);
   chatLog.scrollTop = chatLog.scrollHeight;
+  latestMessagePayload = {
+    role: role === "user" ? "user" : "system",
+    text: String(text || ""),
+  };
+  renderLatestMessage();
 }
 
 function getLastUserBubbleText() {
@@ -803,6 +856,45 @@ function renderLoadedFiles(files) {
   }
 }
 
+function localizeCognitionMetricLabel(item) {
+  const keyRaw = String(item && item.key ? item.key : "").trim().toLowerCase();
+  const labelRaw = String(item && item.label ? item.label : "").trim().toLowerCase();
+  const byKey = {
+    unresolved_disequilibrium: { zh: "未解决失衡率", en: "Unresolved Disequilibrium" },
+    equilibration_quality: { zh: "平衡质量", en: "Equilibration Quality" },
+    schema_explicitness: { zh: "结构显性度", en: "Schema Explicitness" },
+  };
+  const alias = {
+    "unresolved disequilibrium": "unresolved_disequilibrium",
+    "equilibration quality": "equilibration_quality",
+    "schema explicitness": "schema_explicitness",
+  };
+  const canonical = byKey[keyRaw] ? keyRaw : alias[labelRaw] || "";
+  if (canonical && byKey[canonical]) {
+    return uiLanguage === "zh" ? byKey[canonical].zh : byKey[canonical].en;
+  }
+  if (item && item.label) {
+    return String(item.label);
+  }
+  if (item && item.key) {
+    return String(item.key);
+  }
+  return uiLanguage === "zh" ? "指标" : "Metric";
+}
+
+function localizeTrendLabel(trend) {
+  const value = String(trend || "stable").trim().toLowerCase();
+  if (uiLanguage !== "zh") {
+    return value || "stable";
+  }
+  const map = {
+    stable: "稳定",
+    improving: "改善",
+    worsening: "恶化",
+  };
+  return map[value] || value || "稳定";
+}
+
 function renderCognitionCards(cards) {
   cognitionCards.innerHTML = "";
   if (!Array.isArray(cards) || cards.length === 0) {
@@ -823,7 +915,7 @@ function renderCognitionCards(cards) {
 
     const title = document.createElement("div");
     title.className = "metric-title";
-    title.textContent = item.label || item.key || "Metric";
+    title.textContent = localizeCognitionMetricLabel(item);
 
     const value = document.createElement("div");
     value.className = "metric-value";
@@ -833,7 +925,11 @@ function renderCognitionCards(cards) {
     meta.className = "metric-meta";
     const op = item.target_operator || ">=";
     const threshold = item.threshold || "-";
-    meta.textContent = `target ${op} ${threshold} | trend: ${trend} (${delta})`;
+    if (uiLanguage === "zh") {
+      meta.textContent = `目标 ${op} ${threshold} | 趋势：${localizeTrendLabel(trend)}（${delta}）`;
+    } else {
+      meta.textContent = `target ${op} ${threshold} | trend: ${localizeTrendLabel(trend)} (${delta})`;
+    }
 
     card.appendChild(title);
     card.appendChild(value);
@@ -2553,6 +2649,11 @@ if (learningImportBtn) {
     importLearningHandoffResponse();
   });
 }
+if (toggleMessagesBtn) {
+  toggleMessagesBtn.addEventListener("click", () => {
+    setMessagePanelExpanded(!messagesExpanded);
+  });
+}
 suggestionAcceptBtn.addEventListener("click", () => {
   reviewSuggestion("accept");
 });
@@ -2564,6 +2665,8 @@ suggestionRejectBtn.addEventListener("click", () => {
 });
 
 setLanguage("zh");
+setMessagePanelExpanded(false);
+renderLatestMessage();
 setMvpGuideText("mvp_guide_idle");
 setDemoSummaryKey("demo_summary_idle");
 setAuditGuideKey("audit_guide_idle");

@@ -1,4 +1,7 @@
 const chatLog = document.getElementById("chatLog");
+const latestMessage = document.getElementById("latestMessage");
+const chatLogWrap = document.getElementById("chatLogWrap");
+const toggleMessagesBtn = document.getElementById("toggleMessagesBtn");
 const taskForm = document.getElementById("taskForm");
 const taskInput = document.getElementById("taskInput");
 const moduleSelect = document.getElementById("moduleSelect");
@@ -72,6 +75,8 @@ let uiLanguage = "zh";
 let latestGuidanceMode = "pre_run_no_api";
 let isRunningTask = false;
 let activeWorkspaceTab = "task";
+let messagesExpanded = false;
+let latestMessagePayload = { role: null, text: "" };
 
 const LEARNING_SOURCE_DEFAULT = "notes";
 
@@ -157,6 +162,11 @@ const I18N = {
     external_response_placeholder: "把外部模型 JSON 粘贴到这里",
     btn_parse_queue: "导入学习候选",
     trace_messages: "系统消息",
+    messages_idle: "暂无系统消息。",
+    messages_prefix_system: "系统：",
+    messages_prefix_user: "你：",
+    btn_expand_messages: "展开历史",
+    btn_collapse_messages: "收起历史",
     result_title: "执行结果",
     result_summary_empty: "执行后，这里会先给你可读摘要。",
     result_file_label: "结果文件",
@@ -352,6 +362,11 @@ const I18N = {
     external_response_placeholder: "Paste external model JSON here",
     btn_parse_queue: "Import Learning Candidates",
     trace_messages: "System Messages",
+    messages_idle: "No system messages yet.",
+    messages_prefix_system: "System: ",
+    messages_prefix_user: "You: ",
+    btn_expand_messages: "Show History",
+    btn_collapse_messages: "Hide History",
     result_title: "Result",
     result_summary_empty: "After running, this area will show a readable summary first.",
     result_file_label: "Result File",
@@ -518,6 +533,35 @@ function switchWorkspaceTab(tab) {
   }
 }
 
+function setMessagePanelExpanded(expanded) {
+  if (!chatLogWrap || !toggleMessagesBtn) {
+    return;
+  }
+  messagesExpanded = Boolean(expanded);
+  chatLogWrap.classList.toggle("expanded", messagesExpanded);
+  const key = messagesExpanded ? "btn_collapse_messages" : "btn_expand_messages";
+  toggleMessagesBtn.setAttribute("data-i18n", key);
+  toggleMessagesBtn.textContent = t(key);
+  toggleMessagesBtn.setAttribute("aria-expanded", messagesExpanded ? "true" : "false");
+}
+
+function renderLatestMessage() {
+  if (!latestMessage) {
+    return;
+  }
+  const raw = String(latestMessagePayload.text || "").trim();
+  if (!raw) {
+    latestMessage.setAttribute("data-i18n", "messages_idle");
+    latestMessage.textContent = t("messages_idle");
+    return;
+  }
+  const compact = raw.replace(/\s+/g, " ");
+  const clipped = compact.length > 180 ? `${compact.slice(0, 177)}...` : compact;
+  const prefix = latestMessagePayload.role === "user" ? t("messages_prefix_user") : t("messages_prefix_system");
+  latestMessage.removeAttribute("data-i18n");
+  latestMessage.textContent = `${prefix}${clipped}`;
+}
+
 function setLanguage(lang) {
   uiLanguage = lang === "en" ? "en" : "zh";
   applyI18n();
@@ -532,6 +576,8 @@ function setLanguage(lang) {
   updateProviderHelp();
   updateRetrievalHelp();
   setNextStepsByMode(latestGuidanceMode);
+  renderLatestMessage();
+  setMessagePanelExpanded(messagesExpanded);
   renderModeGuide();
 }
 
@@ -625,6 +671,11 @@ function addBubble(role, text) {
   div.textContent = text;
   chatLog.appendChild(div);
   chatLog.scrollTop = chatLog.scrollHeight;
+  latestMessagePayload = {
+    role: role === "user" ? "user" : "system",
+    text: String(text || ""),
+  };
+  renderLatestMessage();
 }
 
 function getLastUserBubbleText() {
@@ -1610,9 +1661,16 @@ if (learningImportBtn) {
     importLearningHandoffResponse();
   });
 }
+if (toggleMessagesBtn) {
+  toggleMessagesBtn.addEventListener("click", () => {
+    setMessagePanelExpanded(!messagesExpanded);
+  });
+}
 
 switchWorkspaceTab("task");
 setLanguage("zh");
+setMessagePanelExpanded(false);
+renderLatestMessage();
 setStatus(t("status_connecting"), "pending", "status_connecting");
 setResultSummary(t("result_summary_empty"));
 setOutputPath("-");

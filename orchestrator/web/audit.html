@@ -27,9 +27,20 @@
   </header>
 
   <main class="layout">
-    <section class="card panel-chat">
-      <div id="chatLog" class="chat-log"></div>
+    <section class="message-dock" aria-live="polite">
+      <section class="workspace-status-strip">
+        <div class="workspace-status-head">
+          <h3 data-i18n="trace_messages">系统消息</h3>
+          <button id="toggleMessagesBtn" type="button" class="message-toggle-btn" data-i18n="btn_expand_messages" aria-expanded="false">展开历史</button>
+        </div>
+        <div id="latestMessage" class="latest-message" data-i18n="messages_idle">暂无系统消息</div>
+        <div id="chatLogWrap" class="chat-log-wrap">
+          <div id="chatLog" class="chat-log"></div>
+        </div>
+      </section>
+    </section>
 
+    <section class="card panel-chat">
       <section id="entrypointHint" class="entrypoint-hint" data-i18n="hint_audit">
         Review drift, reports, and Learning & Evolution candidates before promoting into judgment core.
       </section>
@@ -181,23 +192,23 @@
         <h3 data-i18n="trace_learning_lifecycle">学习生命周期</h3>
         <div id="learningLifecycle" class="learning-stage-grid">
           <div class="learning-stage-card">
-            <div class="learning-stage-name">Imported</div>
+            <div class="learning-stage-name">已导入</div>
             <div class="learning-stage-value">-</div>
           </div>
           <div class="learning-stage-card">
-            <div class="learning-stage-name">Candidate</div>
+            <div class="learning-stage-name">候选中</div>
             <div class="learning-stage-value">-</div>
           </div>
           <div class="learning-stage-card">
-            <div class="learning-stage-name">Reviewed</div>
+            <div class="learning-stage-name">已复核</div>
             <div class="learning-stage-value">-</div>
           </div>
           <div class="learning-stage-card">
-            <div class="learning-stage-name">Promoted</div>
+            <div class="learning-stage-name">已晋升</div>
             <div class="learning-stage-value">-</div>
           </div>
           <div class="learning-stage-card">
-            <div class="learning-stage-name">Active Runtime</div>
+            <div class="learning-stage-name">运行中</div>
             <div class="learning-stage-value">-</div>
           </div>
         </div>

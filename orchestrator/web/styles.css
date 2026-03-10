@@ -203,6 +203,7 @@ body {
 .layout {
   display: grid;
   grid-template-columns: 1.2fr 0.8fr;
+  grid-template-rows: auto minmax(0, 1fr);
   gap: 16px;
   padding: 12px 24px 24px;
   height: calc(100dvh - 96px);
@@ -214,9 +215,15 @@ body {
   z-index: 1;
   display: grid;
   grid-template-columns: 1.25fr 0.75fr;
+  grid-template-rows: auto minmax(0, 1fr);
   gap: 16px;
   padding: 12px 24px 24px;
   height: calc(100dvh - 96px);
+  min-height: 0;
+}
+
+.message-dock {
+  grid-column: 1 / -1;
   min-height: 0;
 }
 
@@ -259,6 +266,78 @@ body {
   white-space: pre-wrap;
   line-height: 1.4;
   font-size: 0.84rem;
+}
+
+.workspace-status-strip {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  border: 1px solid color-mix(in srgb, var(--accent) 34%, var(--border));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--card) 96%, white 4%);
+  padding: 9px 10px;
+}
+
+.message-dock .workspace-status-strip {
+  position: static;
+}
+
+.workspace-status-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.workspace-status-head h3 {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+
+.message-toggle-btn {
+  border: 1px solid color-mix(in srgb, var(--border) 82%, white);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--card) 96%, white 4%);
+  color: var(--accent-ink);
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.message-toggle-btn:hover {
+  border-color: color-mix(in srgb, var(--accent) 55%, white);
+}
+
+.latest-message {
+  margin-top: 8px;
+  border: 1px solid color-mix(in srgb, var(--border) 78%, white);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 8%, var(--card) 92%);
+  color: var(--accent-ink);
+  padding: 7px 9px;
+  font-size: 0.82rem;
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chat-log-wrap {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.2s ease, margin-top 0.2s ease;
+}
+
+.chat-log-wrap.expanded {
+  margin-top: 8px;
+  max-height: 190px;
+}
+
+.workspace-status-strip .chat-log {
+  min-height: 56px;
+  max-height: 180px;
 }
 
 .quick-manual {

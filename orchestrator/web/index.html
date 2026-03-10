@@ -27,6 +27,19 @@
   </header>
 
   <main class="workspace-layout">
+    <section class="message-dock" aria-live="polite">
+      <section class="workspace-status-strip">
+        <div class="workspace-status-head">
+          <h3 data-i18n="trace_messages">系统消息</h3>
+          <button id="toggleMessagesBtn" type="button" class="message-toggle-btn" data-i18n="btn_expand_messages" aria-expanded="false">展开历史</button>
+        </div>
+        <div id="latestMessage" class="latest-message" data-i18n="messages_idle">暂无系统消息</div>
+        <div id="chatLogWrap" class="chat-log-wrap">
+          <div id="chatLog" class="chat-log"></div>
+        </div>
+      </section>
+    </section>
+
     <section class="card workspace-main">
       <div class="workspace-intro">
         <h2 data-i18n="hero_title">你想让我帮你做什么？</h2>
@@ -60,7 +73,6 @@
           <div class="action-row workspace-actions">
             <button id="runBtn" type="submit" class="btn primary" data-i18n="btn_run">开始执行</button>
             <button id="inspectBtn" type="button" class="btn secondary" data-i18n="btn_inspect">查看处理步骤</button>
-            <a class="btn secondary nav-btn" href="/audit.html" data-i18n="btn_go_audit">打开审计中心</a>
           </div>
 
           <details class="workspace-advanced" id="advancedControls">
@@ -172,10 +184,6 @@
         </section>
       </section>
 
-      <section class="workspace-messages">
-        <h3 data-i18n="trace_messages">系统消息</h3>
-        <div id="chatLog" class="chat-log"></div>
-      </section>
     </section>
 
     <aside class="card workspace-result">
