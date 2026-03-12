@@ -39,6 +39,7 @@ const outputDetails = document.getElementById("outputDetails");
 const outputPathText = document.getElementById("outputPathText");
 const resultSummary = document.getElementById("resultSummary");
 const modeGuide = document.getElementById("modeGuide");
+const modeChoiceButtons = document.querySelectorAll(".mode-choice-card");
 const nextStepsList = document.getElementById("nextStepsList");
 const quickSettingsBtn = document.getElementById("quickSettingsBtn");
 const quickCopyBtn = document.getElementById("quickCopyBtn");
@@ -90,22 +91,38 @@ const I18N = {
     status_connecting: "连接中...",
     status_connected: "已连接",
     status_offline: "离线",
-    hero_title: "你想让我帮你做什么？",
-    hero_desc: "你说目标，我给结果、关键结论和下一步动作。任务输入和学习与进化都在这里。",
+    workspace_kicker: "任务启动器",
+    hero_title: "开始一个任务",
+    hero_desc: "先选执行方式，再写任务简报。学习与进化保持独立，不混在任务发起里。",
+    btn_go_review_inbox: "去 Owner Review",
     quick_use_title: "30 秒上手",
     quick_use_step_1: "输入你希望得到的结果（例如“给我下周3件最重要的事”）。",
     quick_use_step_2: "点击“开始执行”。",
     quick_use_step_3: "先看右侧“执行结果”摘要，再决定是否看完整 Markdown。",
     quick_use_step_4: "如果你有新经验/资料，切到上方“学习与进化”标签补充到系统里。",
     workspace_tab_task: "任务执行",
+    workspace_tab_task_desc: "发起任务、看摘要、再决定是否下钻",
     workspace_tab_learning: "学习与进化",
-    section_task: "任务输入",
-    task_intro: "在这里输入你要的结果，执行后在右侧查看结果。",
+    workspace_tab_learning_desc: "吸收素材、生成候选，再送去 owner 复核",
+    task_mode_title: "1. 选择执行方式",
+    task_mode_desc: "把 handoff 当作正常的低成本模式，而不是错误回退。",
+    mode_choice_direct_title: "直接执行",
+    mode_choice_direct_desc: "优先用已配置直连模型直接给结果。",
+    mode_choice_handoff_title: "外部协作",
+    mode_choice_handoff_desc: "生成请求包，交给外部模型完成。",
+    mode_choice_dry_run_title: "离线演练",
+    mode_choice_dry_run_desc: "只验证路由和流程，不追求最终质量。",
+    section_task: "3. 写任务简报",
+    task_intro: "把目标、输出要求和边界写清楚，再开始执行。",
     section_learning: "学习与进化",
     label_task: "任务",
-    task_placeholder: "例如：总结我本周做了什么、哪里做得好/不好、下周3件重点事",
-    btn_run: "开始执行",
-    btn_inspect: "查看处理步骤",
+    label_task_brief: "任务简报",
+    brief_tag_goal: "目标",
+    brief_tag_output: "输出",
+    brief_tag_constraints: "边界",
+    task_placeholder: "任务目标：\n希望输出：\n已知背景：\n约束与边界：",
+    btn_run: "开始任务",
+    btn_inspect: "预览路由与步骤",
     btn_go_audit: "打开审计中心",
     advanced_summary: "执行方式与高级控制（可选）",
     label_module: "任务类型（可选）",
@@ -119,9 +136,9 @@ const I18N = {
     label_use_retrieval: "参考历史记录",
     label_top_k: "参考条数",
     top_k_help: "每次最多带入多少条历史记录。越大越全，但更慢；默认 6。",
-    provider_help_auto: "推荐：系统自动按你的设置选择执行方式。",
+    provider_help_auto: "直接执行会优先使用你已配置的直连方式；如果暂时没有直连，也可以改用 handoff。",
     provider_help_dry_run: "离线演练：不调用外部 API，主要用于测试流程。",
-    provider_help_handoff: "外部协作：生成请求包，你复制到外部模型执行。",
+    provider_help_handoff: "外部协作是正常模式：生成请求包，你复制到外部模型执行。",
     provider_help_openai: "OpenAI 直连：由系统直接生成结果。",
     provider_help_deepseek: "DeepSeek 直连：由系统直接生成结果。",
     retrieval_help_off: "当前未开启历史参考：仅基于你这次输入生成结果。",
@@ -130,12 +147,18 @@ const I18N = {
     option_provider_handoff: "外部协作（handoff）",
     option_provider_openai: "OpenAI（直连）",
     option_provider_deepseek: "DeepSeek（直连）",
-    task_starters: "示例任务",
-    starter_hint: "点击任一项会自动执行并生成结果。",
+    task_starters: "2. 选择任务模板",
+    starter_hint: "点击任一项会把模板填进下方任务简报，你可以再改。",
     review_definition: "复盘 = 回顾本周关键决策、结果原因、改进动作，并给下周执行清单。",
     starter_weekly_review: "本周总结+下周3件事",
     starter_extract_patterns: "目标拆解行动清单",
     starter_write_story: "风险检查+应对动作",
+    task_template_weekly_review:
+      "任务目标：\n- 复盘本周关键决策与结果，并给出下周优先动作。\n\n希望输出：\n1. 本周关键事件与决策\n2. 做对了什么、做错了什么及原因\n3. 下周最重要的 3 个行动\n4. 每个行动的风险提醒与触发条件\n\n已知背景：\n- 如信息不足，请先指出缺口，再基于现有材料给出建议。\n\n约束与边界：\n- 结论要直接可执行，避免空泛复述。",
+    task_template_goal_breakdown:
+      "任务目标：\n- 把当前目标拆成今天 / 本周 / 延后处理的可执行清单。\n\n希望输出：\n1. 今天必须推进的动作\n2. 本周应完成的动作\n3. 可以延期的事项与原因\n4. 每项的优先级与依赖关系\n\n已知背景：\n- 如果目标之间冲突，请直接指出并给排序建议。\n\n约束与边界：\n- 优先给行动，而不是长篇解释。",
+    task_template_risk_check:
+      "任务目标：\n- 找出当前计划里最需要 owner 提前注意的风险。\n\n希望输出：\n1. 前三个风险点\n2. 每个风险的触发条件\n3. 对应的预防动作或应对动作\n4. 哪个风险需要优先盯住\n\n已知背景：\n- 如果风险来自信息不足，请明确标出来。\n\n约束与边界：\n- 风险描述要具体到行动层。",
     learning_intro: "把你新的经验、资料、文章要点放进系统，帮助后续任务更贴合你。",
     learning_flow_title: "学习会怎么进入系统",
     learning_flow_step_1: "直接输入：写入 memory_events + memory_insights（可检索）。",
@@ -167,7 +190,9 @@ const I18N = {
     messages_prefix_user: "你：",
     btn_expand_messages: "展开历史",
     btn_collapse_messages: "收起历史",
+    result_kicker: "结果区",
     result_title: "执行结果",
+    result_summary_title: "1. 摘要",
     result_summary_empty: "执行后，这里会先给你可读摘要。",
     result_file_label: "结果文件",
     next_steps_title: "下一步怎么做",
@@ -175,7 +200,8 @@ const I18N = {
     btn_open_settings: "去配置 API",
     btn_copy_report: "复制完整报告",
     btn_prepare_followup: "生成回填任务模板",
-    output_details_summary: "完整报告（Markdown）",
+    result_support_summary: "细节与导出",
+    output_details_summary: "完整报告（按需展开）",
     technical_summary: "技术详情（路由/计划/文件）",
     trace_route: "路由",
     trace_plan: "计划",
@@ -233,13 +259,13 @@ const I18N = {
     msg_token_exact: "Tokens：{tokens}（精确）",
     msg_token_estimate: "Tokens：{tokens}（估算）",
     msg_token_unavailable: "Tokens：不可用",
-    mode_with_api: "已检测到 API 配置，直接点击“开始执行”即可得到结果。",
-    mode_no_api: "你还没有配置 API Key。当前会走离线模式，输出可能是请求包或草稿。",
-    mode_no_api_steps: "建议步骤：1) 打开设置填写 API Key；或 2) 使用 handoff，把“完整报告（Markdown）”复制到外部模型，再将返回内容贴回这里继续处理。",
-    next_pre_run_api_1: "输入任务后点击“开始执行”。",
+    mode_with_api: "已检测到直连配置。你可以直接执行，也可以主动切换到 handoff / dry-run。",
+    mode_no_api: "当前还没有直连模型配置，但 handoff 仍然是正常、低成本的执行模式。",
+    mode_no_api_steps: "推荐：直接选择 handoff 生成请求包；如需一步出结果，再去设置中补 API。",
+    next_pre_run_api_1: "确认执行方式后，点击“开始任务”。",
     next_pre_run_api_2: "先看“执行结果”摘要，再决定是否展开完整 Markdown。",
-    next_pre_run_no_api_1: "先去“设置”配置 API，可直接得到最终结果。",
-    next_pre_run_no_api_2: "若暂不配 API：使用 handoff，把完整报告发到外部模型。",
+    next_pre_run_no_api_1: "如果想低成本开始，直接用 handoff 生成请求包。",
+    next_pre_run_no_api_2: "如果想一步得到结果，再去“设置”补直连 API。",
     next_handoff_1: "点击“复制完整报告”，把请求包发给外部模型。",
     next_handoff_2: "拿到外部模型结果后，点击“生成回填任务模板”。",
     next_handoff_3: "把外部结果粘贴到模板中，再点“开始执行”。",
@@ -290,22 +316,38 @@ const I18N = {
     status_connecting: "Connecting...",
     status_connected: "Connected",
     status_offline: "Offline",
-    hero_title: "What do you want me to do?",
-    hero_desc: "Tell me the goal. I return outcomes, key conclusions, and next actions.",
+    workspace_kicker: "Task Launcher",
+    hero_title: "Start A Task",
+    hero_desc: "Choose the execution mode first, then write a task brief. Learning stays separate from task launch.",
+    btn_go_review_inbox: "Open Owner Review",
     quick_use_title: "30-Second Guide",
     quick_use_step_1: "Describe the outcome you want (for example: top 3 priorities for next week).",
     quick_use_step_2: "Click Run.",
     quick_use_step_3: "Read the result summary first, then open markdown only if needed.",
     quick_use_step_4: "If you have new notes or experience, switch to Learning & Evolution and add them.",
     workspace_tab_task: "Task",
+    workspace_tab_task_desc: "Launch work, read summary first, dive deeper only when needed",
     workspace_tab_learning: "Learning & Evolution",
-    section_task: "Task Input",
-    task_intro: "Describe the output you want here. Results will appear on the right.",
+    workspace_tab_learning_desc: "Absorb material, create candidates, then send them to owner review",
+    task_mode_title: "1. Choose Execution Mode",
+    task_mode_desc: "Treat handoff as a normal low-cost mode, not an error fallback.",
+    mode_choice_direct_title: "Direct Execute",
+    mode_choice_direct_desc: "Use configured direct providers to generate the result now.",
+    mode_choice_handoff_title: "Handoff",
+    mode_choice_handoff_desc: "Generate a packet and complete it in an external model.",
+    mode_choice_dry_run_title: "Dry Run",
+    mode_choice_dry_run_desc: "Check route and flow only, not final output quality.",
+    section_task: "3. Write Task Brief",
+    task_intro: "Make the goal, output shape, and boundaries explicit before running.",
     section_learning: "Learning & Evolution",
     label_task: "Task",
-    task_placeholder: "Example: summarize my week, what worked/failed, and top 3 priorities for next week",
-    btn_run: "Run",
-    btn_inspect: "View Processing Steps",
+    label_task_brief: "Task Brief",
+    brief_tag_goal: "Goal",
+    brief_tag_output: "Output",
+    brief_tag_constraints: "Boundaries",
+    task_placeholder: "Task goal:\nDesired output:\nKnown context:\nConstraints and boundaries:",
+    btn_run: "Start Task",
+    btn_inspect: "Preview Route & Steps",
     btn_go_audit: "Open Audit Center",
     advanced_summary: "Execution Mode & Advanced Controls (Optional)",
     label_module: "Task Type (Optional)",
@@ -319,9 +361,9 @@ const I18N = {
     label_use_retrieval: "Use Historical Context",
     label_top_k: "Context Count",
     top_k_help: "Maximum historical records to include during retrieval. Higher means broader but slower. Default 6.",
-    provider_help_auto: "Recommended: system chooses the best mode from your settings.",
+    provider_help_auto: "Direct execute uses your configured direct provider first. If none is configured yet, switch to handoff.",
     provider_help_dry_run: "Offline simulation: no external API call, useful for flow checks.",
-    provider_help_handoff: "External handoff: generate a packet and run it in external model.",
+    provider_help_handoff: "Handoff is a normal execution mode: generate a packet and run it in an external model.",
     provider_help_openai: "OpenAI direct mode: system generates final output directly.",
     provider_help_deepseek: "DeepSeek direct mode: system generates final output directly.",
     retrieval_help_off: "Historical context is off: output is based only on current input.",
@@ -330,12 +372,18 @@ const I18N = {
     option_provider_handoff: "External Handoff",
     option_provider_openai: "OpenAI (Direct)",
     option_provider_deepseek: "DeepSeek (Direct)",
-    task_starters: "Example Tasks",
-    starter_hint: "Clicking any item runs it immediately and generates output.",
+    task_starters: "2. Choose A Task Template",
+    starter_hint: "Clicking a template fills the task brief below. Edit it before you run.",
     review_definition: "Review means: what happened, why it happened, what to improve, and next-week checklist.",
     starter_weekly_review: "Weekly Summary + Top 3 Next Actions",
     starter_extract_patterns: "Break Goals Into Action List",
     starter_write_story: "Risk Check + Response Actions",
+    task_template_weekly_review:
+      "Task goal:\n- Review this week's key decisions and outcomes, then define next week's priorities.\n\nDesired output:\n1. Key events and decisions this week\n2. What worked, what failed, and why\n3. Top 3 actions for next week\n4. Risk note and trigger for each action\n\nKnown context:\n- If information is missing, call it out first and still produce the best possible recommendation.\n\nConstraints and boundaries:\n- Keep conclusions actionable instead of generic.",
+    task_template_goal_breakdown:
+      "Task goal:\n- Break the current goal into an executable today / this week / later plan.\n\nDesired output:\n1. Actions that must move today\n2. Actions that should be completed this week\n3. Items that can be delayed and why\n4. Priority and dependency notes for each item\n\nKnown context:\n- If goals conflict, say so explicitly and recommend an order.\n\nConstraints and boundaries:\n- Prefer action lists over long explanation.",
+    task_template_risk_check:
+      "Task goal:\n- Identify the risks in the current plan that the owner should watch first.\n\nDesired output:\n1. Top three risks\n2. Trigger condition for each risk\n3. Preventive or response action for each risk\n4. Which one deserves the closest attention now\n\nKnown context:\n- If a risk exists because information is missing, make that explicit.\n\nConstraints and boundaries:\n- Keep risks specific to decisions and actions.",
     learning_intro: "Feed your new experiences and notes into the system so future tasks fit you better.",
     learning_flow_title: "How Learning Enters MyOS",
     learning_flow_step_1: "Direct input writes to memory_events + memory_insights (searchable).",
@@ -367,7 +415,9 @@ const I18N = {
     messages_prefix_user: "You: ",
     btn_expand_messages: "Show History",
     btn_collapse_messages: "Hide History",
+    result_kicker: "Result Area",
     result_title: "Result",
+    result_summary_title: "1. Summary",
     result_summary_empty: "After running, this area will show a readable summary first.",
     result_file_label: "Result File",
     next_steps_title: "What To Do Next",
@@ -375,7 +425,8 @@ const I18N = {
     btn_open_settings: "Configure API",
     btn_copy_report: "Copy Full Report",
     btn_prepare_followup: "Prepare Follow-up Template",
-    output_details_summary: "Full Report (Markdown)",
+    result_support_summary: "Details & Export",
+    output_details_summary: "Full Report (Expand On Demand)",
     technical_summary: "Technical Details (Route/Plan/Files)",
     trace_route: "Route",
     trace_plan: "Plan",
@@ -433,13 +484,13 @@ const I18N = {
     msg_token_exact: "Tokens: {tokens} (exact)",
     msg_token_estimate: "Tokens: {tokens} (estimate)",
     msg_token_unavailable: "Tokens: unavailable",
-    mode_with_api: "API key detected. Click Run to get direct outputs.",
-    mode_no_api: "No API key configured. The system is in offline mode, so output may be a packet or draft.",
-    mode_no_api_steps: "Recommended: 1) add API key in Settings; or 2) use handoff, copy Full Report to external model, then paste response back for further processing.",
-    next_pre_run_api_1: "Enter your task and click Run.",
+    mode_with_api: "Direct provider is available. You can execute now, or still switch to handoff / dry-run intentionally.",
+    mode_no_api: "No direct provider is configured yet, but handoff is still a normal low-cost execution mode.",
+    mode_no_api_steps: "Recommended: choose handoff to generate a packet now; add API later only if you want one-step direct execution.",
+    next_pre_run_api_1: "Confirm the execution mode, then click Start Task.",
     next_pre_run_api_2: "Read the result summary first, then open markdown only if needed.",
-    next_pre_run_no_api_1: "Configure API in Settings to get final direct outputs.",
-    next_pre_run_no_api_2: "If not, use handoff and send Full Report to an external model.",
+    next_pre_run_no_api_1: "If you want to start cheaply, use handoff and generate a packet.",
+    next_pre_run_no_api_2: "If you want the final result directly here, add a direct API in Settings.",
     next_handoff_1: "Click Copy Full Report and send the packet to an external model.",
     next_handoff_2: "After you get the external result, click Prepare Follow-up Template.",
     next_handoff_3: "Paste external result into the template and click Run.",
@@ -516,6 +567,109 @@ function applyI18n() {
   }
 }
 
+function hasDirectProviderConfigured() {
+  return Boolean(statusCache && (statusCache.has_openai_api_key || statusCache.has_deepseek_api_key));
+}
+
+function preferredDirectProvider() {
+  const defaults = settingsCache || statusCache || {};
+  const preferred = String(defaults.default_provider || "").trim().toLowerCase();
+  const hasOpenAi = Boolean(statusCache && statusCache.has_openai_api_key);
+  const hasDeepseek = Boolean(statusCache && statusCache.has_deepseek_api_key);
+
+  if (preferred === "deepseek" && hasDeepseek) {
+    return "deepseek";
+  }
+  if (preferred === "openai" && hasOpenAi) {
+    return "openai";
+  }
+  if (hasDeepseek) {
+    return "deepseek";
+  }
+  if (hasOpenAi) {
+    return "openai";
+  }
+  return "auto";
+}
+
+function deriveExecutionMode(providerValue) {
+  const value = String(providerValue || "auto").trim().toLowerCase();
+  if (value === "handoff") {
+    return "handoff";
+  }
+  if (value === "dry-run") {
+    return "dry_run";
+  }
+  return "direct";
+}
+
+function syncExecutionModeSelection() {
+  const mode = deriveExecutionMode(providerSelect.value);
+  for (const button of modeChoiceButtons) {
+    const choice = button.getAttribute("data-mode-choice") || "direct";
+    const active = choice === mode;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", active ? "true" : "false");
+  }
+}
+
+function applyProviderSelection(providerValue) {
+  providerSelect.value = providerValue;
+  if (providerSelect.value === "auto") {
+    modelInput.value = "";
+  } else if (providerSelect.value === "deepseek") {
+    const current = modelInput.value.trim();
+    if (!current || current.startsWith("gpt-")) {
+      modelInput.value = (settingsCache && settingsCache.deepseek_model) || "deepseek-chat";
+    }
+  } else if (providerSelect.value === "openai") {
+    const current = modelInput.value.trim();
+    if (!current || current.startsWith("deepseek-")) {
+      modelInput.value =
+        (settingsCache && (settingsCache.openai_model || settingsCache.task_model)) || "gpt-4.1-mini";
+    }
+  }
+  updateProviderHelp();
+  syncExecutionModeSelection();
+  renderModeGuide();
+  refreshOutputTokenMeta();
+}
+
+function selectExecutionMode(mode) {
+  const target = String(mode || "direct").trim().toLowerCase();
+  if (target === "handoff") {
+    applyProviderSelection("handoff");
+    return;
+  }
+  if (target === "dry_run") {
+    applyProviderSelection("dry-run");
+    return;
+  }
+  applyProviderSelection(preferredDirectProvider());
+}
+
+function taskTemplateText(templateKey) {
+  const key = String(templateKey || "").trim().toLowerCase();
+  const map = {
+    weekly_review: "task_template_weekly_review",
+    goal_breakdown: "task_template_goal_breakdown",
+    risk_check: "task_template_risk_check",
+  };
+  const i18nKey = map[key];
+  return i18nKey ? t(i18nKey) : "";
+}
+
+function applyTaskTemplate(templateKey) {
+  const text = taskTemplateText(templateKey);
+  if (!text) {
+    return;
+  }
+  switchWorkspaceTab("task");
+  taskInput.value = text;
+  taskInput.focus();
+  taskInput.setSelectionRange(taskInput.value.length, taskInput.value.length);
+}
+
 function switchWorkspaceTab(tab) {
   const target = tab === "learning" ? "learning" : "task";
   activeWorkspaceTab = target;
@@ -574,6 +728,7 @@ function setLanguage(lang) {
     option.textContent = t("option_use_fallback");
   }
   updateProviderHelp();
+  syncExecutionModeSelection();
   updateRetrievalHelp();
   setNextStepsByMode(latestGuidanceMode);
   renderLatestMessage();
@@ -937,12 +1092,15 @@ function renderRunResult(data, userTask) {
   renderReadableSummary(userTask, latestRunProvider, data.output_preview || "");
   if (latestRunProvider === "handoff") {
     setNextStepsByMode("handoff");
+    outputDetails.open = true;
   } else if (latestRunProvider === "dry-run") {
     setNextStepsByMode("dry_run");
+    outputDetails.open = false;
   } else {
     setNextStepsByMode("final");
+    outputDetails.open = false;
   }
-  outputDetails.open = true;
+  technicalDetails.open = false;
   refreshOutputTokenMeta();
   loadSuggestionDetail(latestSuggestionId);
 }
@@ -955,7 +1113,7 @@ function renderActionPreview(data) {
 
   if (data.output_preview) {
     setPreview(data.output_preview);
-    outputDetails.open = true;
+    outputDetails.open = data.action === "learning_handoff_packet";
     setOutputTokenMeta("-");
     if (data.action === "learning_handoff_packet") {
       setNextStepsByMode("learning_packet");
@@ -986,7 +1144,7 @@ function renderActionPreview(data) {
       previewLines.push(`insight: ${insightPreview}`);
     }
     setPreview(previewLines.join("\n") || "-");
-    outputDetails.open = true;
+    outputDetails.open = false;
     setOutputTokenMeta("-");
     setNextStepsByMode("learning_saved");
     return;
@@ -1003,7 +1161,7 @@ function renderActionPreview(data) {
       }
     }
     setPreview(previewLines.join("\n") || "-");
-    outputDetails.open = true;
+    outputDetails.open = false;
     setOutputTokenMeta("-");
     setNextStepsByMode("learning_import");
     return;
@@ -1219,7 +1377,7 @@ async function loadStatus() {
       moduleSelect.appendChild(option);
     }
 
-    providerSelect.value = "auto";
+    providerSelect.value = hasDirectProviderConfigured() ? preferredDirectProvider() : "handoff";
     modelInput.value = "";
     if (data.ui_language) {
       setLanguage(data.ui_language);
@@ -1230,9 +1388,11 @@ async function loadStatus() {
         option.textContent = moduleName;
         moduleSelect.appendChild(option);
       }
+      providerSelect.value = hasDirectProviderConfigured() ? preferredDirectProvider() : "handoff";
     }
 
     updateProviderHelp();
+    syncExecutionModeSelection();
     updateRetrievalHelp();
     renderModeGuide();
     setStatus(t("status_connected"), "ok", "status_connected");
@@ -1553,11 +1713,16 @@ for (const tab of workspaceTabs) {
   });
 }
 
-for (const button of document.querySelectorAll(".chip[data-task]")) {
+for (const button of modeChoiceButtons) {
   button.addEventListener("click", () => {
-    taskInput.value = button.getAttribute("data-task") || "";
-    taskInput.focus();
-    runTask();
+    const choice = button.getAttribute("data-mode-choice") || "direct";
+    selectExecutionMode(choice);
+  });
+}
+
+for (const button of document.querySelectorAll(".task-template-chip")) {
+  button.addEventListener("click", () => {
+    applyTaskTemplate(button.getAttribute("data-template-key"));
   });
 }
 
@@ -1601,23 +1766,7 @@ if (quickFollowupBtn) {
 }
 
 providerSelect.addEventListener("change", () => {
-  if (providerSelect.value === "auto") {
-    modelInput.value = "";
-  } else if (providerSelect.value === "deepseek") {
-    const current = modelInput.value.trim();
-    if (!current || current.startsWith("gpt-")) {
-      modelInput.value = (settingsCache && settingsCache.deepseek_model) || "deepseek-chat";
-    }
-  } else if (providerSelect.value === "openai") {
-    const current = modelInput.value.trim();
-    if (!current || current.startsWith("deepseek-")) {
-      modelInput.value =
-        (settingsCache && (settingsCache.openai_model || settingsCache.task_model)) || "gpt-4.1-mini";
-    }
-  }
-  updateProviderHelp();
-  renderModeGuide();
-  refreshOutputTokenMeta();
+  applyProviderSelection(providerSelect.value);
 });
 
 retrievalToggle.addEventListener("change", () => {

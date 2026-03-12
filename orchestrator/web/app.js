@@ -47,8 +47,17 @@ const suggestionAcceptBtn = document.getElementById("suggestionAcceptBtn");
 const suggestionModifyBtn = document.getElementById("suggestionModifyBtn");
 const suggestionRejectBtn = document.getElementById("suggestionRejectBtn");
 const cognitionCards = document.getElementById("cognitionCards");
+const reviewInboxLead = document.getElementById("reviewInboxLead");
+const reviewCountReview = document.getElementById("reviewCountReview");
+const reviewCountPromote = document.getElementById("reviewCountPromote");
+const reviewCountTodo = document.getElementById("reviewCountTodo");
+const reviewQueueCount = document.getElementById("reviewQueueCount");
+const promoteQueueCount = document.getElementById("promoteQueueCount");
+const ownerTodoCount = document.getElementById("ownerTodoCount");
+const reviewCandidates = document.getElementById("reviewCandidates");
+const promoteCandidates = document.getElementById("promoteCandidates");
+const reviewedCandidates = document.getElementById("reviewedCandidates");
 const ownerTodos = document.getElementById("ownerTodos");
-const learningCandidates = document.getElementById("learningCandidates");
 const learningLifecycle = document.getElementById("learningLifecycle");
 const candidatePipeline = document.getElementById("candidatePipeline");
 const suggestionReviewSummary = document.getElementById("suggestionReviewSummary");
@@ -113,6 +122,33 @@ const I18N = {
     hint_task: "这是任务执行入口（可选）。常规治理请切换到审计台。",
     hint_learning: "学习与进化已迁移到工作台。这里主要做审计与候选治理。",
     hint_audit: "在这里做漂移检查、报告复核和学习与进化候选治理。",
+    audit_kicker: "Owner Review",
+    review_inbox_title: "待判断事项",
+    review_inbox_desc: "先处理候选与 Owner 待办，再按需查看生命周期、报告和机器轨迹。",
+    review_inbox_lead_review: "当前有待复核候选。先做 Accept / Modify / Reject，再决定哪些值得进入下一阶段。",
+    review_inbox_lead_promote: "当前有候选已经通过复核。Accept 不等于 Promote，请单独判断是否值得晋升。",
+    review_inbox_lead_todo: "当前主要是 Owner 待办。先处理这些异常与判断事项，再回看支持上下文。",
+    review_inbox_lead_empty: "当前收件箱为空。你可以回到工作台补充学习素材，或按需运行一次 quick audit。",
+    review_inbox_lead_mixed: "先处理真正需要你判断的对象；生命周期和机器轨迹只作为辅助上下文。",
+    review_count_review: "待复核",
+    review_count_promote: "可晋升",
+    review_count_todo: "Owner 待办",
+    review_queue_title: "待复核候选",
+    review_queue_desc: "这里做 Accept / Modify / Reject，不把判断淹没在日志里。",
+    promote_queue_title: "可晋升候选",
+    promote_queue_desc: "Accept 不等于 Promote。这里只处理已经通过复核的项。",
+    owner_todo_title: "Owner 待办",
+    owner_todo_desc: "这是系统已经升级成 owner judgment 的异常与待确认事项。",
+    review_history_summary: "近期已处理 / 冷却中",
+    queue_empty_review: "当前没有待复核候选。",
+    queue_empty_promote: "当前没有可晋升候选。",
+    queue_empty_reviewed: "当前没有近期已处理或冷却中的候选。",
+    queue_empty_todo: "当前没有 Owner 待办。",
+    audit_support_kicker: "支持上下文",
+    audit_support_title: "复核支撑",
+    audit_support_desc: "生命周期、报告和机器轨迹在这里辅助判断，但不占据主舞台。",
+    audit_fold_pipeline: "候选与复核汇总",
+    audit_fold_machine: "机器轨迹（按需展开）",
     label_task: "任务",
     task_placeholder: "描述你要做的事...",
     label_module: "模块",
@@ -348,6 +384,33 @@ const I18N = {
     hint_task: "Task execution entry (optional). For governance, switch to Audit Console.",
     hint_learning: "Learning & Evolution has moved to Workspace. This page is for audit and candidate governance.",
     hint_audit: "Review drift, reports, and Learning & Evolution candidates before promoting into judgment core.",
+    audit_kicker: "Owner Review",
+    review_inbox_title: "Items Requiring Judgment",
+    review_inbox_desc: "Handle candidates and owner todos first, then open lifecycle, reports, or machine traces only when needed.",
+    review_inbox_lead_review: "Pending candidates need review now. Decide Accept / Modify / Reject before thinking about promotion.",
+    review_inbox_lead_promote: "Some candidates already passed review. Accept is not Promote, so judge promotion separately.",
+    review_inbox_lead_todo: "Owner todos are the main work right now. Clear these judgment items first, then use support context if needed.",
+    review_inbox_lead_empty: "The inbox is empty for now. Add new learning material from Workspace or run quick audit if you want fresh context.",
+    review_inbox_lead_mixed: "Focus on the objects that need owner judgment first; lifecycle and machine traces stay in a support role.",
+    review_count_review: "Needs Review",
+    review_count_promote: "Ready To Promote",
+    review_count_todo: "Owner Todos",
+    review_queue_title: "Pending Review Candidates",
+    review_queue_desc: "This is where Accept / Modify / Reject happens, without burying judgment under logs.",
+    promote_queue_title: "Promotion Candidates",
+    promote_queue_desc: "Accept is not Promote. This queue is only for candidates that already passed review.",
+    owner_todo_title: "Owner Todos",
+    owner_todo_desc: "These are exceptions and decisions that have already escalated into owner judgment work.",
+    review_history_summary: "Recently Reviewed / Cooling",
+    queue_empty_review: "No candidates currently need review.",
+    queue_empty_promote: "No candidates are ready to promote right now.",
+    queue_empty_reviewed: "No recently reviewed or cooling candidates yet.",
+    queue_empty_todo: "No owner todos right now.",
+    audit_support_kicker: "Support Context",
+    audit_support_title: "Review Support",
+    audit_support_desc: "Lifecycle, reports, and machine traces support judgment here, but they should not dominate the page.",
+    audit_fold_pipeline: "Candidate And Review Summaries",
+    audit_fold_machine: "Machine Trace (Open On Demand)",
     label_task: "Task",
     task_placeholder: "Describe what you want to do...",
     label_module: "Module",
@@ -656,6 +719,7 @@ function refreshAuditUiSnapshot(data) {
   if (data.candidate_pipeline_summary && typeof data.candidate_pipeline_summary === "object") {
     auditUiSnapshot.candidate_pipeline_summary = data.candidate_pipeline_summary;
   }
+  renderReviewInboxSummary();
   updateAuditConsoleDensity();
 }
 
@@ -682,17 +746,87 @@ function hasLifecycleSignals(summary) {
   return keys.some((key) => Number(lifecycle[key] || 0) > 0);
 }
 
-function updateAuditConsoleDensity() {
-  if (!auditZeroState || !auditManualActions) {
+function splitLearningCandidates(items) {
+  const buckets = {
+    review: [],
+    promote: [],
+    reviewed: [],
+  };
+  if (!Array.isArray(items)) {
+    return buckets;
+  }
+  for (const item of items) {
+    if (!item || typeof item !== "object") {
+      continue;
+    }
+    if (item.can_review) {
+      buckets.review.push(item);
+      continue;
+    }
+    if (item.can_promote) {
+      buckets.promote.push(item);
+      continue;
+    }
+    buckets.reviewed.push(item);
+  }
+  return buckets;
+}
+
+function renderReviewInboxSummary() {
+  const buckets = splitLearningCandidates(auditUiSnapshot.learning_candidates);
+  const todoTotal = Array.isArray(auditUiSnapshot.owner_todos)
+    ? auditUiSnapshot.owner_todos.filter((item) => item && typeof item === "object" && String(item.id || "").trim()).length
+    : 0;
+
+  if (reviewCountReview) {
+    reviewCountReview.textContent = String(buckets.review.length);
+  }
+  if (reviewCountPromote) {
+    reviewCountPromote.textContent = String(buckets.promote.length);
+  }
+  if (reviewCountTodo) {
+    reviewCountTodo.textContent = String(todoTotal);
+  }
+  if (reviewQueueCount) {
+    reviewQueueCount.textContent = String(buckets.review.length);
+  }
+  if (promoteQueueCount) {
+    promoteQueueCount.textContent = String(buckets.promote.length);
+  }
+  if (ownerTodoCount) {
+    ownerTodoCount.textContent = String(todoTotal);
+  }
+
+  if (!reviewInboxLead) {
     return;
   }
-  const empty =
-    !hasRealOwnerTodos(auditUiSnapshot.owner_todos) &&
-    !hasRealLearningCandidates(auditUiSnapshot.learning_candidates) &&
-    !hasLifecycleSignals(auditUiSnapshot.candidate_pipeline_summary);
+
+  let leadKey = "review_inbox_lead_mixed";
+  if (buckets.review.length > 0) {
+    leadKey = "review_inbox_lead_review";
+  } else if (buckets.promote.length > 0) {
+    leadKey = "review_inbox_lead_promote";
+  } else if (todoTotal > 0) {
+    leadKey = "review_inbox_lead_todo";
+  } else if (!hasLifecycleSignals(auditUiSnapshot.candidate_pipeline_summary)) {
+    leadKey = "review_inbox_lead_empty";
+  }
+
+  reviewInboxLead.setAttribute("data-i18n", leadKey);
+  reviewInboxLead.textContent = t(leadKey);
+}
+
+function updateAuditConsoleDensity() {
+  if (!auditZeroState) {
+    return;
+  }
+  const buckets = splitLearningCandidates(auditUiSnapshot.learning_candidates);
+  const empty = !hasRealOwnerTodos(auditUiSnapshot.owner_todos) && buckets.review.length === 0 && buckets.promote.length === 0;
   const showZero = empty && !auditManualForcedVisible;
   auditZeroState.hidden = !showZero;
-  auditManualActions.hidden = showZero;
+  if (auditManualActions) {
+    auditManualActions.hidden = showZero;
+  }
   if (auditAdvancedActions && showZero) {
     auditAdvancedActions.open = false;
   }
@@ -787,6 +921,7 @@ function setLanguage(lang) {
   if (autoOption) {
     autoOption.textContent = t("option_auto_route");
   }
+  renderReviewInboxSummary();
   renderLatestMessage();
   setMessagePanelExpanded(messagesExpanded);
 }
@@ -938,17 +1073,43 @@ function renderCognitionCards(cards) {
   }
 }
 
+function renderQueueEmpty(container, message) {
+  if (!container) {
+    return;
+  }
+  container.innerHTML = "";
+  const empty = document.createElement("div");
+  empty.className = "todo-item todo-item-empty";
+  empty.innerHTML = `<div class="todo-head"><span class="todo-metric">${message}</span></div><div class="todo-action">-</div>`;
+  container.appendChild(empty);
+}
+
 function renderOwnerTodos(items) {
+  if (!ownerTodos) {
+    return;
+  }
   ownerTodos.innerHTML = "";
-  if (!Array.isArray(items) || items.length === 0) {
-    const empty = document.createElement("div");
-    empty.className = "todo-item";
-    empty.innerHTML = "<div class=\"todo-head\"><span class=\"todo-metric\">-</span></div><div class=\"todo-action\">-</div>";
-    ownerTodos.appendChild(empty);
+  const priorityRank = {
+    red: 0,
+    amber: 1,
+    yellow: 1,
+    green: 2,
+  };
+  const rows = Array.isArray(items)
+    ? items
+        .filter((item) => item && typeof item === "object" && String(item.id || "").trim())
+        .sort((a, b) => {
+          const left = priorityRank[String(a.priority || "").toLowerCase()] ?? 3;
+          const right = priorityRank[String(b.priority || "").toLowerCase()] ?? 3;
+          return left - right;
+        })
+    : [];
+  if (rows.length === 0) {
+    renderQueueEmpty(ownerTodos, t("queue_empty_todo"));
     return;
   }
 
-  for (const item of items) {
+  for (const item of rows) {
     const wrap = document.createElement("div");
     const priority = (item.priority || "red").toLowerCase();
     wrap.className = `todo-item priority-${priority}`;
@@ -1056,13 +1217,13 @@ function renderLearningLifecycle(summary) {
   }
 }
 
-function renderLearningCandidates(items) {
-  learningCandidates.innerHTML = "";
+function renderCandidateCards(container, items, emptyKey) {
+  if (!container) {
+    return;
+  }
+  container.innerHTML = "";
   if (!Array.isArray(items) || items.length === 0) {
-    const empty = document.createElement("div");
-    empty.className = "todo-item";
-    empty.innerHTML = "<div class=\"todo-head\"><span class=\"todo-metric\">-</span></div><div class=\"todo-action\">-</div>";
-    learningCandidates.appendChild(empty);
+    renderQueueEmpty(container, t(emptyKey));
     return;
   }
 
@@ -1167,8 +1328,15 @@ function renderLearningCandidates(items) {
     wrap.appendChild(statement);
     wrap.appendChild(meta);
     wrap.appendChild(actions);
-    learningCandidates.appendChild(wrap);
+    container.appendChild(wrap);
   }
+}
+
+function renderLearningCandidates(items) {
+  const buckets = splitLearningCandidates(items);
+  renderCandidateCards(reviewCandidates, buckets.review, "queue_empty_review");
+  renderCandidateCards(promoteCandidates, buckets.promote, "queue_empty_promote");
+  renderCandidateCards(reviewedCandidates, buckets.reviewed, "queue_empty_reviewed");
 }
 
 function renderCandidatePipelineSummary(summary, trend = null) {

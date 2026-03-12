@@ -41,7 +41,7 @@
     </section>
 
     <section class="card panel-chat">
-      <section id="entrypointHint" class="entrypoint-hint" data-i18n="hint_audit">
+      <section id="entrypointHint" class="entrypoint-hint" data-i18n="hint_audit" hidden>
         Review drift, reports, and Learning & Evolution candidates before promoting into judgment core.
       </section>
 
@@ -112,58 +112,147 @@
       </section>
 
       <section id="auditConsolePanel" class="console-panel active" data-console="audit">
-        <div class="quick-actions">
-          <h2 data-i18n="audit_start_title">Start Here</h2>
-          <p class="helper-note" data-i18n="audit_start_desc">Run one quick audit first, then use manual actions only when needed.</p>
-          <div class="action-row">
-            <button id="auditQuickRunBtn" type="button" class="btn primary" data-i18n="btn_audit_quick_run">Run Quick Audit (Validate -> Metrics -> Owner Report)</button>
-          </div>
-          <section id="auditGuide" class="entrypoint-hint audit-guide" data-i18n="audit_guide_idle">
-            Audit guide: run quick audit first, then check cognition cards and owner todos on the right.
-          </section>
-
-          <section id="auditZeroState" class="entrypoint-hint audit-zero-state" hidden>
-            <p data-i18n="audit_zero_state_desc">
-              目前没有待办候选或 Owner 待办。建议先去工作台输入学习素材，或先跑一次一键审计。
+        <section class="audit-inbox-intro">
+          <div>
+            <p class="section-kicker" data-i18n="audit_kicker">Owner Review</p>
+            <h2 data-i18n="review_inbox_title">待判断事项</h2>
+            <p id="reviewInboxLead" class="audit-inbox-lead" data-i18n="review_inbox_desc">
+              先处理候选与 Owner 待办，再按需查看生命周期、报告和机器轨迹。
             </p>
-            <div class="action-row">
-              <a class="btn secondary nav-btn" href="/" data-i18n="btn_go_workspace_learning">去工作台学习与进化</a>
-              <button id="auditShowManualBtn" type="button" class="btn secondary" data-i18n="btn_show_manual_actions">仍然显示全部手动动作</button>
+          </div>
+          <div id="reviewInboxCounts" class="review-inbox-counts">
+            <div class="review-count-card">
+              <span class="review-count-label" data-i18n="review_count_review">待复核</span>
+              <strong id="reviewCountReview">0</strong>
             </div>
-          </section>
-
-          <section id="auditManualActions">
-            <h2 data-i18n="audit_actions_primary">Manual Actions (Common)</h2>
-            <div class="chips">
-              <button class="chip action" data-action="validate" data-i18n="audit_validate">Validate</button>
-              <button class="chip action" data-action="metrics" data-i18n="audit_metrics">Metrics 7D</button>
-              <button class="chip action" data-action="owner_report" data-i18n="audit_owner_report">Owner Report 7D</button>
+            <div class="review-count-card">
+              <span class="review-count-label" data-i18n="review_count_promote">可晋升</span>
+              <strong id="reviewCountPromote">0</strong>
             </div>
+            <div class="review-count-card">
+              <span class="review-count-label" data-i18n="review_count_todo">Owner 待办</span>
+              <strong id="reviewCountTodo">0</strong>
+            </div>
+          </div>
+        </section>
 
-            <details id="auditAdvancedActions" class="audit-advanced-fold">
-              <summary data-i18n="audit_actions_secondary_fold">Diagnostics / Maintenance (On Demand)</summary>
-              <h2 data-i18n="audit_actions_secondary">Diagnostics / Maintenance</h2>
-              <div class="chips">
-                <button class="chip action" data-action="detect_disequilibrium" data-i18n="audit_detect_diseq">Detect Disequilibrium</button>
-                <button class="chip action" data-action="cognition_timeline" data-i18n="audit_cognition_timeline">Cognition Timeline</button>
-                <button class="chip action" data-action="schedule_weekly" data-i18n="audit_schedule_weekly">Run Weekly Cycle</button>
-                <button class="chip action" data-action="build_index" data-i18n="audit_build_index">Build Retrieval Index</button>
+        <section id="auditZeroState" class="entrypoint-hint audit-zero-state" hidden>
+          <p data-i18n="audit_zero_state_desc">
+            目前没有待办候选或 Owner 待办。建议先去工作台输入学习素材，或先跑一次一键审计。
+          </p>
+          <div class="action-row">
+            <a class="btn secondary nav-btn" href="/" data-i18n="btn_go_workspace_learning">去工作台学习与进化</a>
+            <button id="auditShowManualBtn" type="button" class="btn secondary" data-i18n="btn_show_manual_actions">仍然显示全部手动动作</button>
+          </div>
+        </section>
+
+        <section class="review-queue review-queue-primary">
+          <div class="review-queue-head">
+            <div>
+              <h3 data-i18n="review_queue_title">待复核候选</h3>
+              <p class="helper-note" data-i18n="review_queue_desc">这里做 Accept / Modify / Reject，不把判断淹没在日志里。</p>
+            </div>
+            <span id="reviewQueueCount" class="queue-count-badge">0</span>
+          </div>
+          <div id="reviewCandidates" class="todo-list">
+            <div class="todo-item">
+              <div class="todo-head">
+                <span class="todo-metric">Loading...</span>
               </div>
-              <h2 data-i18n="suggestion_review_filters">Suggestion Review Filters</h2>
-              <div class="chips">
-                <button class="chip action" data-action="suggestion_review_summary_all" data-i18n="filter_review_all">Review All</button>
-                <button class="chip action" data-action="suggestion_review_summary_accept" data-i18n="filter_accept">Accept</button>
-                <button class="chip action" data-action="suggestion_review_summary_modify" data-i18n="filter_modify">Modify</button>
-                <button class="chip action" data-action="suggestion_review_summary_reject" data-i18n="filter_reject">Reject</button>
+              <div class="todo-action">-</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="review-queue">
+          <div class="review-queue-head">
+            <div>
+              <h3 data-i18n="promote_queue_title">可晋升候选</h3>
+              <p class="helper-note" data-i18n="promote_queue_desc">Accept 不等于 Promote。这里只处理已经通过复核的项。</p>
+            </div>
+            <span id="promoteQueueCount" class="queue-count-badge">0</span>
+          </div>
+          <div id="promoteCandidates" class="todo-list">
+            <div class="todo-item">
+              <div class="todo-head">
+                <span class="todo-metric">Loading...</span>
               </div>
-            </details>
-          </section>
-        </div>
+              <div class="todo-action">-</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="review-queue">
+          <div class="review-queue-head">
+            <div>
+              <h3 data-i18n="owner_todo_title">Owner 待办</h3>
+              <p class="helper-note" data-i18n="owner_todo_desc">这是系统已经升级成 owner judgment 的异常与待确认事项。</p>
+            </div>
+            <span id="ownerTodoCount" class="queue-count-badge">0</span>
+          </div>
+          <div id="ownerTodos" class="todo-list">
+            <div class="todo-item">
+              <div class="todo-head">
+                <span class="todo-metric">Loading...</span>
+              </div>
+              <div class="todo-action">-</div>
+            </div>
+          </div>
+        </section>
+
+        <details class="review-history-fold">
+          <summary data-i18n="review_history_summary">近期已处理 / 冷却中</summary>
+          <div id="reviewedCandidates" class="todo-list">
+            <div class="todo-item">
+              <div class="todo-head">
+                <span class="todo-metric">Loading...</span>
+              </div>
+              <div class="todo-action">-</div>
+            </div>
+          </div>
+        </details>
       </section>
     </section>
 
-    <aside class="card panel-trace">
-      <h2 data-i18n="execution_trace">Execution Trace</h2>
+    <aside class="card panel-trace audit-support-panel">
+      <section class="audit-support-card">
+        <p class="section-kicker" data-i18n="audit_support_kicker">支持上下文</p>
+        <h2 data-i18n="audit_support_title">复核支撑</h2>
+        <p class="helper-note" data-i18n="audit_support_desc">生命周期、报告和机器轨迹在这里辅助判断，但不占据主舞台。</p>
+        <div class="action-row">
+          <button id="auditQuickRunBtn" type="button" class="btn secondary" data-i18n="btn_audit_quick_run">Run Quick Audit (Validate -> Metrics -> Owner Report)</button>
+        </div>
+        <section id="auditGuide" class="entrypoint-hint audit-guide" data-i18n="audit_guide_idle">
+          Audit guide: run quick audit first, then check cognition cards and owner todos on the right.
+        </section>
+      </section>
+
+      <section id="auditManualActions" class="audit-support-card">
+        <h2 data-i18n="audit_actions_primary">Manual Actions (Common)</h2>
+        <div class="chips">
+          <button class="chip action" data-action="validate" data-i18n="audit_validate">Validate</button>
+          <button class="chip action" data-action="metrics" data-i18n="audit_metrics">Metrics 7D</button>
+          <button class="chip action" data-action="owner_report" data-i18n="audit_owner_report">Owner Report 7D</button>
+        </div>
+
+        <details id="auditAdvancedActions" class="audit-advanced-fold">
+          <summary data-i18n="audit_actions_secondary_fold">Diagnostics / Maintenance (On Demand)</summary>
+          <h2 data-i18n="audit_actions_secondary">Diagnostics / Maintenance</h2>
+          <div class="chips">
+            <button class="chip action" data-action="detect_disequilibrium" data-i18n="audit_detect_diseq">Detect Disequilibrium</button>
+            <button class="chip action" data-action="cognition_timeline" data-i18n="audit_cognition_timeline">Cognition Timeline</button>
+            <button class="chip action" data-action="schedule_weekly" data-i18n="audit_schedule_weekly">Run Weekly Cycle</button>
+            <button class="chip action" data-action="build_index" data-i18n="audit_build_index">Build Retrieval Index</button>
+          </div>
+          <h2 data-i18n="suggestion_review_filters">Suggestion Review Filters</h2>
+          <div class="chips">
+            <button class="chip action" data-action="suggestion_review_summary_all" data-i18n="filter_review_all">Review All</button>
+            <button class="chip action" data-action="suggestion_review_summary_accept" data-i18n="filter_accept">Accept</button>
+            <button class="chip action" data-action="suggestion_review_summary_modify" data-i18n="filter_modify">Modify</button>
+            <button class="chip action" data-action="suggestion_review_summary_reject" data-i18n="filter_reject">Reject</button>
+          </div>
+        </details>
+      </section>
 
       <div class="trace-block">
         <h3 data-i18n="trace_cognition_signals">Cognition Signals (7D)</h3>
@@ -172,18 +261,6 @@
             <div class="metric-title">Loading...</div>
             <div class="metric-value">-</div>
             <div class="metric-meta">-</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="trace-block">
-        <h3 data-i18n="trace_owner_todos">Owner Todos</h3>
-        <div id="ownerTodos" class="todo-list">
-          <div class="todo-item">
-            <div class="todo-head">
-              <span class="todo-metric">Loading...</span>
-            </div>
-            <div class="todo-action">-</div>
           </div>
         </div>
       </div>
@@ -217,66 +294,54 @@
         </p>
       </div>
 
-      <div class="trace-block">
-        <h3 data-i18n="trace_learning_candidates">学习候选与状态队列</h3>
-        <div id="learningCandidates" class="todo-list">
-          <div class="todo-item">
-            <div class="todo-head">
-              <span class="todo-metric">Loading...</span>
-            </div>
-            <div class="todo-action">-</div>
+      <details class="audit-support-fold">
+        <summary data-i18n="audit_fold_pipeline">候选与复核汇总</summary>
+        <div class="trace-block">
+          <h3 data-i18n="trace_candidate_pipeline">Candidate Pipeline (30D + Trend)</h3>
+          <pre id="candidatePipeline">-</pre>
+        </div>
+        <div class="trace-block">
+          <h3 data-i18n="trace_suggestion_reviews">Suggestion Reviews (30D + Trend)</h3>
+          <pre id="suggestionReviewSummary">-</pre>
+        </div>
+      </details>
+
+      <details class="audit-support-fold">
+        <summary data-i18n="audit_fold_machine">机器轨迹（按需展开）</summary>
+        <div class="trace-block">
+          <h3 data-i18n="trace_route">Route</h3>
+          <pre id="routeTrace">-</pre>
+        </div>
+        <div class="trace-block">
+          <h3 data-i18n="trace_plan">Plan</h3>
+          <pre id="planTrace">-</pre>
+        </div>
+        <div class="trace-block">
+          <h3 data-i18n="trace_loaded_files">Loaded Files</h3>
+          <ul id="loadedFiles" class="file-list">
+            <li>-</li>
+          </ul>
+        </div>
+        <div class="trace-block">
+          <h3 data-i18n="trace_result">Result</h3>
+          <pre id="resultTrace">-</pre>
+        </div>
+        <div class="trace-block">
+          <h3 data-i18n="trace_suggestion_detail">Suggestion Detail</h3>
+          <pre id="suggestionTrace">-</pre>
+          <div class="todo-actions">
+            <button id="suggestionAcceptBtn" class="todo-resolve-btn" type="button" data-i18n="btn_accept">Accept</button>
+            <button id="suggestionModifyBtn" class="todo-resolve-btn" type="button" data-i18n="btn_modify">Modify</button>
+            <button id="suggestionRejectBtn" class="todo-resolve-btn" type="button" data-i18n="btn_reject">Reject</button>
           </div>
         </div>
-      </div>
-
-      <div class="trace-block">
-        <h3 data-i18n="trace_candidate_pipeline">Candidate Pipeline (30D + Trend)</h3>
-        <pre id="candidatePipeline">-</pre>
-      </div>
-
-      <div class="trace-block">
-        <h3 data-i18n="trace_suggestion_reviews">Suggestion Reviews (30D + Trend)</h3>
-        <pre id="suggestionReviewSummary">-</pre>
-      </div>
-
-      <div class="trace-block">
-        <h3 data-i18n="trace_route">Route</h3>
-        <pre id="routeTrace">-</pre>
-      </div>
-
-      <div class="trace-block">
-        <h3 data-i18n="trace_plan">Plan</h3>
-        <pre id="planTrace">-</pre>
-      </div>
-
-      <div class="trace-block">
-        <h3 data-i18n="trace_loaded_files">Loaded Files</h3>
-        <ul id="loadedFiles" class="file-list">
-          <li>-</li>
-        </ul>
-      </div>
-
-      <div class="trace-block">
-        <h3 data-i18n="trace_result">Result</h3>
-        <pre id="resultTrace">-</pre>
-      </div>
-
-      <div class="trace-block">
-        <h3 data-i18n="trace_suggestion_detail">Suggestion Detail</h3>
-        <pre id="suggestionTrace">-</pre>
-        <div class="todo-actions">
-          <button id="suggestionAcceptBtn" class="todo-resolve-btn" type="button" data-i18n="btn_accept">Accept</button>
-          <button id="suggestionModifyBtn" class="todo-resolve-btn" type="button" data-i18n="btn_modify">Modify</button>
-          <button id="suggestionRejectBtn" class="todo-resolve-btn" type="button" data-i18n="btn_reject">Reject</button>
+        <div class="trace-block output-block">
+          <h3 data-i18n="trace_output_preview">Output Preview</h3>
+          <button id="copyOutputBtn" class="icon-btn copy-btn" type="button" aria-label="Copy full output" title="Copy full output">⧉</button>
+          <div id="outputTokenMeta" class="token-meta">-</div>
+          <pre id="outputPreview">-</pre>
         </div>
-      </div>
-
-      <div class="trace-block output-block">
-        <h3 data-i18n="trace_output_preview">Output Preview</h3>
-        <button id="copyOutputBtn" class="icon-btn copy-btn" type="button" aria-label="Copy full output" title="Copy full output">⧉</button>
-        <div id="outputTokenMeta" class="token-meta">-</div>
-        <pre id="outputPreview">-</pre>
-      </div>
+      </details>
     </aside>
   </main>
 

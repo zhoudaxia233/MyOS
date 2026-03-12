@@ -97,6 +97,33 @@ Keep rollout evolutionary: preserve existing extraction/distillation pipelines a
   - no auto-promotion/autonomous learning path
   - no provider-coupled memory/runtime rewrite
 
+#### Operator Action Hierarchy Slice (2026-03-12)
+
+- Why this slice:
+  - the main friction was not missing capability, but that operator flow was still visually organized like internal control panels
+  - both Workspace and Audit needed the same correction: bring the next owner action to the top, push machine detail into support
+- Shipped in this iteration:
+  - Workspace now reads as a task launcher instead of a mixed tutorial/control page:
+    - explicit primary execution modes: `direct execute`, `handoff`, `dry run`
+    - handoff copy reframed as a normal low-cost mode, not an error fallback
+    - task starter chips now fill structured task-brief templates instead of auto-running immediately
+    - result area now prioritizes `summary -> next action -> details`
+    - file path / tokens / full markdown are downgraded into secondary folds
+  - Audit now reads as an Owner Review Inbox instead of a monitoring dashboard:
+    - top-level triage counts for `pending review`, `ready to promote`, `owner todos`
+    - primary queues split by judgment stage instead of one blended candidate/status list
+    - lifecycle, report summaries, and machine traces moved into support rail / progressive disclosure
+    - quick audit remains available but is visually supportive, not dominant over review decisions
+- Remaining next:
+  - add candidate triage controls (`stage / type / source / age`) for higher-volume review inboxes
+  - add evidence drill-down for candidate context without promoting raw logs back into the main surface
+  - consider a dedicated suggestion-review inbox slice, separate from learning candidate governance
+- Do not change yet:
+  - do not collapse `accept` and `promote`
+  - do not weaken runtime maturity / promotion gates
+  - do not move learning back into a generic task box
+  - do not refactor backend governance architecture just to satisfy UI structure
+
 #### Stage 1 - Transparent Suggestion Pipeline (Current)
 
 - Completed:
