@@ -136,6 +136,47 @@
           </div>
         </section>
 
+        <section class="review-filter-bar">
+          <div class="review-filter-head">
+            <div>
+              <h3 data-i18n="review_filters_title">收件箱筛选</h3>
+              <p class="helper-note" data-i18n="review_filters_desc">按阶段、类型、来源和时效收窄候选范围。</p>
+            </div>
+            <button id="reviewFilterResetBtn" type="button" class="btn secondary" data-i18n="btn_reset_filters">清空筛选</button>
+          </div>
+          <div class="review-filter-grid">
+            <label class="control">
+              <span data-i18n="review_filter_stage">阶段</span>
+              <select id="reviewStageFilter">
+                <option value="all" data-i18n="review_filter_stage_all">全部</option>
+                <option value="review" data-i18n="review_filter_stage_review">待复核</option>
+                <option value="promote" data-i18n="review_filter_stage_promote">可晋升</option>
+                <option value="reviewed" data-i18n="review_filter_stage_reviewed">近期已处理</option>
+              </select>
+            </label>
+            <label class="control">
+              <span data-i18n="review_filter_type">类型</span>
+              <select id="reviewTypeFilter">
+                <option value="all" data-i18n="review_filter_type_all">全部类型</option>
+              </select>
+            </label>
+            <label class="control">
+              <span data-i18n="review_filter_source">来源</span>
+              <input id="reviewSourceFilter" type="text" data-i18n-placeholder="review_filter_source_placeholder" placeholder="来源引用 / import id / 关键词">
+            </label>
+            <label class="control">
+              <span data-i18n="review_filter_age">时间</span>
+              <select id="reviewAgeFilter">
+                <option value="all" data-i18n="review_filter_age_all">全部时间</option>
+                <option value="24h" data-i18n="review_filter_age_24h">近 24 小时</option>
+                <option value="7d" data-i18n="review_filter_age_7d">近 7 天</option>
+                <option value="30d" data-i18n="review_filter_age_30d">近 30 天</option>
+              </select>
+            </label>
+          </div>
+          <p id="reviewFilterMeta" class="helper-note review-filter-meta" data-i18n="review_filter_meta_idle">当前显示全部候选。</p>
+        </section>
+
         <section id="auditZeroState" class="entrypoint-hint audit-zero-state" hidden>
           <p data-i18n="audit_zero_state_desc">
             目前没有待办候选或 Owner 待办。建议先去工作台输入学习素材，或先跑一次一键审计。

@@ -114,10 +114,14 @@ Keep rollout evolutionary: preserve existing extraction/distillation pipelines a
     - primary queues split by judgment stage instead of one blended candidate/status list
     - lifecycle, report summaries, and machine traces moved into support rail / progressive disclosure
     - quick audit remains available but is visually supportive, not dominant over review decisions
+  - Follow-up inbox triage refinement shipped immediately after:
+    - client-side candidate filters for `stage / type / source / age`
+    - dynamic type options derived from current candidate queue
+    - filtered queue counts + filter meta so operators can quickly narrow review scope without changing backend contracts
 - Remaining next:
-  - add candidate triage controls (`stage / type / source / age`) for higher-volume review inboxes
   - add evidence drill-down for candidate context without promoting raw logs back into the main surface
   - consider a dedicated suggestion-review inbox slice, separate from learning candidate governance
+  - consider saved review views or default triage presets only after current filter usage feels stable
 - Do not change yet:
   - do not collapse `accept` and `promote`
   - do not weaken runtime maturity / promotion gates

@@ -822,6 +822,37 @@ body {
   color: var(--accent-ink);
 }
 
+.review-filter-bar {
+  border: 1px solid color-mix(in srgb, var(--border) 80%, white);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--card) 96%, white 4%);
+  padding: 12px;
+}
+
+.review-filter-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.review-filter-head h3 {
+  margin: 0;
+  font-size: 0.96rem;
+  color: var(--accent-ink);
+}
+
+.review-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.review-filter-meta {
+  margin-top: 10px;
+}
+
 .chat-log {
   flex: 0 0 auto;
   min-height: 88px;
@@ -1717,7 +1748,8 @@ pre {
   }
 
   .mode-choice-grid,
-  .review-inbox-counts {
+  .review-inbox-counts,
+  .review-filter-grid {
     grid-template-columns: 1fr;
   }
 }
@@ -1748,7 +1780,8 @@ pre {
 
   .workspace-launch-intro,
   .audit-inbox-intro,
-  .workspace-section-head {
+  .workspace-section-head,
+  .review-filter-head {
     flex-direction: column;
   }
 

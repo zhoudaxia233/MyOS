@@ -54,6 +54,12 @@ const reviewCountTodo = document.getElementById("reviewCountTodo");
 const reviewQueueCount = document.getElementById("reviewQueueCount");
 const promoteQueueCount = document.getElementById("promoteQueueCount");
 const ownerTodoCount = document.getElementById("ownerTodoCount");
+const reviewStageFilter = document.getElementById("reviewStageFilter");
+const reviewTypeFilter = document.getElementById("reviewTypeFilter");
+const reviewSourceFilter = document.getElementById("reviewSourceFilter");
+const reviewAgeFilter = document.getElementById("reviewAgeFilter");
+const reviewFilterResetBtn = document.getElementById("reviewFilterResetBtn");
+const reviewFilterMeta = document.getElementById("reviewFilterMeta");
 const reviewCandidates = document.getElementById("reviewCandidates");
 const promoteCandidates = document.getElementById("promoteCandidates");
 const reviewedCandidates = document.getElementById("reviewedCandidates");
@@ -104,6 +110,12 @@ let auditUiSnapshot = {
   learning_candidates: [],
   candidate_pipeline_summary: {},
 };
+let reviewFilterState = {
+  stage: "all",
+  type: "all",
+  source: "",
+  age: "all",
+};
 const LEARNING_SOURCE_DEFAULT = "notes";
 
 const I18N = {
@@ -129,10 +141,30 @@ const I18N = {
     review_inbox_lead_promote: "当前有候选已经通过复核。Accept 不等于 Promote，请单独判断是否值得晋升。",
     review_inbox_lead_todo: "当前主要是 Owner 待办。先处理这些异常与判断事项，再回看支持上下文。",
     review_inbox_lead_empty: "当前收件箱为空。你可以回到工作台补充学习素材，或按需运行一次 quick audit。",
+    review_inbox_lead_filtered_empty: "当前筛选条件下没有匹配候选。你可以放宽筛选范围，或回到全部视图。",
     review_inbox_lead_mixed: "先处理真正需要你判断的对象；生命周期和机器轨迹只作为辅助上下文。",
     review_count_review: "待复核",
     review_count_promote: "可晋升",
     review_count_todo: "Owner 待办",
+    review_filters_title: "收件箱筛选",
+    review_filters_desc: "按阶段、类型、来源和时效收窄候选范围。",
+    review_filter_stage: "阶段",
+    review_filter_stage_all: "全部",
+    review_filter_stage_review: "待复核",
+    review_filter_stage_promote: "可晋升",
+    review_filter_stage_reviewed: "近期已处理",
+    review_filter_type: "类型",
+    review_filter_type_all: "全部类型",
+    review_filter_source: "来源",
+    review_filter_source_placeholder: "来源引用 / import id / 关键词",
+    review_filter_age: "时间",
+    review_filter_age_all: "全部时间",
+    review_filter_age_24h: "近 24 小时",
+    review_filter_age_7d: "近 7 天",
+    review_filter_age_30d: "近 30 天",
+    btn_reset_filters: "清空筛选",
+    review_filter_meta_idle: "当前显示全部候选。",
+    review_filter_meta_active: "当前显示 {shown} / {total} 条候选。",
     review_queue_title: "待复核候选",
     review_queue_desc: "这里做 Accept / Modify / Reject，不把判断淹没在日志里。",
     promote_queue_title: "可晋升候选",
@@ -391,10 +423,30 @@ const I18N = {
     review_inbox_lead_promote: "Some candidates already passed review. Accept is not Promote, so judge promotion separately.",
     review_inbox_lead_todo: "Owner todos are the main work right now. Clear these judgment items first, then use support context if needed.",
     review_inbox_lead_empty: "The inbox is empty for now. Add new learning material from Workspace or run quick audit if you want fresh context.",
+    review_inbox_lead_filtered_empty: "No candidates match the current filters. Relax the filters or return to the full inbox view.",
     review_inbox_lead_mixed: "Focus on the objects that need owner judgment first; lifecycle and machine traces stay in a support role.",
     review_count_review: "Needs Review",
     review_count_promote: "Ready To Promote",
     review_count_todo: "Owner Todos",
+    review_filters_title: "Inbox Filters",
+    review_filters_desc: "Narrow candidates by stage, type, source, and recency.",
+    review_filter_stage: "Stage",
+    review_filter_stage_all: "All",
+    review_filter_stage_review: "Needs Review",
+    review_filter_stage_promote: "Ready To Promote",
+    review_filter_stage_reviewed: "Recently Processed",
+    review_filter_type: "Type",
+    review_filter_type_all: "All Types",
+    review_filter_source: "Source",
+    review_filter_source_placeholder: "Source ref / import id / keyword",
+    review_filter_age: "Age",
+    review_filter_age_all: "Any Time",
+    review_filter_age_24h: "Last 24h",
+    review_filter_age_7d: "Last 7d",
+    review_filter_age_30d: "Last 30d",
+    btn_reset_filters: "Reset Filters",
+    review_filter_meta_idle: "Showing all candidates.",
+    review_filter_meta_active: "Showing {shown} / {total} candidates.",
     review_queue_title: "Pending Review Candidates",
     review_queue_desc: "This is where Accept / Modify / Reject happens, without burying judgment under logs.",
     promote_queue_title: "Promotion Candidates",
@@ -719,6 +771,7 @@ function refreshAuditUiSnapshot(data) {
   if (data.candidate_pipeline_summary && typeof data.candidate_pipeline_summary === "object") {
     auditUiSnapshot.candidate_pipeline_summary = data.candidate_pipeline_summary;
   }
+  refreshReviewTypeOptions();
   renderReviewInboxSummary();
   updateAuditConsoleDensity();
 }
@@ -772,8 +825,143 @@ function splitLearningCandidates(items) {
   return buckets;
 }
 
+function candidateStageBucket(item) {
+  if (!item || typeof item !== "object") {
+    return "reviewed";
+  }
+  if (item.can_review) {
+    return "review";
+  }
+  if (item.can_promote) {
+    return "promote";
+  }
+  return "reviewed";
+}
+
+function candidateAgeHours(item) {
+  if (!item || typeof item !== "object") {
+    return null;
+  }
+  const createdAt = String(item.created_at || "").trim();
+  if (!createdAt) {
+    return null;
+  }
+  const created = new Date(createdAt);
+  const ts = created.getTime();
+  if (Number.isNaN(ts)) {
+    return null;
+  }
+  return Math.max(0, (Date.now() - ts) / 3600000);
+}
+
+function candidateSourceText(item) {
+  if (!item || typeof item !== "object") {
+    return "";
+  }
+  return [
+    item.title,
+    item.source_material_ref,
+    item.source_import_ref,
+    ...(Array.isArray(item.source_refs) ? item.source_refs : []),
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+}
+
+function hasActiveReviewFilters() {
+  return (
+    reviewFilterState.stage !== "all" ||
+    reviewFilterState.type !== "all" ||
+    reviewFilterState.age !== "all" ||
+    Boolean(String(reviewFilterState.source || "").trim())
+  );
+}
+
+function filterLearningCandidates(items) {
+  if (!Array.isArray(items)) {
+    return [];
+  }
+  return items.filter((item) => {
+    if (!item || typeof item !== "object") {
+      return false;
+    }
+    if (reviewFilterState.stage !== "all" && candidateStageBucket(item) !== reviewFilterState.stage) {
+      return false;
+    }
+    if (reviewFilterState.type !== "all" && String(item.candidate_type || "").trim() !== reviewFilterState.type) {
+      return false;
+    }
+
+    const sourceTerm = String(reviewFilterState.source || "").trim().toLowerCase();
+    if (sourceTerm && !candidateSourceText(item).includes(sourceTerm)) {
+      return false;
+    }
+
+    const ageHours = candidateAgeHours(item);
+    if (reviewFilterState.age === "24h" && (ageHours === null || ageHours > 24)) {
+      return false;
+    }
+    if (reviewFilterState.age === "7d" && (ageHours === null || ageHours > 24 * 7)) {
+      return false;
+    }
+    if (reviewFilterState.age === "30d" && (ageHours === null || ageHours > 24 * 30)) {
+      return false;
+    }
+    return true;
+  });
+}
+
+function refreshReviewTypeOptions() {
+  if (!reviewTypeFilter) {
+    return;
+  }
+  const current = String(reviewFilterState.type || "all");
+  const types = Array.from(
+    new Set(
+      (Array.isArray(auditUiSnapshot.learning_candidates) ? auditUiSnapshot.learning_candidates : [])
+        .map((item) => String(item && item.candidate_type ? item.candidate_type : "").trim())
+        .filter(Boolean)
+    )
+  ).sort((left, right) => left.localeCompare(right));
+
+  reviewTypeFilter.innerHTML = "";
+  const allOption = document.createElement("option");
+  allOption.value = "all";
+  allOption.setAttribute("data-i18n", "review_filter_type_all");
+  allOption.textContent = t("review_filter_type_all");
+  reviewTypeFilter.appendChild(allOption);
+
+  for (const type of types) {
+    const option = document.createElement("option");
+    option.value = type;
+    option.textContent = type;
+    reviewTypeFilter.appendChild(option);
+  }
+
+  reviewFilterState.type = types.includes(current) ? current : "all";
+  reviewTypeFilter.value = reviewFilterState.type;
+}
+
+function updateReviewFilterMeta(filteredItems, totalItems) {
+  if (!reviewFilterMeta) {
+    return;
+  }
+  if (!hasActiveReviewFilters()) {
+    reviewFilterMeta.setAttribute("data-i18n", "review_filter_meta_idle");
+    reviewFilterMeta.textContent = t("review_filter_meta_idle");
+    return;
+  }
+  reviewFilterMeta.removeAttribute("data-i18n");
+  reviewFilterMeta.textContent = t("review_filter_meta_active", {
+    shown: Number(filteredItems || 0),
+    total: Number(totalItems || 0),
+  });
+}
+
 function renderReviewInboxSummary() {
-  const buckets = splitLearningCandidates(auditUiSnapshot.learning_candidates);
+  const filtered = filterLearningCandidates(auditUiSnapshot.learning_candidates);
+  const buckets = splitLearningCandidates(filtered);
   const todoTotal = Array.isArray(auditUiSnapshot.owner_todos)
     ? auditUiSnapshot.owner_todos.filter((item) => item && typeof item === "object" && String(item.id || "").trim()).length
     : 0;
@@ -802,7 +990,9 @@ function renderReviewInboxSummary() {
   }
 
   let leadKey = "review_inbox_lead_mixed";
-  if (buckets.review.length > 0) {
+  if (hasActiveReviewFilters() && filtered.length === 0) {
+    leadKey = "review_inbox_lead_filtered_empty";
+  } else if (buckets.review.length > 0) {
     leadKey = "review_inbox_lead_review";
   } else if (buckets.promote.length > 0) {
     leadKey = "review_inbox_lead_promote";
@@ -921,7 +1111,10 @@ function setLanguage(lang) {
   if (autoOption) {
     autoOption.textContent = t("option_auto_route");
   }
+  refreshReviewTypeOptions();
   renderReviewInboxSummary();
+  renderLearningCandidates(auditUiSnapshot.learning_candidates);
+  renderOwnerTodos(auditUiSnapshot.owner_todos);
   renderLatestMessage();
   setMessagePanelExpanded(messagesExpanded);
 }
@@ -1333,10 +1526,13 @@ function renderCandidateCards(container, items, emptyKey) {
 }
 
 function renderLearningCandidates(items) {
-  const buckets = splitLearningCandidates(items);
+  const total = Array.isArray(items) ? items.length : 0;
+  const filtered = filterLearningCandidates(items);
+  const buckets = splitLearningCandidates(filtered);
   renderCandidateCards(reviewCandidates, buckets.review, "queue_empty_review");
   renderCandidateCards(promoteCandidates, buckets.promote, "queue_empty_promote");
   renderCandidateCards(reviewedCandidates, buckets.reviewed, "queue_empty_reviewed");
+  updateReviewFilterMeta(filtered.length, total);
 }
 
 function renderCandidatePipelineSummary(summary, trend = null) {
@@ -2688,6 +2884,61 @@ if (auditShowManualBtn) {
   auditShowManualBtn.addEventListener("click", () => {
     auditManualForcedVisible = true;
     updateAuditConsoleDensity();
+  });
+}
+
+function rerenderReviewInbox() {
+  renderReviewInboxSummary();
+  renderLearningCandidates(auditUiSnapshot.learning_candidates);
+}
+
+if (reviewStageFilter) {
+  reviewStageFilter.addEventListener("change", () => {
+    reviewFilterState.stage = reviewStageFilter.value || "all";
+    rerenderReviewInbox();
+  });
+}
+
+if (reviewTypeFilter) {
+  reviewTypeFilter.addEventListener("change", () => {
+    reviewFilterState.type = reviewTypeFilter.value || "all";
+    rerenderReviewInbox();
+  });
+}
+
+if (reviewSourceFilter) {
+  reviewSourceFilter.addEventListener("input", () => {
+    reviewFilterState.source = reviewSourceFilter.value || "";
+    rerenderReviewInbox();
+  });
+}
+
+if (reviewAgeFilter) {
+  reviewAgeFilter.addEventListener("change", () => {
+    reviewFilterState.age = reviewAgeFilter.value || "all";
+    rerenderReviewInbox();
+  });
+}
+
+if (reviewFilterResetBtn) {
+  reviewFilterResetBtn.addEventListener("click", () => {
+    reviewFilterState = {
+      stage: "all",
+      type: "all",
+      source: "",
+      age: "all",
+    };
+    if (reviewStageFilter) {
+      reviewStageFilter.value = "all";
+    }
+    refreshReviewTypeOptions();
+    if (reviewSourceFilter) {
+      reviewSourceFilter.value = "";
+    }
+    if (reviewAgeFilter) {
+      reviewAgeFilter.value = "all";
+    }
+    rerenderReviewInbox();
   });
 }
 
