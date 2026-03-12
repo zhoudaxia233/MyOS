@@ -303,6 +303,18 @@ const I18N = {
     candidate_label_status: "当前状态",
     candidate_source_unknown: "未提供来源",
     candidate_evidence_none: "无证据片段",
+    candidate_detail_summary: "查看判断依据",
+    candidate_detail_evidence: "证据片段",
+    candidate_detail_sources: "来源引用",
+    candidate_detail_created: "进入队列时间",
+    candidate_detail_owner_note: "Owner 备注",
+    candidate_detail_modified: "修改后陈述",
+    candidate_detail_promotion_target: "晋升目标",
+    candidate_detail_runtime: "运行时状态",
+    candidate_detail_none: "暂无更细证据。",
+    candidate_detail_runtime_pending: "尚未进入运行时上下文。",
+    candidate_detail_runtime_cooling: "仍在成熟期，约剩余 {hours} 小时。",
+    candidate_detail_runtime_active: "已进入运行时上下文。",
     candidate_next_review: "下一步：执行复核（接受 / 修改 / 拒绝）。",
     candidate_next_promote: "下一步：可晋升进入治理成熟期。",
     candidate_next_rework: "下一步：修改后会生成新的候选条目等待复核。",
@@ -585,6 +597,18 @@ const I18N = {
     candidate_label_status: "Status",
     candidate_source_unknown: "No source reference",
     candidate_evidence_none: "No evidence snippet",
+    candidate_detail_summary: "Review Context",
+    candidate_detail_evidence: "Evidence Snippets",
+    candidate_detail_sources: "Source References",
+    candidate_detail_created: "Queued At",
+    candidate_detail_owner_note: "Owner Note",
+    candidate_detail_modified: "Modified Statement",
+    candidate_detail_promotion_target: "Promotion Target",
+    candidate_detail_runtime: "Runtime Status",
+    candidate_detail_none: "No deeper evidence available.",
+    candidate_detail_runtime_pending: "Not in runtime context yet.",
+    candidate_detail_runtime_cooling: "Still cooling, about {hours} hours remaining.",
+    candidate_detail_runtime_active: "Already active in runtime context.",
     candidate_next_review: "Next: review this candidate (Accept / Modify / Reject).",
     candidate_next_promote: "Next: promote this accepted candidate.",
     candidate_next_rework: "Next: modified statement creates a new review candidate.",
@@ -957,6 +981,42 @@ function updateReviewFilterMeta(filteredItems, totalItems) {
     shown: Number(filteredItems || 0),
     total: Number(totalItems || 0),
   });
+}
+
+function formatCandidateCreatedAt(item) {
+  if (!item || typeof item !== "object") {
+    return "-";
+  }
+  const raw = String(item.created_at || "").trim();
+  if (!raw) {
+    return "-";
+  }
+  const date = new Date(raw);
+  if (Number.isNaN(date.getTime())) {
+    return raw;
+  }
+  return date.toLocaleString(uiLanguage === "zh" ? "zh-CN" : "en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function candidateRuntimeDetail(item) {
+  if (!item || typeof item !== "object") {
+    return t("candidate_detail_runtime_pending");
+  }
+  if (item.lifecycle_stage === "active_runtime" || item.runtime_active) {
+    return t("candidate_detail_runtime_active");
+  }
+  if (item.lifecycle_stage === "promoted") {
+    return t("candidate_detail_runtime_cooling", {
+      hours: Number(item.runtime_hours_remaining || 0),
+    });
+  }
+  return t("candidate_detail_runtime_pending");
 }
 
 function renderReviewInboxSummary() {
@@ -1470,6 +1530,49 @@ function renderCandidateCards(container, items, emptyKey) {
       meta.appendChild(line);
     }
 
+    const context = document.createElement("details");
+    context.className = "candidate-context";
+    const contextSummary = document.createElement("summary");
+    contextSummary.textContent = t("candidate_detail_summary");
+    context.appendChild(contextSummary);
+
+    const contextGrid = document.createElement("div");
+    contextGrid.className = "candidate-context-grid";
+
+    const sections = [
+      [
+        t("candidate_detail_evidence"),
+        Array.isArray(item.evidence) && item.evidence.length > 0 ? item.evidence.join("\n\n") : t("candidate_detail_none"),
+      ],
+      [
+        t("candidate_detail_sources"),
+        Array.isArray(item.source_refs) && item.source_refs.length > 0
+          ? item.source_refs.join("\n")
+          : sourceRef || t("candidate_source_unknown"),
+      ],
+      [t("candidate_detail_created"), formatCandidateCreatedAt(item)],
+      [t("candidate_detail_owner_note"), item.owner_note || "-"],
+      [t("candidate_detail_modified"), item.modified_statement || "-"],
+      [t("candidate_detail_promotion_target"), item.promotion_target || item.proposal_target || "-"],
+      [t("candidate_detail_runtime"), candidateRuntimeDetail(item)],
+    ];
+
+    for (const [labelText, valueText] of sections) {
+      const block = document.createElement("div");
+      block.className = "candidate-context-block";
+      const label = document.createElement("div");
+      label.className = "candidate-context-label";
+      label.textContent = labelText;
+      const value = document.createElement("div");
+      value.className = "candidate-context-value";
+      value.textContent = String(valueText || "-");
+      block.appendChild(label);
+      block.appendChild(value);
+      contextGrid.appendChild(block);
+    }
+
+    context.appendChild(contextGrid);
+
     const actions = document.createElement("div");
     actions.className = "todo-actions";
 
@@ -1520,6 +1623,7 @@ function renderCandidateCards(container, items, emptyKey) {
     wrap.appendChild(title);
     wrap.appendChild(statement);
     wrap.appendChild(meta);
+    wrap.appendChild(context);
     wrap.appendChild(actions);
     container.appendChild(wrap);
   }

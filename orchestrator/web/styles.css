@@ -1582,6 +1582,46 @@ body {
   font-weight: 700;
 }
 
+.candidate-context {
+  border: 1px dashed color-mix(in srgb, var(--border) 80%, white);
+  border-radius: 10px;
+  padding: 8px 9px;
+  background: color-mix(in srgb, var(--card) 97%, white 3%);
+}
+
+.candidate-context summary {
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--accent-ink);
+}
+
+.candidate-context-grid {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.candidate-context-block {
+  display: grid;
+  gap: 4px;
+}
+
+.candidate-context-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.candidate-context-value {
+  font-size: 0.76rem;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  color: var(--text);
+}
+
 pre {
   margin: 0;
   font-family: "IBM Plex Mono", "Consolas", monospace;

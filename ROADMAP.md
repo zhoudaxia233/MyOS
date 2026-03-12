@@ -118,10 +118,13 @@ Keep rollout evolutionary: preserve existing extraction/distillation pipelines a
     - client-side candidate filters for `stage / type / source / age`
     - dynamic type options derived from current candidate queue
     - filtered queue counts + filter meta so operators can quickly narrow review scope without changing backend contracts
+  - Follow-up evidence drill-down shipped:
+    - candidate cards now include expandable review context for `evidence / source refs / owner note / modified statement / runtime state`
+    - detailed judgment context stays inside the review object instead of forcing operators back into machine trace
 - Remaining next:
-  - add evidence drill-down for candidate context without promoting raw logs back into the main surface
   - consider a dedicated suggestion-review inbox slice, separate from learning candidate governance
   - consider saved review views or default triage presets only after current filter usage feels stable
+  - consider selective evidence compaction if longer transcripts start overwhelming the card context
 - Do not change yet:
   - do not collapse `accept` and `promote`
   - do not weaken runtime maturity / promotion gates
