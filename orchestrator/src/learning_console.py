@@ -1304,10 +1304,13 @@ def list_recent_learning_candidates(
         can_review = True
         can_promote = False
         runtime_hours_remaining: int | None = None
+        reviewed_at: str | None = None
+        promoted_at: str | None = None
 
         if promotion_row is not None:
             can_review = False
             can_promote = False
+            promoted_at = str(promotion_row.get("created_at", "")).strip() or None
             created = _parse_iso8601(str(promotion_row.get("created_at", "")).strip())
             if created is None:
                 lifecycle_stage = "promoted"
@@ -1325,6 +1328,7 @@ def list_recent_learning_candidates(
             verdict = str(verdict_row.get("verdict", "")).strip().lower() or None
             owner_note = str(verdict_row.get("owner_note", "")).strip() or None
             modified_statement = str(verdict_row.get("modified_statement", "")).strip() or None
+            reviewed_at = str(verdict_row.get("created_at", "")).strip() or None
             can_review = False
             can_promote = verdict == "accept"
 
@@ -1357,6 +1361,8 @@ def list_recent_learning_candidates(
             "modified_statement": modified_statement,
             "can_review": can_review,
             "can_promote": can_promote,
+            "reviewed_at": reviewed_at,
+            "promoted_at": promoted_at,
             "runtime_hours_remaining": runtime_hours_remaining,
             "promotion_target": str(promotion_row.get("promotion_target", "")).strip() if promotion_row else None,
             "runtime_active": lifecycle_stage == "active_runtime",

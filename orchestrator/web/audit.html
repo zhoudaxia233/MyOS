@@ -211,24 +211,6 @@
           </div>
         </section>
 
-        <details class="review-history-fold suggestion-history-fold">
-          <summary>
-            <span class="history-summary-line">
-              <span data-i18n="suggestion_history_summary">最近执行判断</span>
-              <span id="suggestionReviewedCount" class="history-count-badge">0</span>
-            </span>
-          </summary>
-          <p class="helper-note" data-i18n="suggestion_history_desc">这里回看最近已经完成的 execution judgment，不重新打开操作动作。</p>
-          <div id="suggestionReviewedList" class="todo-list">
-            <div class="todo-item">
-              <div class="todo-head">
-                <span class="todo-metric">Loading...</span>
-              </div>
-              <div class="todo-action">-</div>
-            </div>
-          </div>
-        </details>
-
         <section id="auditZeroState" class="entrypoint-hint audit-zero-state" hidden>
           <p data-i18n="audit_zero_state_desc">
             当前没有待复核建议、学习候选或 Owner 待办。建议先去工作台输入学习素材，或先跑一次一键审计。
@@ -293,9 +275,15 @@
           </div>
         </section>
 
-        <details class="review-history-fold">
-          <summary data-i18n="review_history_summary">近期已处理 / 冷却中</summary>
-          <div id="reviewedCandidates" class="todo-list">
+        <details class="review-history-fold audit-timeline-fold">
+          <summary>
+            <span class="history-summary-line">
+              <span data-i18n="audit_timeline_summary">近期判断时间线</span>
+              <span id="auditTimelineCount" class="history-count-badge">0</span>
+            </span>
+          </summary>
+          <p class="helper-note" data-i18n="audit_timeline_desc">按时间回看最近完成的 execution judgment 与 learning judgment，主队列仍只保留待处理对象。</p>
+          <div id="auditTimelineList" class="todo-list">
             <div class="todo-item">
               <div class="todo-head">
                 <span class="todo-metric">Loading...</span>

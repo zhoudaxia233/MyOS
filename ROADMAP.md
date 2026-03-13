@@ -137,9 +137,14 @@ Keep rollout evolutionary: preserve existing extraction/distillation pipelines a
     - recently reviewed suggestions are now visible in a secondary fold, so owners can audit their latest execution judgments without reopening the main action queue
     - reviewed suggestion cards surface verdict, timing, owner note, and correction target at a glance
     - reviewed items remain read-oriented with `Open Detail` only, preserving the distinction between pending judgment and completed judgment
+  - Follow-up shared audit timeline shipped:
+    - recently reviewed execution suggestions and resolved learning candidates now share one chronological secondary timeline
+    - pending queues remain object-specific; chronology now applies only to completed judgments
+    - reviewed learning entries keep expandable evidence and source context inside the timeline, so chronology does not remove auditability
 - Remaining next:
   - consider richer saved views only if operators need per-owner custom presets beyond the shipped defaults
-  - consider merging reviewed learning candidates and reviewed execution suggestions into a shared audit timeline only if chronology becomes more important than object type
+  - consider timeline-scoped filters only if the combined judgment history becomes too noisy for quick replay
+  - consider a cross-object detail pane only if inline context stops being enough for completed judgments
   - consider selective evidence compaction if longer transcripts start overwhelming the card context
 - Do not change yet:
   - do not collapse `accept` and `promote`

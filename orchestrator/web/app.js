@@ -64,11 +64,10 @@ const reviewFilterResetBtn = document.getElementById("reviewFilterResetBtn");
 const reviewFilterMeta = document.getElementById("reviewFilterMeta");
 const reviewPresetButtons = Array.from(document.querySelectorAll("[data-review-preset]"));
 const suggestionReviewList = document.getElementById("suggestionReviewList");
-const suggestionReviewedCount = document.getElementById("suggestionReviewedCount");
-const suggestionReviewedList = document.getElementById("suggestionReviewedList");
+const auditTimelineCount = document.getElementById("auditTimelineCount");
+const auditTimelineList = document.getElementById("auditTimelineList");
 const reviewCandidates = document.getElementById("reviewCandidates");
 const promoteCandidates = document.getElementById("promoteCandidates");
-const reviewedCandidates = document.getElementById("reviewedCandidates");
 const ownerTodos = document.getElementById("ownerTodos");
 const learningLifecycle = document.getElementById("learningLifecycle");
 const candidatePipeline = document.getElementById("candidatePipeline");
@@ -218,6 +217,16 @@ const I18N = {
     suggestion_history_desc: "这里回看最近已经完成的 execution judgment，不重新打开操作动作。",
     suggestion_history_empty: "当前没有最近已复核的执行建议。",
     suggestion_history_reviewed: "已判断 {created}",
+    audit_timeline_summary: "近期判断时间线",
+    audit_timeline_desc: "按时间回看最近完成的 execution judgment 与 learning judgment，主队列仍只保留待处理对象。",
+    audit_timeline_empty: "当前没有可回看的近期判断。",
+    audit_timeline_kind_suggestion: "执行建议",
+    audit_timeline_kind_learning: "学习候选",
+    audit_timeline_time_decided: "判断于 {created}",
+    audit_timeline_time_reviewed: "复核于 {created}",
+    audit_timeline_time_promoted: "晋升于 {created}",
+    audit_timeline_time_created: "进入队列 {created}",
+    audit_timeline_open_detail: "打开支撑详情",
     suggestion_detail_empty: "选择一条建议以查看复核支撑。",
     suggestion_detail_raw: "原始载荷（按需展开）",
     suggestion_detail_task: "任务",
@@ -573,6 +582,16 @@ const I18N = {
     suggestion_history_desc: "Review the latest completed execution judgments here without reopening decision actions.",
     suggestion_history_empty: "No recently reviewed execution suggestions yet.",
     suggestion_history_reviewed: "Reviewed {created}",
+    audit_timeline_summary: "Recent Judgment Timeline",
+    audit_timeline_desc: "Review recent execution and learning judgments in time order. The main queues still keep only pending items.",
+    audit_timeline_empty: "No recent judgments to review yet.",
+    audit_timeline_kind_suggestion: "Execution Suggestion",
+    audit_timeline_kind_learning: "Learning Candidate",
+    audit_timeline_time_decided: "Decided {created}",
+    audit_timeline_time_reviewed: "Reviewed {created}",
+    audit_timeline_time_promoted: "Promoted {created}",
+    audit_timeline_time_created: "Queued {created}",
+    audit_timeline_open_detail: "Open Support Detail",
     suggestion_detail_empty: "Select a suggestion to open review support.",
     suggestion_detail_raw: "Raw Payload (Open On Demand)",
     suggestion_detail_task: "Task",
@@ -957,7 +976,7 @@ function refreshAuditUiSnapshot(data) {
   }
   refreshReviewTypeOptions();
   renderSuggestionReviewQueue(auditUiSnapshot.suggestion_review_queue);
-  renderRecentSuggestionReviews(auditUiSnapshot.suggestion_review_queue);
+  renderAuditTimeline();
   renderReviewInboxSummary();
   updateAuditConsoleDensity();
 }
@@ -1316,6 +1335,14 @@ function summarizeSuggestionTask(item) {
   return raw.length > 160 ? `${raw.slice(0, 157)}...` : raw;
 }
 
+function clipText(value, maxLength = 240) {
+  const raw = String(value || "").trim();
+  if (!raw) {
+    return "";
+  }
+  return raw.length > maxLength ? `${raw.slice(0, maxLength - 3)}...` : raw;
+}
+
 function suggestionReviewBadgeKey(item) {
   const verdict = String((((item || {}).owner_review || {}).verdict) || "").trim().toLowerCase();
   if (verdict === "accept") {
@@ -1328,6 +1355,203 @@ function suggestionReviewBadgeKey(item) {
     return "reject";
   }
   return "pending";
+}
+
+function timelineDateValue(raw) {
+  const text = String(raw || "").trim();
+  if (!text) {
+    return 0;
+  }
+  const ts = Date.parse(text);
+  return Number.isNaN(ts) ? 0 : ts;
+}
+
+function learningTimelineTimestamp(item) {
+  return String((item && (item.promoted_at || item.reviewed_at || item.created_at)) || "").trim();
+}
+
+function learningTimelineTimeKey(item) {
+  const stage = String((item && item.lifecycle_stage) || "").trim();
+  if ((stage === "promoted" || stage === "active_runtime") && String((item && item.promoted_at) || "").trim()) {
+    return "audit_timeline_time_promoted";
+  }
+  if (stage === "reviewed" && String((item && item.reviewed_at) || "").trim()) {
+    return "audit_timeline_time_reviewed";
+  }
+  return "audit_timeline_time_created";
+}
+
+function learningTimelineStageClass(item) {
+  const stage = String((item && item.lifecycle_stage) || "reviewed").trim();
+  if (stage === "active_runtime") {
+    return "stage-active_runtime";
+  }
+  if (stage === "promoted") {
+    return "stage-promoted";
+  }
+  if (stage === "reviewed") {
+    return "stage-reviewed";
+  }
+  return "stage-candidate";
+}
+
+function buildAuditTimelineItems() {
+  const items = [];
+  for (const item of suggestionReviewedItems(auditUiSnapshot.suggestion_review_queue)) {
+    const suggestionId = String(item && item.id ? item.id : "").trim();
+    if (!suggestionId) {
+      continue;
+    }
+    const ownerReview = item && item.owner_review && typeof item.owner_review === "object" ? item.owner_review : {};
+    const timestamp = String(ownerReview.reviewed_at || item.created_at || "").trim();
+    const detailLines = [
+      String(ownerReview.owner_note || "").trim(),
+      String(ownerReview.replacement_judgment || "").trim(),
+      String(ownerReview.unlike_me_reason || "").trim(),
+    ].filter(Boolean);
+    items.push({
+      kind: "suggestion",
+      id: suggestionId,
+      title: summarizeSuggestionTask(item),
+      badgeText: t(`suggestion_detail_status_${suggestionReviewBadgeKey(item)}`),
+      badgeClassName: `suggestion-detail-chip status-${suggestionReviewBadgeKey(item)}`,
+      metaChips: [
+        t("audit_timeline_kind_suggestion"),
+        item.module ? String(item.module) : "",
+        t("audit_timeline_time_decided", {
+          created: formatCandidateCreatedAt({ created_at: timestamp || item.created_at || "" }),
+        }),
+        ownerReview.target_layer ? `${t("suggestion_detail_target")}: ${String(ownerReview.target_layer)}` : "",
+      ].filter(Boolean),
+      summaryText: detailLines[0] || "",
+      noteText: detailLines.length > 1 ? detailLines.slice(1).join("\n") : "",
+      timestamp,
+      active: suggestionId === String(latestSuggestionId || "").trim(),
+      openLabel: t("audit_timeline_open_detail"),
+      openAction() {
+        void focusSuggestionReview(suggestionId);
+      },
+    });
+  }
+
+  for (const item of splitLearningCandidates(auditUiSnapshot.learning_candidates).reviewed) {
+    const candidateId = String(item && item.id ? item.id : "").trim();
+    if (!candidateId) {
+      continue;
+    }
+    const timestamp = learningTimelineTimestamp(item);
+    items.push({
+      kind: "learning",
+      id: candidateId,
+      title: String(item.title || item.candidate_type || item.id || "-").trim(),
+      badgeText: lifecycleStageLabel(item),
+      badgeClassName: `lifecycle-badge ${learningTimelineStageClass(item)}`,
+      metaChips: [
+        t("audit_timeline_kind_learning"),
+        item.candidate_type ? String(item.candidate_type) : "",
+        t(learningTimelineTimeKey(item), {
+          created: formatCandidateCreatedAt({ created_at: timestamp || item.created_at || "" }),
+        }),
+        item.promotion_target || item.proposal_target
+          ? `${t("candidate_label_target")}: ${String(item.promotion_target || item.proposal_target)}`
+          : "",
+      ].filter(Boolean),
+      summaryText: clipText(item.statement, 260),
+      noteText: clipText(item.owner_note || item.modified_statement || lifecycleNextAction(item), 240),
+      timestamp,
+      active: false,
+      sourceItem: item,
+    });
+  }
+
+  items.sort((left, right) => {
+    const rightValue = timelineDateValue(right.timestamp);
+    const leftValue = timelineDateValue(left.timestamp);
+    if (rightValue !== leftValue) {
+      return rightValue - leftValue;
+    }
+    return String(right.timestamp || "").localeCompare(String(left.timestamp || ""));
+  });
+  return items;
+}
+
+function renderAuditTimeline() {
+  if (!auditTimelineList) {
+    return;
+  }
+  const items = buildAuditTimelineItems();
+  if (auditTimelineCount) {
+    auditTimelineCount.textContent = String(items.length);
+  }
+
+  auditTimelineList.innerHTML = "";
+  if (items.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "todo-item todo-item-empty";
+    empty.textContent = t("audit_timeline_empty");
+    auditTimelineList.appendChild(empty);
+    return;
+  }
+
+  for (const item of items) {
+    const wrap = document.createElement("div");
+    wrap.className = "todo-item suggestion-review-card reviewed-card";
+    wrap.dataset.active = item.active ? "true" : "false";
+
+    const head = document.createElement("div");
+    head.className = "todo-head";
+    const metric = document.createElement("span");
+    metric.className = "todo-metric";
+    metric.textContent = item.title || "-";
+    const badge = document.createElement("span");
+    badge.className = item.badgeClassName;
+    badge.textContent = item.badgeText;
+    head.appendChild(metric);
+    head.appendChild(badge);
+    wrap.appendChild(head);
+
+    const meta = document.createElement("div");
+    meta.className = "suggestion-meta";
+    for (const chipText of item.metaChips) {
+      const chip = document.createElement("span");
+      chip.className = "suggestion-meta-chip";
+      chip.textContent = chipText;
+      meta.appendChild(chip);
+    }
+    wrap.appendChild(meta);
+
+    if (item.summaryText) {
+      const summary = document.createElement("div");
+      summary.className = "suggestion-review-note timeline-summary";
+      summary.textContent = item.summaryText;
+      wrap.appendChild(summary);
+    }
+
+    if (item.noteText) {
+      const note = document.createElement("div");
+      note.className = "suggestion-review-note";
+      note.textContent = item.noteText;
+      wrap.appendChild(note);
+    }
+
+    if (item.kind === "learning" && item.sourceItem) {
+      wrap.appendChild(buildCandidateContext(item.sourceItem));
+    }
+
+    if (typeof item.openAction === "function") {
+      const actions = document.createElement("div");
+      actions.className = "todo-actions";
+      const detailBtn = document.createElement("button");
+      detailBtn.className = "todo-resolve-btn";
+      detailBtn.type = "button";
+      detailBtn.textContent = item.openLabel;
+      detailBtn.addEventListener("click", item.openAction);
+      actions.appendChild(detailBtn);
+      wrap.appendChild(actions);
+    }
+
+    auditTimelineList.appendChild(wrap);
+  }
 }
 
 function renderSuggestionReviewQueue(queue) {
@@ -1409,99 +1633,6 @@ function renderSuggestionReviewQueue(queue) {
     wrap.appendChild(nextAction);
     wrap.appendChild(actions);
     suggestionReviewList.appendChild(wrap);
-  }
-}
-
-function renderRecentSuggestionReviews(queue) {
-  if (!suggestionReviewedList) {
-    return;
-  }
-  const items = suggestionReviewedItems(queue);
-  const total = suggestionReviewedTotal(queue);
-  const selectedId = String(latestSuggestionId || "").trim();
-
-  if (suggestionReviewedCount) {
-    suggestionReviewedCount.textContent = String(total);
-  }
-
-  suggestionReviewedList.innerHTML = "";
-  if (items.length === 0) {
-    const empty = document.createElement("div");
-    empty.className = "todo-item todo-item-empty";
-    empty.textContent = t("suggestion_history_empty");
-    suggestionReviewedList.appendChild(empty);
-    return;
-  }
-
-  for (const item of items) {
-    const suggestionId = String(item.id || "").trim();
-    const badgeKey = suggestionReviewBadgeKey(item);
-    const wrap = document.createElement("div");
-    wrap.className = "todo-item suggestion-review-card reviewed-card";
-    wrap.dataset.active = suggestionId && suggestionId === selectedId ? "true" : "false";
-
-    const head = document.createElement("div");
-    head.className = "todo-head";
-    const metric = document.createElement("span");
-    metric.className = "todo-metric";
-    metric.textContent = summarizeSuggestionTask(item);
-    head.appendChild(metric);
-
-    const statusBadge = document.createElement("span");
-    statusBadge.className = `suggestion-detail-chip status-${badgeKey}`;
-    statusBadge.textContent = t(`suggestion_detail_status_${badgeKey}`);
-    head.appendChild(statusBadge);
-
-    const meta = document.createElement("div");
-    meta.className = "suggestion-meta";
-    if (item.module) {
-      const moduleChip = document.createElement("span");
-      moduleChip.className = "suggestion-meta-chip";
-      moduleChip.textContent = String(item.module);
-      meta.appendChild(moduleChip);
-    }
-    const reviewedAt = String((((item || {}).owner_review || {}).reviewed_at) || item.created_at || "").trim();
-    if (reviewedAt) {
-      const reviewedChip = document.createElement("span");
-      reviewedChip.className = "suggestion-meta-chip";
-      reviewedChip.textContent = t("suggestion_history_reviewed", {
-        created: formatCandidateCreatedAt({ created_at: reviewedAt }),
-      });
-      meta.appendChild(reviewedChip);
-    }
-    const correctionTarget = String((((item || {}).owner_review || {}).target_layer) || "").trim();
-    if (correctionTarget) {
-      const targetChip = document.createElement("span");
-      targetChip.className = "suggestion-meta-chip";
-      targetChip.textContent = `${t("suggestion_detail_target")}: ${correctionTarget}`;
-      meta.appendChild(targetChip);
-    }
-
-    const ownerNote = String((((item || {}).owner_review || {}).owner_note) || "").trim();
-    if (ownerNote) {
-      const note = document.createElement("div");
-      note.className = "suggestion-review-note";
-      note.textContent = ownerNote.length > 200 ? `${ownerNote.slice(0, 197)}...` : ownerNote;
-      wrap.appendChild(head);
-      wrap.appendChild(meta);
-      wrap.appendChild(note);
-    } else {
-      wrap.appendChild(head);
-      wrap.appendChild(meta);
-    }
-
-    const actions = document.createElement("div");
-    actions.className = "todo-actions";
-    const detailBtn = document.createElement("button");
-    detailBtn.className = "todo-resolve-btn";
-    detailBtn.type = "button";
-    detailBtn.textContent = t("suggestion_queue_open_detail");
-    detailBtn.addEventListener("click", () => {
-      void focusSuggestionReview(suggestionId);
-    });
-    actions.appendChild(detailBtn);
-    wrap.appendChild(actions);
-    suggestionReviewedList.appendChild(wrap);
   }
 }
 
@@ -1684,7 +1815,7 @@ function setLanguage(lang) {
   }
   refreshReviewTypeOptions();
   renderSuggestionReviewQueue(auditUiSnapshot.suggestion_review_queue);
-  renderRecentSuggestionReviews(auditUiSnapshot.suggestion_review_queue);
+  renderAuditTimeline();
   renderReviewInboxSummary();
   renderLearningCandidates(auditUiSnapshot.learning_candidates);
   renderOwnerTodos(auditUiSnapshot.owner_todos);
@@ -1988,6 +2119,55 @@ function renderLearningLifecycle(summary) {
   }
 }
 
+function buildCandidateContext(item) {
+  const sourceRef =
+    (item && (item.source_material_ref || item.source_import_ref)) || t("candidate_source_unknown");
+
+  const context = document.createElement("details");
+  context.className = "candidate-context";
+  const contextSummary = document.createElement("summary");
+  contextSummary.textContent = t("candidate_detail_summary");
+  context.appendChild(contextSummary);
+
+  const contextGrid = document.createElement("div");
+  contextGrid.className = "candidate-context-grid";
+
+  const sections = [
+    [
+      t("candidate_detail_evidence"),
+      Array.isArray(item && item.evidence) && item.evidence.length > 0 ? item.evidence.join("\n\n") : t("candidate_detail_none"),
+    ],
+    [
+      t("candidate_detail_sources"),
+      Array.isArray(item && item.source_refs) && item.source_refs.length > 0
+        ? item.source_refs.join("\n")
+        : sourceRef || t("candidate_source_unknown"),
+    ],
+    [t("candidate_detail_created"), formatCandidateCreatedAt(item)],
+    [t("candidate_detail_owner_note"), (item && item.owner_note) || "-"],
+    [t("candidate_detail_modified"), (item && item.modified_statement) || "-"],
+    [t("candidate_detail_promotion_target"), (item && (item.promotion_target || item.proposal_target)) || "-"],
+    [t("candidate_detail_runtime"), candidateRuntimeDetail(item)],
+  ];
+
+  for (const [labelText, valueText] of sections) {
+    const block = document.createElement("div");
+    block.className = "candidate-context-block";
+    const label = document.createElement("div");
+    label.className = "candidate-context-label";
+    label.textContent = labelText;
+    const value = document.createElement("div");
+    value.className = "candidate-context-value";
+    value.textContent = String(valueText || "-");
+    block.appendChild(label);
+    block.appendChild(value);
+    contextGrid.appendChild(block);
+  }
+
+  context.appendChild(contextGrid);
+  return context;
+}
+
 function renderCandidateCards(container, items, emptyKey) {
   if (!container) {
     return;
@@ -2048,48 +2228,7 @@ function renderCandidateCards(container, items, emptyKey) {
       meta.appendChild(line);
     }
 
-    const context = document.createElement("details");
-    context.className = "candidate-context";
-    const contextSummary = document.createElement("summary");
-    contextSummary.textContent = t("candidate_detail_summary");
-    context.appendChild(contextSummary);
-
-    const contextGrid = document.createElement("div");
-    contextGrid.className = "candidate-context-grid";
-
-    const sections = [
-      [
-        t("candidate_detail_evidence"),
-        Array.isArray(item.evidence) && item.evidence.length > 0 ? item.evidence.join("\n\n") : t("candidate_detail_none"),
-      ],
-      [
-        t("candidate_detail_sources"),
-        Array.isArray(item.source_refs) && item.source_refs.length > 0
-          ? item.source_refs.join("\n")
-          : sourceRef || t("candidate_source_unknown"),
-      ],
-      [t("candidate_detail_created"), formatCandidateCreatedAt(item)],
-      [t("candidate_detail_owner_note"), item.owner_note || "-"],
-      [t("candidate_detail_modified"), item.modified_statement || "-"],
-      [t("candidate_detail_promotion_target"), item.promotion_target || item.proposal_target || "-"],
-      [t("candidate_detail_runtime"), candidateRuntimeDetail(item)],
-    ];
-
-    for (const [labelText, valueText] of sections) {
-      const block = document.createElement("div");
-      block.className = "candidate-context-block";
-      const label = document.createElement("div");
-      label.className = "candidate-context-label";
-      label.textContent = labelText;
-      const value = document.createElement("div");
-      value.className = "candidate-context-value";
-      value.textContent = String(valueText || "-");
-      block.appendChild(label);
-      block.appendChild(value);
-      contextGrid.appendChild(block);
-    }
-
-    context.appendChild(contextGrid);
+    const context = buildCandidateContext(item);
 
     const actions = document.createElement("div");
     actions.className = "todo-actions";
@@ -2153,7 +2292,6 @@ function renderLearningCandidates(items) {
   const buckets = splitLearningCandidates(filtered);
   renderCandidateCards(reviewCandidates, buckets.review, "queue_empty_review");
   renderCandidateCards(promoteCandidates, buckets.promote, "queue_empty_promote");
-  renderCandidateCards(reviewedCandidates, buckets.reviewed, "queue_empty_reviewed");
   updateReviewFilterMeta(filtered.length, total);
 }
 
@@ -2395,7 +2533,7 @@ function renderInspectResult(data) {
   suggestionTrace.textContent = "-";
   setSuggestionReviewEnabled(false);
   renderSuggestionReviewQueue(auditUiSnapshot.suggestion_review_queue);
-  renderRecentSuggestionReviews(auditUiSnapshot.suggestion_review_queue);
+  renderAuditTimeline();
   if (!data.output_preview) {
     setPreview("-");
     setOutputTokenMeta("-");
@@ -2581,7 +2719,7 @@ async function loadSuggestionDetail(suggestionId, options = {}) {
   if (!sid) {
     latestSuggestionId = null;
     renderSuggestionReviewQueue(auditUiSnapshot.suggestion_review_queue);
-    renderRecentSuggestionReviews(auditUiSnapshot.suggestion_review_queue);
+    renderAuditTimeline();
     renderSuggestionDetailEmpty();
     suggestionTrace.textContent = "-";
     setSuggestionReviewEnabled(false);
@@ -2589,7 +2727,7 @@ async function loadSuggestionDetail(suggestionId, options = {}) {
   }
   latestSuggestionId = sid;
   renderSuggestionReviewQueue(auditUiSnapshot.suggestion_review_queue);
-  renderRecentSuggestionReviews(auditUiSnapshot.suggestion_review_queue);
+  renderAuditTimeline();
   if (options && options.openSupport && auditMachineFold) {
     auditMachineFold.open = true;
   }

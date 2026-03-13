@@ -1348,6 +1348,10 @@ body {
   color: var(--muted);
 }
 
+.audit-timeline-fold .helper-note {
+  margin: 8px 0 10px;
+}
+
 .history-summary-line {
   display: inline-flex;
   align-items: center;
@@ -1656,6 +1660,10 @@ body {
   white-space: pre-wrap;
 }
 
+.timeline-summary {
+  color: var(--text);
+}
+
 .suggestion-detail-card {
   display: grid;
   gap: 10px;
@@ -1761,6 +1769,26 @@ body {
   font-weight: 600;
   letter-spacing: 0.1px;
   background: color-mix(in srgb, var(--card) 92%, white 8%);
+}
+
+.lifecycle-badge.stage-candidate {
+  border-color: color-mix(in srgb, var(--warn) 45%, white);
+  background: color-mix(in srgb, var(--warn) 16%, var(--card) 84%);
+}
+
+.lifecycle-badge.stage-reviewed {
+  border-color: color-mix(in srgb, var(--accent) 45%, white);
+  background: color-mix(in srgb, var(--accent) 14%, var(--card) 86%);
+}
+
+.lifecycle-badge.stage-promoted {
+  border-color: color-mix(in srgb, var(--warm) 56%, white);
+  background: color-mix(in srgb, var(--warm) 17%, var(--card) 83%);
+}
+
+.lifecycle-badge.stage-active_runtime {
+  border-color: color-mix(in srgb, var(--ok) 52%, white);
+  background: color-mix(in srgb, var(--ok) 15%, var(--card) 85%);
 }
 
 .learning-candidate-card.stage-candidate .lifecycle-badge {
