@@ -129,9 +129,13 @@ Keep rollout evolutionary: preserve existing extraction/distillation pipelines a
     - task suggestions now have a dedicated review queue in Audit instead of living only as summary metrics + the latest trace detail
     - owner can review any pending suggestion from the inbox with a guided modal instead of `window.prompt`
     - execution suggestion judgment is now visually separated from learning candidate governance while keeping the same review contract
+  - Follow-up structured suggestion detail support shipped:
+    - the suggestion support panel now shows structured review context first: task, status, output artifact, focus points, owner note, correction, and next action
+    - raw suggestion payload is still available, but moved behind progressive disclosure instead of dominating the review surface
+    - selecting a suggestion from the inbox now also syncs the support-side output preview, so review context and artifact preview stay aligned
 - Remaining next:
   - consider richer saved views only if operators need per-owner custom presets beyond the shipped defaults
-  - consider a structured suggestion detail panel so support context is less JSON-shaped when owners drill down
+  - consider a lightweight recent-reviewed suggestion fold if owners need a faster way to audit their last few execution judgments
   - consider selective evidence compaction if longer transcripts start overwhelming the card context
 - Do not change yet:
   - do not collapse `accept` and `promote`

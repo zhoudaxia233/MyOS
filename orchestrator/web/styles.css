@@ -1624,6 +1624,98 @@ body {
   margin-bottom: 0;
 }
 
+.suggestion-detail-card {
+  display: grid;
+  gap: 10px;
+  border: 1px solid color-mix(in srgb, var(--border) 78%, white);
+  border-radius: 12px;
+  padding: 10px;
+  background: color-mix(in srgb, var(--card) 97%, white 3%);
+}
+
+.suggestion-detail-empty {
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.suggestion-detail-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.suggestion-detail-chip {
+  border: 1px solid color-mix(in srgb, var(--border) 78%, white);
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-size: 0.72rem;
+  color: var(--muted);
+  background: color-mix(in srgb, var(--card) 92%, white 8%);
+}
+
+.suggestion-detail-chip.status-pending {
+  border-color: color-mix(in srgb, var(--warn) 50%, white);
+  background: color-mix(in srgb, var(--warn) 16%, var(--card) 84%);
+  color: var(--text);
+}
+
+.suggestion-detail-chip.status-accept {
+  border-color: color-mix(in srgb, var(--ok) 48%, white);
+  background: color-mix(in srgb, var(--ok) 16%, var(--card) 84%);
+  color: var(--text);
+}
+
+.suggestion-detail-chip.status-modify {
+  border-color: color-mix(in srgb, var(--warm) 52%, white);
+  background: color-mix(in srgb, var(--warm) 16%, var(--card) 84%);
+  color: var(--text);
+}
+
+.suggestion-detail-chip.status-reject {
+  border-color: color-mix(in srgb, var(--fail) 52%, white);
+  background: color-mix(in srgb, var(--fail) 13%, var(--card) 87%);
+  color: var(--text);
+}
+
+.suggestion-detail-section {
+  display: grid;
+  gap: 4px;
+}
+
+.suggestion-detail-label {
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.suggestion-detail-value {
+  font-size: 0.82rem;
+  line-height: 1.48;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.suggestion-focus-list {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 4px;
+  color: var(--text);
+  font-size: 0.8rem;
+}
+
+.suggestion-raw-fold {
+  margin-top: 8px;
+}
+
+.suggestion-raw-fold summary {
+  cursor: pointer;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
 .learning-candidate-card {
   display: grid;
   gap: 6px;

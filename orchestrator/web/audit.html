@@ -403,7 +403,13 @@
         </div>
         <div class="trace-block">
           <h3 data-i18n="trace_suggestion_detail">Suggestion Detail</h3>
-          <pre id="suggestionTrace">-</pre>
+          <div id="suggestionDetailCard" class="suggestion-detail-card">
+            <div class="suggestion-detail-empty" data-i18n="suggestion_detail_empty">选择一条建议以查看复核支撑。</div>
+          </div>
+          <details class="suggestion-raw-fold">
+            <summary data-i18n="suggestion_detail_raw">原始载荷（按需展开）</summary>
+            <pre id="suggestionTrace">-</pre>
+          </details>
           <div class="todo-actions">
             <button id="suggestionAcceptBtn" class="todo-resolve-btn" type="button" data-i18n="btn_accept">Accept</button>
             <button id="suggestionModifyBtn" class="todo-resolve-btn" type="button" data-i18n="btn_modify">Modify</button>

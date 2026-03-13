@@ -71,6 +71,7 @@ const ownerTodos = document.getElementById("ownerTodos");
 const learningLifecycle = document.getElementById("learningLifecycle");
 const candidatePipeline = document.getElementById("candidatePipeline");
 const suggestionReviewSummary = document.getElementById("suggestionReviewSummary");
+const suggestionDetailCard = document.getElementById("suggestionDetailCard");
 const mvpGuide = document.getElementById("mvpGuide");
 const demoSummary = document.getElementById("demoSummary");
 const settingsModal = document.getElementById("settingsModal");
@@ -211,6 +212,30 @@ const I18N = {
     suggestion_queue_empty: "当前没有待复核的任务建议。",
     suggestion_queue_open_detail: "查看细节",
     suggestion_meta_created: "进入队列 {created}",
+    suggestion_detail_empty: "选择一条建议以查看复核支撑。",
+    suggestion_detail_raw: "原始载荷（按需展开）",
+    suggestion_detail_task: "任务",
+    suggestion_detail_status: "当前状态",
+    suggestion_detail_status_pending: "待复核",
+    suggestion_detail_status_accept: "已接受",
+    suggestion_detail_status_modify: "已修改",
+    suggestion_detail_status_reject: "已拒绝",
+    suggestion_detail_created: "进入队列时间",
+    suggestion_detail_module: "模块",
+    suggestion_detail_run: "运行记录",
+    suggestion_detail_output: "输出文件",
+    suggestion_detail_focus: "复核焦点",
+    suggestion_detail_focus_none: "暂无显式复核焦点。",
+    suggestion_detail_owner_note: "Owner 备注",
+    suggestion_detail_correction: "修正记录",
+    suggestion_detail_replacement: "替代判断",
+    suggestion_detail_reason: "不像我的原因",
+    suggestion_detail_target: "目标层",
+    suggestion_detail_next: "下一步",
+    suggestion_detail_next_pending: "提交 Accept / Modify / Reject，让这条执行建议完成 judgment。",
+    suggestion_detail_next_accept: "已接受：如需沉淀，再单独判断是否值得进入学习流程。",
+    suggestion_detail_next_modify: "已修改：修正记录已经写入，可继续对照输出与更正后的判断。",
+    suggestion_detail_next_reject: "已拒绝：这条执行建议不会作为你的判断被保留。",
     review_queue_title: "学习候选待复核",
     review_queue_desc: "这里处理学习候选的 Accept / Modify / Reject，不把判断淹没在日志里。",
     promote_queue_title: "学习候选可晋升",
@@ -538,6 +563,30 @@ const I18N = {
     suggestion_queue_empty: "No task suggestions currently need review.",
     suggestion_queue_open_detail: "Open Detail",
     suggestion_meta_created: "Queued {created}",
+    suggestion_detail_empty: "Select a suggestion to open review support.",
+    suggestion_detail_raw: "Raw Payload (Open On Demand)",
+    suggestion_detail_task: "Task",
+    suggestion_detail_status: "Current Status",
+    suggestion_detail_status_pending: "Needs Review",
+    suggestion_detail_status_accept: "Accepted",
+    suggestion_detail_status_modify: "Modified",
+    suggestion_detail_status_reject: "Rejected",
+    suggestion_detail_created: "Queued At",
+    suggestion_detail_module: "Module",
+    suggestion_detail_run: "Run Ref",
+    suggestion_detail_output: "Output File",
+    suggestion_detail_focus: "Review Focus",
+    suggestion_detail_focus_none: "No explicit review focus points were recorded.",
+    suggestion_detail_owner_note: "Owner Note",
+    suggestion_detail_correction: "Correction Record",
+    suggestion_detail_replacement: "Replacement Judgment",
+    suggestion_detail_reason: "Unlike-Me Reason",
+    suggestion_detail_target: "Target Layer",
+    suggestion_detail_next: "Next Action",
+    suggestion_detail_next_pending: "Submit Accept / Modify / Reject so this execution suggestion completes judgment.",
+    suggestion_detail_next_accept: "Accepted. If it should become durable learning, judge that separately in the learning flow.",
+    suggestion_detail_next_modify: "Modified. The correction record is written; compare the output against the corrected judgment if needed.",
+    suggestion_detail_next_reject: "Rejected. This execution suggestion will not be retained as your judgment.",
     review_queue_title: "Learning Candidates Needing Review",
     review_queue_desc: "This queue is for learning candidate Accept / Modify / Reject without burying judgment under logs.",
     promote_queue_title: "Learning Candidates Ready To Promote",
@@ -1502,6 +1551,11 @@ function setLanguage(lang) {
   renderReviewInboxSummary();
   renderLearningCandidates(auditUiSnapshot.learning_candidates);
   renderOwnerTodos(auditUiSnapshot.owner_todos);
+  if (latestSuggestionId) {
+    void loadSuggestionDetail(latestSuggestionId);
+  } else {
+    renderSuggestionDetailEmpty();
+  }
   renderLatestMessage();
   setMessagePanelExpanded(messagesExpanded);
 }
@@ -2210,20 +2264,177 @@ function renderInspectResult(data) {
   }
 }
 
+function suggestionReviewStatusKey(ownerReview) {
+  const verdict = String((((ownerReview || {}).verdict || {}).verdict) || "").trim().toLowerCase();
+  if (verdict === "accept") {
+    return "accept";
+  }
+  if (verdict === "modify") {
+    return "modify";
+  }
+  if (verdict === "reject") {
+    return "reject";
+  }
+  return "pending";
+}
+
+function renderSuggestionDetailEmpty(messageKey = "suggestion_detail_empty", messageText = "") {
+  if (suggestionDetailCard) {
+    suggestionDetailCard.innerHTML = "";
+    const empty = document.createElement("div");
+    empty.className = "suggestion-detail-empty";
+    if (messageText) {
+      empty.removeAttribute("data-i18n");
+      empty.textContent = messageText;
+    } else {
+      empty.setAttribute("data-i18n", messageKey);
+      empty.textContent = t(messageKey);
+    }
+    suggestionDetailCard.appendChild(empty);
+  }
+}
+
+function appendSuggestionDetailSection(container, labelKey, value) {
+  if (!container || value === null || value === undefined || value === "") {
+    return;
+  }
+  const section = document.createElement("div");
+  section.className = "suggestion-detail-section";
+
+  const label = document.createElement("div");
+  label.className = "suggestion-detail-label";
+  label.textContent = t(labelKey);
+
+  const body = document.createElement("div");
+  body.className = "suggestion-detail-value";
+  body.textContent = String(value);
+
+  section.appendChild(label);
+  section.appendChild(body);
+  container.appendChild(section);
+}
+
 function renderSuggestionDetail(data) {
   if (!data || typeof data !== "object" || !data.suggestion || typeof data.suggestion !== "object") {
+    renderSuggestionDetailEmpty();
     suggestionTrace.textContent = "-";
     setSuggestionReviewEnabled(false);
     return;
   }
+  const suggestion = data.suggestion;
+  const ownerReview = data.owner_review && typeof data.owner_review === "object" ? data.owner_review : {};
+  const verdictRow = ownerReview.verdict && typeof ownerReview.verdict === "object" ? ownerReview.verdict : null;
+  const correctionRow = ownerReview.correction && typeof ownerReview.correction === "object" ? ownerReview.correction : null;
+  const statusKey = suggestionReviewStatusKey(ownerReview);
   const payload = {
-    suggestion: data.suggestion,
+    suggestion,
     run: data.run || null,
-    owner_review: data.owner_review || null,
+    owner_review: ownerReview,
     output_path: data.output_path || null,
     output_preview: data.output_preview || null,
   };
   suggestionTrace.textContent = JSON.stringify(payload, null, 2);
+
+  renderSuggestionDetailEmpty();
+  if (suggestionDetailCard) {
+    suggestionDetailCard.innerHTML = "";
+
+    const meta = document.createElement("div");
+    meta.className = "suggestion-detail-meta";
+
+    const moduleChip = document.createElement("span");
+    moduleChip.className = "suggestion-detail-chip";
+    moduleChip.textContent = `${t("suggestion_detail_module")}: ${String(suggestion.module || "-")}`;
+    meta.appendChild(moduleChip);
+
+    const createdChip = document.createElement("span");
+    createdChip.className = "suggestion-detail-chip";
+    createdChip.textContent = `${t("suggestion_detail_created")}: ${formatCandidateCreatedAt(suggestion)}`;
+    meta.appendChild(createdChip);
+
+    const statusChip = document.createElement("span");
+    statusChip.className = `suggestion-detail-chip status-${statusKey}`;
+    statusChip.textContent = `${t("suggestion_detail_status")}: ${t(`suggestion_detail_status_${statusKey}`)}`;
+    meta.appendChild(statusChip);
+
+    suggestionDetailCard.appendChild(meta);
+    appendSuggestionDetailSection(suggestionDetailCard, "suggestion_detail_task", summarizeSuggestionTask(suggestion));
+    appendSuggestionDetailSection(suggestionDetailCard, "suggestion_detail_output", String(data.output_path || "").trim() || "-");
+    appendSuggestionDetailSection(suggestionDetailCard, "suggestion_detail_run", String(suggestion.run_ref || "").trim() || "-");
+
+    const focusPoints = Array.isArray(suggestion.audit_focus_points) ? suggestion.audit_focus_points.filter(Boolean) : [];
+    const focusSection = document.createElement("div");
+    focusSection.className = "suggestion-detail-section";
+    const focusLabel = document.createElement("div");
+    focusLabel.className = "suggestion-detail-label";
+    focusLabel.textContent = t("suggestion_detail_focus");
+    focusSection.appendChild(focusLabel);
+    if (focusPoints.length > 0) {
+      const focusList = document.createElement("ul");
+      focusList.className = "suggestion-focus-list";
+      for (const point of focusPoints.slice(0, 6)) {
+        const item = document.createElement("li");
+        item.textContent = String(point);
+        focusList.appendChild(item);
+      }
+      focusSection.appendChild(focusList);
+    } else {
+      const emptyFocus = document.createElement("div");
+      emptyFocus.className = "suggestion-detail-value";
+      emptyFocus.textContent = t("suggestion_detail_focus_none");
+      focusSection.appendChild(emptyFocus);
+    }
+    suggestionDetailCard.appendChild(focusSection);
+
+    if (verdictRow && String(verdictRow.owner_note || "").trim()) {
+      appendSuggestionDetailSection(
+        suggestionDetailCard,
+        "suggestion_detail_owner_note",
+        String(verdictRow.owner_note || "").trim()
+      );
+    }
+
+    if (correctionRow) {
+      const correctionSection = document.createElement("div");
+      correctionSection.className = "suggestion-detail-section";
+      const correctionLabel = document.createElement("div");
+      correctionLabel.className = "suggestion-detail-label";
+      correctionLabel.textContent = t("suggestion_detail_correction");
+      correctionSection.appendChild(correctionLabel);
+
+      const correctionParts = [];
+      if (String(correctionRow.replacement_judgment || "").trim()) {
+        correctionParts.push(
+          `${t("suggestion_detail_replacement")}: ${String(correctionRow.replacement_judgment || "").trim()}`
+        );
+      }
+      if (String(correctionRow.unlike_me_reason || "").trim()) {
+        correctionParts.push(`${t("suggestion_detail_reason")}: ${String(correctionRow.unlike_me_reason || "").trim()}`);
+      }
+      if (String(correctionRow.target_layer || "").trim()) {
+        correctionParts.push(`${t("suggestion_detail_target")}: ${String(correctionRow.target_layer || "").trim()}`);
+      }
+
+      const correctionBody = document.createElement("div");
+      correctionBody.className = "suggestion-detail-value";
+      correctionBody.textContent = correctionParts.join("\n");
+      correctionSection.appendChild(correctionBody);
+      suggestionDetailCard.appendChild(correctionSection);
+    }
+
+    appendSuggestionDetailSection(
+      suggestionDetailCard,
+      "suggestion_detail_next",
+      t(`suggestion_detail_next_${statusKey}`)
+    );
+  }
+
+  latestOutputPath = data.output_path || null;
+  if (data.run && typeof data.run === "object") {
+    latestOutputProvider = data.run.provider || latestOutputProvider;
+  }
+  setPreview(data.output_preview || "-");
+  refreshOutputTokenMeta();
   setSuggestionReviewEnabled(true);
 }
 
@@ -2232,6 +2443,7 @@ async function loadSuggestionDetail(suggestionId, options = {}) {
   if (!sid) {
     latestSuggestionId = null;
     renderSuggestionReviewQueue(auditUiSnapshot.suggestion_review_queue);
+    renderSuggestionDetailEmpty();
     suggestionTrace.textContent = "-";
     setSuggestionReviewEnabled(false);
     return;
@@ -2245,6 +2457,7 @@ async function loadSuggestionDetail(suggestionId, options = {}) {
     const data = await getJson(`/api/suggestion?id=${encodeURIComponent(sid)}`);
     renderSuggestionDetail(data);
   } catch (err) {
+    renderSuggestionDetailEmpty("", `load_failed: ${err.message}`);
     suggestionTrace.textContent = `load_failed: ${err.message}`;
     setSuggestionReviewEnabled(false);
   }
