@@ -330,20 +330,10 @@
     </section>
 
     <aside class="card panel-trace audit-support-panel">
-      <section class="audit-support-card">
-        <p class="section-kicker" data-i18n="audit_support_kicker">支持上下文</p>
-        <h2 data-i18n="audit_support_title">复核支撑</h2>
-        <p class="helper-note" data-i18n="audit_support_desc">生命周期、报告和机器轨迹在这里辅助判断，但不占据主舞台。</p>
-        <div class="action-row">
-          <button id="auditQuickRunBtn" type="button" class="btn secondary" data-i18n="btn_audit_quick_run">Run Quick Audit (Validate -> Metrics -> Owner Report)</button>
-        </div>
-        <section id="auditGuide" class="entrypoint-hint audit-guide" data-i18n="audit_guide_idle">
-          Audit guide: run quick audit first, then check cognition cards and owner todos on the right.
-        </section>
-      </section>
-
       <section id="auditJudgmentDetailBlock" class="audit-support-card audit-judgment-card">
+        <p class="section-kicker" data-i18n="judgment_detail_kicker">当前判断</p>
         <h2 data-i18n="trace_judgment_detail">Judgment Detail</h2>
+        <p class="helper-note" data-i18n="judgment_detail_desc">这里显示你当前选中的判断对象；支持上下文和机器轨迹放在下方。</p>
         <p id="auditSupportSubject" class="helper-note audit-support-subject" data-i18n="judgment_detail_subject_empty">
           选择一条建议或已处理学习项以查看复核支撑。
         </p>
@@ -359,6 +349,18 @@
           <button id="suggestionModifyBtn" class="todo-resolve-btn" type="button" data-i18n="btn_modify">Modify</button>
           <button id="suggestionRejectBtn" class="todo-resolve-btn" type="button" data-i18n="btn_reject">Reject</button>
         </div>
+      </section>
+
+      <section class="audit-support-card audit-support-context-card">
+        <p class="section-kicker" data-i18n="audit_support_kicker">支持上下文</p>
+        <h2 data-i18n="audit_support_title">支持上下文</h2>
+        <p class="helper-note" data-i18n="audit_support_desc">当你需要额外线索时，再使用 quick audit、生命周期、报告和机器轨迹。</p>
+        <div class="action-row">
+          <button id="auditQuickRunBtn" type="button" class="btn secondary" data-i18n="btn_audit_quick_run">Run Quick Audit (Validate -> Metrics -> Owner Report)</button>
+        </div>
+        <section id="auditGuide" class="entrypoint-hint audit-guide" data-i18n="audit_guide_idle">
+          Audit guide: run quick audit first, then check cognition cards and owner todos on the right.
+        </section>
       </section>
 
       <section id="auditManualActions" class="audit-support-card">

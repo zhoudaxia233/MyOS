@@ -1428,6 +1428,11 @@ body {
   );
 }
 
+.audit-support-context-card {
+  border-style: dashed;
+  background: color-mix(in srgb, var(--card) 97%, white 3%);
+}
+
 .audit-support-fold {
   border: 1px solid color-mix(in srgb, var(--border) 82%, white);
   border-radius: 12px;
