@@ -47,17 +47,33 @@
           <h2 data-i18n="hero_title">开始一个任务</h2>
           <p data-i18n="hero_desc">先选执行方式，再写任务简报。学习与进化保持独立，不混在任务发起里。</p>
         </div>
-        <a class="btn secondary nav-btn" href="/audit.html" data-i18n="btn_go_review_inbox">去 Owner Review</a>
+        <a
+          class="btn secondary nav-btn"
+          href="/audit.html"
+          data-i18n="btn_go_review_inbox"
+          data-i18n-title="btn_go_review_inbox_hint"
+          title="进入 Owner Review Inbox，处理建议、候选和待办。"
+        >去审计中心</a>
       </div>
 
       <section class="entrypoint-tabs workspace-entry-tabs" aria-label="Workspace sections">
-        <button class="entrypoint-tab workspace-tab workspace-mode-card active" type="button" data-workspace-tab="task">
+        <button
+          class="entrypoint-tab workspace-tab workspace-mode-card active"
+          type="button"
+          data-workspace-tab="task"
+          data-i18n-title="workspace_tab_task_desc"
+          title="发起任务、看摘要、再决定是否下钻"
+        >
           <span class="workspace-mode-card-title" data-i18n="workspace_tab_task">任务执行</span>
-          <span class="workspace-mode-card-desc" data-i18n="workspace_tab_task_desc">发起任务、看摘要、再决定是否下钻</span>
         </button>
-        <button class="entrypoint-tab workspace-tab workspace-mode-card" type="button" data-workspace-tab="learning">
+        <button
+          class="entrypoint-tab workspace-tab workspace-mode-card"
+          type="button"
+          data-workspace-tab="learning"
+          data-i18n-title="workspace_tab_learning_desc"
+          title="吸收素材、生成候选，再送去 owner 复核"
+        >
           <span class="workspace-mode-card-title" data-i18n="workspace_tab_learning">学习与进化</span>
-          <span class="workspace-mode-card-desc" data-i18n="workspace_tab_learning_desc">吸收素材、生成候选，再送去 owner 复核</span>
         </button>
       </section>
 

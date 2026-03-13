@@ -94,7 +94,8 @@ const I18N = {
     workspace_kicker: "任务启动器",
     hero_title: "开始一个任务",
     hero_desc: "先选执行方式，再写任务简报。学习与进化保持独立，不混在任务发起里。",
-    btn_go_review_inbox: "去 Owner Review",
+    btn_go_review_inbox: "去审计中心",
+    btn_go_review_inbox_hint: "进入 Owner Review Inbox，处理建议、候选和待办。",
     quick_use_title: "30 秒上手",
     quick_use_step_1: "输入你希望得到的结果（例如“给我下周3件最重要的事”）。",
     quick_use_step_2: "点击“开始执行”。",
@@ -319,7 +320,8 @@ const I18N = {
     workspace_kicker: "Task Launcher",
     hero_title: "Start A Task",
     hero_desc: "Choose the execution mode first, then write a task brief. Learning stays separate from task launch.",
-    btn_go_review_inbox: "Open Owner Review",
+    btn_go_review_inbox: "Open Audit Center",
+    btn_go_review_inbox_hint: "Open the Owner Review inbox for suggestions, candidates, and todos.",
     quick_use_title: "30-Second Guide",
     quick_use_step_1: "Describe the outcome you want (for example: top 3 priorities for next week).",
     quick_use_step_2: "Click Run.",
@@ -560,6 +562,13 @@ function applyI18n() {
       continue;
     }
     node.setAttribute("placeholder", t(key));
+  }
+  for (const node of document.querySelectorAll("[data-i18n-title]")) {
+    const key = node.getAttribute("data-i18n-title");
+    if (!key) {
+      continue;
+    }
+    node.setAttribute("title", t(key));
   }
   const titleNode = document.querySelector("title[data-i18n]");
   if (titleNode) {

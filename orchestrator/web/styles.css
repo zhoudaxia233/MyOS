@@ -443,28 +443,17 @@ body {
 }
 
 .workspace-mode-card {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-width: 0;
-  padding: 11px 14px;
+  padding: 11px 16px;
   border-radius: 14px;
 }
 
 .workspace-mode-card-title {
   font-size: 0.92rem;
   font-weight: 700;
-}
-
-.workspace-mode-card-desc {
-  font-size: 0.78rem;
-  line-height: 1.35;
-  color: var(--muted);
-}
-
-.workspace-mode-card.active .workspace-mode-card-desc {
-  color: color-mix(in srgb, var(--bubble-user-text) 80%, var(--text));
 }
 
 .workspace-panel {
