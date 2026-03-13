@@ -137,6 +137,18 @@
         </section>
 
         <section class="review-filter-bar">
+          <div class="review-preset-strip">
+            <div class="review-preset-copy">
+              <span class="review-preset-label" data-i18n="review_presets_title">常用分诊视图</span>
+              <p class="helper-note" data-i18n="review_presets_desc">一键回到常见 Owner 队列；手动微调筛选时会自动进入自定义视图。</p>
+            </div>
+            <div class="review-preset-chips" role="toolbar" aria-label="Review triage views">
+              <button type="button" class="review-preset-btn" data-review-preset="all" data-i18n="review_preset_all">全部</button>
+              <button type="button" class="review-preset-btn" data-review-preset="review" data-i18n="review_preset_review">待复核优先</button>
+              <button type="button" class="review-preset-btn" data-review-preset="promote" data-i18n="review_preset_promote">可晋升</button>
+              <button type="button" class="review-preset-btn" data-review-preset="recent" data-i18n="review_preset_recent">近 7 天新增</button>
+            </div>
+          </div>
           <div class="review-filter-head">
             <div>
               <h3 data-i18n="review_filters_title">收件箱筛选</h3>

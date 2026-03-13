@@ -60,6 +60,7 @@ const reviewSourceFilter = document.getElementById("reviewSourceFilter");
 const reviewAgeFilter = document.getElementById("reviewAgeFilter");
 const reviewFilterResetBtn = document.getElementById("reviewFilterResetBtn");
 const reviewFilterMeta = document.getElementById("reviewFilterMeta");
+const reviewPresetButtons = Array.from(document.querySelectorAll("[data-review-preset]"));
 const reviewCandidates = document.getElementById("reviewCandidates");
 const promoteCandidates = document.getElementById("promoteCandidates");
 const reviewedCandidates = document.getElementById("reviewedCandidates");
@@ -117,6 +118,13 @@ let reviewFilterState = {
   age: "all",
 };
 const LEARNING_SOURCE_DEFAULT = "notes";
+const REVIEW_PRESET_STORAGE_KEY = "pcos_audit_review_preset_v1";
+const REVIEW_FILTER_PRESETS = Object.freeze({
+  all: { stage: "all", type: "all", source: "", age: "all" },
+  review: { stage: "review", type: "all", source: "", age: "all" },
+  promote: { stage: "promote", type: "all", source: "", age: "all" },
+  recent: { stage: "all", type: "all", source: "", age: "7d" },
+});
 
 const I18N = {
   zh: {
@@ -146,6 +154,12 @@ const I18N = {
     review_count_review: "待复核",
     review_count_promote: "可晋升",
     review_count_todo: "Owner 待办",
+    review_presets_title: "常用分诊视图",
+    review_presets_desc: "一键回到常见 Owner 队列；手动微调筛选时会自动进入自定义视图。",
+    review_preset_all: "全部",
+    review_preset_review: "待复核优先",
+    review_preset_promote: "可晋升",
+    review_preset_recent: "近 7 天新增",
     review_filters_title: "收件箱筛选",
     review_filters_desc: "按阶段、类型、来源和时效收窄候选范围。",
     review_filter_stage: "阶段",
@@ -440,6 +454,12 @@ const I18N = {
     review_count_review: "Needs Review",
     review_count_promote: "Ready To Promote",
     review_count_todo: "Owner Todos",
+    review_presets_title: "Common Triage Views",
+    review_presets_desc: "Jump back to common owner queues in one click. Manual filter tweaks automatically become a custom view.",
+    review_preset_all: "All",
+    review_preset_review: "Needs Review",
+    review_preset_promote: "Ready To Promote",
+    review_preset_recent: "Last 7d",
     review_filters_title: "Inbox Filters",
     review_filters_desc: "Narrow candidates by stage, type, source, and recency.",
     review_filter_stage: "Stage",
@@ -893,6 +913,93 @@ function candidateSourceText(item) {
     .toLowerCase();
 }
 
+function normalizeReviewFilterState(nextState = {}) {
+  const stage = String(nextState.stage || "all").trim();
+  const age = String(nextState.age || "all").trim();
+  return {
+    stage: ["all", "review", "promote", "reviewed"].includes(stage) ? stage : "all",
+    type: String(nextState.type || "all").trim() || "all",
+    source: String(nextState.source || ""),
+    age: ["all", "24h", "7d", "30d"].includes(age) ? age : "all",
+  };
+}
+
+function sameReviewFilterState(left, right) {
+  const normalizedLeft = normalizeReviewFilterState(left);
+  const normalizedRight = normalizeReviewFilterState(right);
+  return (
+    normalizedLeft.stage === normalizedRight.stage &&
+    normalizedLeft.type === normalizedRight.type &&
+    normalizedLeft.age === normalizedRight.age &&
+    normalizedLeft.source === normalizedRight.source
+  );
+}
+
+function getActiveReviewPresetKey() {
+  for (const [key, preset] of Object.entries(REVIEW_FILTER_PRESETS)) {
+    if (sameReviewFilterState(reviewFilterState, preset)) {
+      return key;
+    }
+  }
+  return "";
+}
+
+function updateReviewPresetButtons() {
+  const activePreset = getActiveReviewPresetKey();
+  for (const button of reviewPresetButtons) {
+    const isActive = String(button.dataset.reviewPreset || "") === activePreset;
+    button.dataset.active = isActive ? "true" : "false";
+    button.setAttribute("aria-pressed", isActive ? "true" : "false");
+  }
+}
+
+function persistReviewPresetSelection() {
+  try {
+    const activePreset = getActiveReviewPresetKey();
+    if (activePreset) {
+      localStorage.setItem(REVIEW_PRESET_STORAGE_KEY, activePreset);
+    } else {
+      localStorage.removeItem(REVIEW_PRESET_STORAGE_KEY);
+    }
+  } catch (error) {
+    console.debug("review preset persistence unavailable", error);
+  }
+}
+
+function syncReviewFilterControls() {
+  if (reviewStageFilter) {
+    reviewStageFilter.value = reviewFilterState.stage;
+  }
+  refreshReviewTypeOptions();
+  if (reviewSourceFilter) {
+    reviewSourceFilter.value = reviewFilterState.source;
+  }
+  if (reviewAgeFilter) {
+    reviewAgeFilter.value = reviewFilterState.age;
+  }
+}
+
+function applyReviewPreset(presetKey) {
+  const preset = REVIEW_FILTER_PRESETS[presetKey] || REVIEW_FILTER_PRESETS.all;
+  reviewFilterState = normalizeReviewFilterState(preset);
+  syncReviewFilterControls();
+  rerenderReviewInbox();
+}
+
+function initReviewPresetSelection() {
+  updateReviewPresetButtons();
+  try {
+    const savedPreset = String(localStorage.getItem(REVIEW_PRESET_STORAGE_KEY) || "").trim();
+    if (savedPreset && REVIEW_FILTER_PRESETS[savedPreset]) {
+      applyReviewPreset(savedPreset);
+      return;
+    }
+  } catch (error) {
+    console.debug("review preset restore unavailable", error);
+  }
+  persistReviewPresetSelection();
+}
+
 function hasActiveReviewFilters() {
   return (
     reviewFilterState.stage !== "all" ||
@@ -938,6 +1045,7 @@ function filterLearningCandidates(items) {
 
 function refreshReviewTypeOptions() {
   if (!reviewTypeFilter) {
+    updateReviewPresetButtons();
     return;
   }
   const current = String(reviewFilterState.type || "all");
@@ -965,6 +1073,7 @@ function refreshReviewTypeOptions() {
 
   reviewFilterState.type = types.includes(current) ? current : "all";
   reviewTypeFilter.value = reviewFilterState.type;
+  updateReviewPresetButtons();
 }
 
 function updateReviewFilterMeta(filteredItems, totalItems) {
@@ -2992,8 +3101,16 @@ if (auditShowManualBtn) {
 }
 
 function rerenderReviewInbox() {
+  updateReviewPresetButtons();
+  persistReviewPresetSelection();
   renderReviewInboxSummary();
   renderLearningCandidates(auditUiSnapshot.learning_candidates);
+}
+
+for (const button of reviewPresetButtons) {
+  button.addEventListener("click", () => {
+    applyReviewPreset(String(button.dataset.reviewPreset || "all"));
+  });
 }
 
 if (reviewStageFilter) {
@@ -3026,23 +3143,7 @@ if (reviewAgeFilter) {
 
 if (reviewFilterResetBtn) {
   reviewFilterResetBtn.addEventListener("click", () => {
-    reviewFilterState = {
-      stage: "all",
-      type: "all",
-      source: "",
-      age: "all",
-    };
-    if (reviewStageFilter) {
-      reviewStageFilter.value = "all";
-    }
-    refreshReviewTypeOptions();
-    if (reviewSourceFilter) {
-      reviewSourceFilter.value = "";
-    }
-    if (reviewAgeFilter) {
-      reviewAgeFilter.value = "all";
-    }
-    rerenderReviewInbox();
+    applyReviewPreset("all");
   });
 }
 
@@ -3195,6 +3296,7 @@ setDemoSummaryKey("demo_summary_idle");
 setAuditGuideKey("audit_guide_idle");
 setStatus(t("status_connecting"), "pending", "status_connecting");
 initTheme();
+initReviewPresetSelection();
 switchEntrypoint("audit");
 setSuggestionReviewEnabled(false);
 updateAuditConsoleDensity();

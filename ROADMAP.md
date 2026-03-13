@@ -121,9 +121,13 @@ Keep rollout evolutionary: preserve existing extraction/distillation pipelines a
   - Follow-up evidence drill-down shipped:
     - candidate cards now include expandable review context for `evidence / source refs / owner note / modified statement / runtime state`
     - detailed judgment context stays inside the review object instead of forcing operators back into machine trace
+  - Follow-up triage preset views shipped:
+    - default inbox views for `all / needs review / ready to promote / last 7d`
+    - preset selection is remembered client-side so the audit page can reopen in the owner's usual queue
+    - manual filter edits still work and automatically fall back to a custom view without changing backend contracts
 - Remaining next:
   - consider a dedicated suggestion-review inbox slice, separate from learning candidate governance
-  - consider saved review views or default triage presets only after current filter usage feels stable
+  - consider richer saved views only if operators need per-owner custom presets beyond the shipped defaults
   - consider selective evidence compaction if longer transcripts start overwhelming the card context
 - Do not change yet:
   - do not collapse `accept` and `promote`
