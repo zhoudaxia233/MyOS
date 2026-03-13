@@ -78,6 +78,7 @@ const learningLifecycle = document.getElementById("learningLifecycle");
 const candidatePipeline = document.getElementById("candidatePipeline");
 const suggestionReviewSummary = document.getElementById("suggestionReviewSummary");
 const auditSupportSubject = document.getElementById("auditSupportSubject");
+const auditJudgmentDetailBlock = document.getElementById("auditJudgmentDetailBlock");
 const suggestionDetailCard = document.getElementById("suggestionDetailCard");
 const auditDetailRawFold = document.getElementById("auditDetailRawFold");
 const suggestionDetailActions = document.getElementById("suggestionDetailActions");
@@ -128,6 +129,7 @@ let latestOutputPath = null;
 let latestOutputProvider = null;
 let latestSuggestionId = null;
 let auditSupportTarget = { kind: null, id: null };
+let auditSupportRevealTimer = null;
 let settingsCache = null;
 let uiLanguage = "zh";
 let learningReviewDraft = null;
@@ -2806,6 +2808,32 @@ function setAuditSupportActionsVisible(visible) {
   }
 }
 
+function revealAuditJudgmentDetail() {
+  if (!auditJudgmentDetailBlock) {
+    return;
+  }
+  if (auditMachineFold) {
+    auditMachineFold.open = true;
+  }
+  auditJudgmentDetailBlock.dataset.supportReveal = "true";
+  if (auditSupportRevealTimer !== null) {
+    window.clearTimeout(auditSupportRevealTimer);
+  }
+  window.requestAnimationFrame(() => {
+    auditJudgmentDetailBlock.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+      inline: "nearest",
+    });
+  });
+  auditSupportRevealTimer = window.setTimeout(() => {
+    if (auditJudgmentDetailBlock) {
+      delete auditJudgmentDetailBlock.dataset.supportReveal;
+    }
+    auditSupportRevealTimer = null;
+  }, 1600);
+}
+
 function syncAuditSupportSelection(kind = null, id = null) {
   auditSupportTarget = {
     kind: kind ? String(kind).trim() : null,
@@ -3073,7 +3101,7 @@ function renderLearningSupportDetail(item, options = {}) {
   setOutputTokenMeta("-");
   setSuggestionReviewEnabled(false);
   if (options && options.openSupport && auditMachineFold) {
-    auditMachineFold.open = true;
+    revealAuditJudgmentDetail();
   }
 }
 
@@ -3219,6 +3247,9 @@ async function loadSuggestionDetail(suggestionId, options = {}) {
   try {
     const data = await getJson(`/api/suggestion?id=${encodeURIComponent(sid)}`);
     renderSuggestionDetail(data);
+    if (options && options.openSupport) {
+      revealAuditJudgmentDetail();
+    }
   } catch (err) {
     renderSuggestionDetailEmpty("", `load_failed: ${err.message}`);
     suggestionTrace.textContent = `load_failed: ${err.message}`;
@@ -3228,6 +3259,9 @@ async function loadSuggestionDetail(suggestionId, options = {}) {
     latestOutputProvider = null;
     setPreview("-");
     setOutputTokenMeta("-");
+    if (options && options.openSupport) {
+      revealAuditJudgmentDetail();
+    }
   }
 }
 
