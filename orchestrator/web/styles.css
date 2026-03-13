@@ -1352,6 +1352,19 @@ body {
   margin: 8px 0 10px;
 }
 
+.timeline-filter-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.timeline-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
 .history-summary-line {
   display: inline-flex;
   align-items: center;
@@ -2043,7 +2056,8 @@ pre {
 
   .mode-choice-grid,
   .review-inbox-counts,
-  .review-filter-grid {
+  .review-filter-grid,
+  .timeline-filter-grid {
     grid-template-columns: 1fr;
   }
 
@@ -2084,7 +2098,8 @@ pre {
   .workspace-launch-intro,
   .audit-inbox-intro,
   .workspace-section-head,
-  .review-filter-head {
+  .review-filter-head,
+  .timeline-filter-head {
     flex-direction: column;
   }
 

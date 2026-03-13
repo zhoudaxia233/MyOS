@@ -282,7 +282,41 @@
               <span id="auditTimelineCount" class="history-count-badge">0</span>
             </span>
           </summary>
-          <p class="helper-note" data-i18n="audit_timeline_desc">按时间回看最近完成的 execution judgment 与 learning judgment，主队列仍只保留待处理对象。</p>
+          <div class="timeline-filter-head">
+            <div>
+              <p class="helper-note" data-i18n="audit_timeline_desc">按时间回看最近完成的 execution judgment 与 learning judgment，主队列仍只保留待处理对象。</p>
+            </div>
+            <button id="auditTimelineResetBtn" type="button" class="btn secondary" data-i18n="btn_reset_filters">清空筛选</button>
+          </div>
+          <div class="timeline-filter-grid">
+            <label class="control">
+              <span data-i18n="audit_timeline_filter_kind">对象</span>
+              <select id="auditTimelineKindFilter">
+                <option value="all" data-i18n="audit_timeline_filter_kind_all">全部对象</option>
+                <option value="suggestion" data-i18n="audit_timeline_filter_kind_suggestion">执行建议</option>
+                <option value="learning" data-i18n="audit_timeline_filter_kind_learning">学习候选</option>
+              </select>
+            </label>
+            <label class="control">
+              <span data-i18n="audit_timeline_filter_status">判断</span>
+              <select id="auditTimelineStatusFilter">
+                <option value="all" data-i18n="audit_timeline_filter_status_all">全部判断</option>
+                <option value="accept" data-i18n="audit_timeline_filter_status_accept">Accept</option>
+                <option value="modify" data-i18n="audit_timeline_filter_status_modify">Modify</option>
+                <option value="reject" data-i18n="audit_timeline_filter_status_reject">Reject</option>
+                <option value="promote" data-i18n="audit_timeline_filter_status_promote">Promote / Runtime</option>
+              </select>
+            </label>
+            <label class="control">
+              <span data-i18n="audit_timeline_filter_age">时间</span>
+              <select id="auditTimelineAgeFilter">
+                <option value="all" data-i18n="audit_timeline_filter_age_all">全部时间</option>
+                <option value="7d" data-i18n="audit_timeline_filter_age_7d">近 7 天</option>
+                <option value="30d" data-i18n="audit_timeline_filter_age_30d">近 30 天</option>
+              </select>
+            </label>
+          </div>
+          <p id="auditTimelineMeta" class="helper-note review-filter-meta" data-i18n="audit_timeline_meta_idle">当前显示全部近期判断。</p>
           <div id="auditTimelineList" class="todo-list">
             <div class="todo-item">
               <div class="todo-head">

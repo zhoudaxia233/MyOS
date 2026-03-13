@@ -141,9 +141,12 @@ Keep rollout evolutionary: preserve existing extraction/distillation pipelines a
     - recently reviewed execution suggestions and resolved learning candidates now share one chronological secondary timeline
     - pending queues remain object-specific; chronology now applies only to completed judgments
     - reviewed learning entries keep expandable evidence and source context inside the timeline, so chronology does not remove auditability
+  - Follow-up timeline-scoped replay filters shipped:
+    - the shared audit timeline now has its own `object / judgment / time` filters instead of borrowing the pending inbox filters
+    - owners can replay only `execution suggestions`, only `learning candidates`, or narrow to `accept / modify / reject / promote` decisions
+    - completed-judgment replay stays separate from pending triage, preserving the difference between doing judgment and revisiting judgment
 - Remaining next:
   - consider richer saved views only if operators need per-owner custom presets beyond the shipped defaults
-  - consider timeline-scoped filters only if the combined judgment history becomes too noisy for quick replay
   - consider a cross-object detail pane only if inline context stops being enough for completed judgments
   - consider selective evidence compaction if longer transcripts start overwhelming the card context
 - Do not change yet:

@@ -64,6 +64,11 @@ const reviewFilterResetBtn = document.getElementById("reviewFilterResetBtn");
 const reviewFilterMeta = document.getElementById("reviewFilterMeta");
 const reviewPresetButtons = Array.from(document.querySelectorAll("[data-review-preset]"));
 const suggestionReviewList = document.getElementById("suggestionReviewList");
+const auditTimelineKindFilter = document.getElementById("auditTimelineKindFilter");
+const auditTimelineStatusFilter = document.getElementById("auditTimelineStatusFilter");
+const auditTimelineAgeFilter = document.getElementById("auditTimelineAgeFilter");
+const auditTimelineResetBtn = document.getElementById("auditTimelineResetBtn");
+const auditTimelineMeta = document.getElementById("auditTimelineMeta");
 const auditTimelineCount = document.getElementById("auditTimelineCount");
 const auditTimelineList = document.getElementById("auditTimelineList");
 const reviewCandidates = document.getElementById("reviewCandidates");
@@ -141,6 +146,11 @@ let reviewFilterState = {
   stage: "all",
   type: "all",
   source: "",
+  age: "all",
+};
+let auditTimelineFilterState = {
+  kind: "all",
+  status: "all",
   age: "all",
 };
 const LEARNING_SOURCE_DEFAULT = "notes";
@@ -227,6 +237,23 @@ const I18N = {
     audit_timeline_time_promoted: "晋升于 {created}",
     audit_timeline_time_created: "进入队列 {created}",
     audit_timeline_open_detail: "打开支撑详情",
+    audit_timeline_filter_kind: "对象",
+    audit_timeline_filter_kind_all: "全部对象",
+    audit_timeline_filter_kind_suggestion: "执行建议",
+    audit_timeline_filter_kind_learning: "学习候选",
+    audit_timeline_filter_status: "判断",
+    audit_timeline_filter_status_all: "全部判断",
+    audit_timeline_filter_status_accept: "Accept",
+    audit_timeline_filter_status_modify: "Modify",
+    audit_timeline_filter_status_reject: "Reject",
+    audit_timeline_filter_status_promote: "Promote / Runtime",
+    audit_timeline_filter_age: "时间",
+    audit_timeline_filter_age_all: "全部时间",
+    audit_timeline_filter_age_7d: "近 7 天",
+    audit_timeline_filter_age_30d: "近 30 天",
+    audit_timeline_meta_idle: "当前显示全部近期判断。",
+    audit_timeline_meta_active: "当前显示 {shown} / {total} 条近期判断。",
+    audit_timeline_empty_filtered: "当前没有符合时间线筛选的判断。",
     suggestion_detail_empty: "选择一条建议以查看复核支撑。",
     suggestion_detail_raw: "原始载荷（按需展开）",
     suggestion_detail_task: "任务",
@@ -592,6 +619,23 @@ const I18N = {
     audit_timeline_time_promoted: "Promoted {created}",
     audit_timeline_time_created: "Queued {created}",
     audit_timeline_open_detail: "Open Support Detail",
+    audit_timeline_filter_kind: "Object",
+    audit_timeline_filter_kind_all: "All Objects",
+    audit_timeline_filter_kind_suggestion: "Execution Suggestions",
+    audit_timeline_filter_kind_learning: "Learning Candidates",
+    audit_timeline_filter_status: "Judgment",
+    audit_timeline_filter_status_all: "All Judgments",
+    audit_timeline_filter_status_accept: "Accept",
+    audit_timeline_filter_status_modify: "Modify",
+    audit_timeline_filter_status_reject: "Reject",
+    audit_timeline_filter_status_promote: "Promote / Runtime",
+    audit_timeline_filter_age: "Time",
+    audit_timeline_filter_age_all: "Any Time",
+    audit_timeline_filter_age_7d: "Last 7d",
+    audit_timeline_filter_age_30d: "Last 30d",
+    audit_timeline_meta_idle: "Showing all recent judgments.",
+    audit_timeline_meta_active: "Showing {shown} / {total} recent judgments.",
+    audit_timeline_empty_filtered: "No recent judgments match the current timeline filters.",
     suggestion_detail_empty: "Select a suggestion to open review support.",
     suggestion_detail_raw: "Raw Payload (Open On Demand)",
     suggestion_detail_task: "Task",
@@ -1306,6 +1350,53 @@ function updateReviewFilterMeta(filteredItems, totalItems) {
   });
 }
 
+function normalizeAuditTimelineFilterState(nextState = {}) {
+  const kind = String(nextState.kind || "all").trim();
+  const status = String(nextState.status || "all").trim();
+  const age = String(nextState.age || "all").trim();
+  return {
+    kind: ["all", "suggestion", "learning"].includes(kind) ? kind : "all",
+    status: ["all", "accept", "modify", "reject", "promote"].includes(status) ? status : "all",
+    age: ["all", "7d", "30d"].includes(age) ? age : "all",
+  };
+}
+
+function syncAuditTimelineFilterControls() {
+  if (auditTimelineKindFilter) {
+    auditTimelineKindFilter.value = auditTimelineFilterState.kind;
+  }
+  if (auditTimelineStatusFilter) {
+    auditTimelineStatusFilter.value = auditTimelineFilterState.status;
+  }
+  if (auditTimelineAgeFilter) {
+    auditTimelineAgeFilter.value = auditTimelineFilterState.age;
+  }
+}
+
+function hasActiveAuditTimelineFilters() {
+  return (
+    auditTimelineFilterState.kind !== "all" ||
+    auditTimelineFilterState.status !== "all" ||
+    auditTimelineFilterState.age !== "all"
+  );
+}
+
+function updateAuditTimelineMeta(filteredItems, totalItems) {
+  if (!auditTimelineMeta) {
+    return;
+  }
+  if (!hasActiveAuditTimelineFilters()) {
+    auditTimelineMeta.setAttribute("data-i18n", "audit_timeline_meta_idle");
+    auditTimelineMeta.textContent = t("audit_timeline_meta_idle");
+    return;
+  }
+  auditTimelineMeta.removeAttribute("data-i18n");
+  auditTimelineMeta.textContent = t("audit_timeline_meta_active", {
+    shown: Number(filteredItems || 0),
+    total: Number(totalItems || 0),
+  });
+}
+
 function formatCandidateCreatedAt(item) {
   if (!item || typeof item !== "object") {
     return "-";
@@ -1395,6 +1486,26 @@ function learningTimelineStageClass(item) {
   return "stage-candidate";
 }
 
+function learningTimelineJudgmentKey(item) {
+  const stage = String((item && item.lifecycle_stage) || "").trim();
+  if (stage === "promoted" || stage === "active_runtime") {
+    return "promote";
+  }
+  const verdict = String((item && item.verdict) || "").trim().toLowerCase();
+  if (["accept", "modify", "reject"].includes(verdict)) {
+    return verdict;
+  }
+  return "all";
+}
+
+function timelineAgeHours(timestamp) {
+  const ts = timelineDateValue(timestamp);
+  if (!ts) {
+    return null;
+  }
+  return Math.max(0, (Date.now() - ts) / 3600000);
+}
+
 function buildAuditTimelineItems() {
   const items = [];
   for (const item of suggestionReviewedItems(auditUiSnapshot.suggestion_review_queue)) {
@@ -1423,6 +1534,7 @@ function buildAuditTimelineItems() {
         }),
         ownerReview.target_layer ? `${t("suggestion_detail_target")}: ${String(ownerReview.target_layer)}` : "",
       ].filter(Boolean),
+      statusKey: suggestionReviewBadgeKey(item),
       summaryText: detailLines[0] || "",
       noteText: detailLines.length > 1 ? detailLines.slice(1).join("\n") : "",
       timestamp,
@@ -1456,6 +1568,7 @@ function buildAuditTimelineItems() {
           ? `${t("candidate_label_target")}: ${String(item.promotion_target || item.proposal_target)}`
           : "",
       ].filter(Boolean),
+      statusKey: learningTimelineJudgmentKey(item),
       summaryText: clipText(item.statement, 260),
       noteText: clipText(item.owner_note || item.modified_statement || lifecycleNextAction(item), 240),
       timestamp,
@@ -1475,20 +1588,47 @@ function buildAuditTimelineItems() {
   return items;
 }
 
+function filterAuditTimelineItems(items) {
+  if (!Array.isArray(items)) {
+    return [];
+  }
+  return items.filter((item) => {
+    if (!item || typeof item !== "object") {
+      return false;
+    }
+    if (auditTimelineFilterState.kind !== "all" && item.kind !== auditTimelineFilterState.kind) {
+      return false;
+    }
+    if (auditTimelineFilterState.status !== "all" && item.statusKey !== auditTimelineFilterState.status) {
+      return false;
+    }
+    const ageHours = timelineAgeHours(item.timestamp);
+    if (auditTimelineFilterState.age === "7d" && (ageHours === null || ageHours > 24 * 7)) {
+      return false;
+    }
+    if (auditTimelineFilterState.age === "30d" && (ageHours === null || ageHours > 24 * 30)) {
+      return false;
+    }
+    return true;
+  });
+}
+
 function renderAuditTimeline() {
   if (!auditTimelineList) {
     return;
   }
-  const items = buildAuditTimelineItems();
+  const allItems = buildAuditTimelineItems();
+  const items = filterAuditTimelineItems(allItems);
   if (auditTimelineCount) {
     auditTimelineCount.textContent = String(items.length);
   }
+  updateAuditTimelineMeta(items.length, allItems.length);
 
   auditTimelineList.innerHTML = "";
   if (items.length === 0) {
     const empty = document.createElement("div");
     empty.className = "todo-item todo-item-empty";
-    empty.textContent = t("audit_timeline_empty");
+    empty.textContent = t(hasActiveAuditTimelineFilters() ? "audit_timeline_empty_filtered" : "audit_timeline_empty");
     auditTimelineList.appendChild(empty);
     return;
   }
@@ -1809,6 +1949,7 @@ function renderLatestMessage() {
 function setLanguage(lang) {
   uiLanguage = lang === "en" ? "en" : "zh";
   applyI18n();
+  syncAuditTimelineFilterControls();
   const autoOption = moduleSelect.querySelector('option[value=""]');
   if (autoOption) {
     autoOption.textContent = t("option_auto_route");
@@ -3918,6 +4059,12 @@ function rerenderReviewInbox() {
   renderLearningCandidates(auditUiSnapshot.learning_candidates);
 }
 
+function rerenderAuditTimeline() {
+  auditTimelineFilterState = normalizeAuditTimelineFilterState(auditTimelineFilterState);
+  syncAuditTimelineFilterControls();
+  renderAuditTimeline();
+}
+
 for (const button of reviewPresetButtons) {
   button.addEventListener("click", () => {
     applyReviewPreset(String(button.dataset.reviewPreset || "all"));
@@ -3955,6 +4102,34 @@ if (reviewAgeFilter) {
 if (reviewFilterResetBtn) {
   reviewFilterResetBtn.addEventListener("click", () => {
     applyReviewPreset("all");
+  });
+}
+
+if (auditTimelineKindFilter) {
+  auditTimelineKindFilter.addEventListener("change", () => {
+    auditTimelineFilterState.kind = auditTimelineKindFilter.value || "all";
+    rerenderAuditTimeline();
+  });
+}
+
+if (auditTimelineStatusFilter) {
+  auditTimelineStatusFilter.addEventListener("change", () => {
+    auditTimelineFilterState.status = auditTimelineStatusFilter.value || "all";
+    rerenderAuditTimeline();
+  });
+}
+
+if (auditTimelineAgeFilter) {
+  auditTimelineAgeFilter.addEventListener("change", () => {
+    auditTimelineFilterState.age = auditTimelineAgeFilter.value || "all";
+    rerenderAuditTimeline();
+  });
+}
+
+if (auditTimelineResetBtn) {
+  auditTimelineResetBtn.addEventListener("click", () => {
+    auditTimelineFilterState = normalizeAuditTimelineFilterState();
+    rerenderAuditTimeline();
   });
 }
 
@@ -4130,6 +4305,7 @@ setAuditGuideKey("audit_guide_idle");
 setStatus(t("status_connecting"), "pending", "status_connecting");
 initTheme();
 initReviewPresetSelection();
+rerenderAuditTimeline();
 switchEntrypoint("audit");
 setSuggestionReviewEnabled(false);
 updateAuditConsoleDensity();
