@@ -1419,6 +1419,15 @@ body {
   color: var(--accent-ink);
 }
 
+.audit-judgment-card {
+  border-color: color-mix(in srgb, var(--accent) 38%, var(--border));
+  background: linear-gradient(
+    140deg,
+    color-mix(in srgb, var(--accent) 6%, var(--card) 94%),
+    color-mix(in srgb, var(--card) 96%, white 4%)
+  );
+}
+
 .audit-support-fold {
   border: 1px solid color-mix(in srgb, var(--border) 82%, white);
   border-radius: 12px;
@@ -1448,7 +1457,8 @@ body {
   background: color-mix(in srgb, var(--card) 96%, white 4%);
 }
 
-.trace-block[data-support-reveal="true"] {
+.trace-block[data-support-reveal="true"],
+.audit-support-card[data-support-reveal="true"] {
   border-color: color-mix(in srgb, var(--accent) 62%, white);
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 28%, transparent);
 }

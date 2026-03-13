@@ -2812,9 +2812,6 @@ function revealAuditJudgmentDetail() {
   if (!auditJudgmentDetailBlock) {
     return;
   }
-  if (auditMachineFold) {
-    auditMachineFold.open = true;
-  }
   auditJudgmentDetailBlock.dataset.supportReveal = "true";
   if (auditSupportRevealTimer !== null) {
     window.clearTimeout(auditSupportRevealTimer);
@@ -3100,7 +3097,7 @@ function renderLearningSupportDetail(item, options = {}) {
   setPreview("-");
   setOutputTokenMeta("-");
   setSuggestionReviewEnabled(false);
-  if (options && options.openSupport && auditMachineFold) {
+  if (options && options.openSupport) {
     revealAuditJudgmentDetail();
   }
 }
@@ -3241,9 +3238,6 @@ async function loadSuggestionDetail(suggestionId, options = {}) {
   }
   latestSuggestionId = sid;
   syncAuditSupportSelection("suggestion", sid);
-  if (options && options.openSupport && auditMachineFold) {
-    auditMachineFold.open = true;
-  }
   try {
     const data = await getJson(`/api/suggestion?id=${encodeURIComponent(sid)}`);
     renderSuggestionDetail(data);
