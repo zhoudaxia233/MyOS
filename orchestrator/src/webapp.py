@@ -33,6 +33,7 @@ from manifests import discover_module_manifests
 from metrics import compute_cognition_trend, compute_drift_metrics, render_metrics_report
 from owner_report import (
     build_owner_snapshot,
+    list_suggestion_review_queue,
     list_open_owner_todos,
     render_owner_report,
     render_owner_todos,
@@ -840,6 +841,7 @@ def api_status(root: Path) -> dict:
         "learning_candidates": list_recent_learning_candidates(root, limit=12, include_resolved=True),
         "candidate_pipeline_summary": summarize_learning_pipeline(root, window_days=30),
         "candidate_pipeline_trend": summarize_learning_pipeline_trend(root),
+        "suggestion_review_queue": list_suggestion_review_queue(root, window_days=30, limit=8),
         "suggestion_review_summary": summarize_suggestion_reviews(root, window_days=30, limit=12),
         "suggestion_review_trend": summarize_suggestion_review_trend(root),
     }

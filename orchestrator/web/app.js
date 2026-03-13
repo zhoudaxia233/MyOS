@@ -48,9 +48,11 @@ const suggestionModifyBtn = document.getElementById("suggestionModifyBtn");
 const suggestionRejectBtn = document.getElementById("suggestionRejectBtn");
 const cognitionCards = document.getElementById("cognitionCards");
 const reviewInboxLead = document.getElementById("reviewInboxLead");
+const reviewCountSuggestion = document.getElementById("reviewCountSuggestion");
 const reviewCountReview = document.getElementById("reviewCountReview");
 const reviewCountPromote = document.getElementById("reviewCountPromote");
 const reviewCountTodo = document.getElementById("reviewCountTodo");
+const suggestionReviewCount = document.getElementById("suggestionReviewCount");
 const reviewQueueCount = document.getElementById("reviewQueueCount");
 const promoteQueueCount = document.getElementById("promoteQueueCount");
 const ownerTodoCount = document.getElementById("ownerTodoCount");
@@ -61,6 +63,7 @@ const reviewAgeFilter = document.getElementById("reviewAgeFilter");
 const reviewFilterResetBtn = document.getElementById("reviewFilterResetBtn");
 const reviewFilterMeta = document.getElementById("reviewFilterMeta");
 const reviewPresetButtons = Array.from(document.querySelectorAll("[data-review-preset]"));
+const suggestionReviewList = document.getElementById("suggestionReviewList");
 const reviewCandidates = document.getElementById("reviewCandidates");
 const promoteCandidates = document.getElementById("promoteCandidates");
 const reviewedCandidates = document.getElementById("reviewedCandidates");
@@ -88,6 +91,7 @@ const settingsContentModel = document.getElementById("settingsContentModel");
 const settingsCognitionProvider = document.getElementById("settingsCognitionProvider");
 const settingsCognitionModel = document.getElementById("settingsCognitionModel");
 const settingsUiLanguage = document.getElementById("settingsUiLanguage");
+const auditMachineFold = document.getElementById("auditMachineFold");
 const learningReviewModal = document.getElementById("learningReviewModal");
 const learningReviewTitle = document.getElementById("learningReviewTitle");
 const learningReviewMeta = document.getElementById("learningReviewMeta");
@@ -97,12 +101,26 @@ const learningReviewStatement = document.getElementById("learningReviewStatement
 const learningReviewSubmit = document.getElementById("learningReviewSubmit");
 const learningReviewCancel = document.getElementById("learningReviewCancel");
 const learningReviewClose = document.getElementById("learningReviewClose");
+const suggestionReviewModal = document.getElementById("suggestionReviewModal");
+const suggestionReviewTitle = document.getElementById("suggestionReviewTitle");
+const suggestionReviewMeta = document.getElementById("suggestionReviewMeta");
+const suggestionReviewNote = document.getElementById("suggestionReviewNote");
+const suggestionReviewReplacementWrap = document.getElementById("suggestionReviewReplacementWrap");
+const suggestionReviewReplacement = document.getElementById("suggestionReviewReplacement");
+const suggestionReviewReasonWrap = document.getElementById("suggestionReviewReasonWrap");
+const suggestionReviewReason = document.getElementById("suggestionReviewReason");
+const suggestionReviewTargetWrap = document.getElementById("suggestionReviewTargetWrap");
+const suggestionReviewTarget = document.getElementById("suggestionReviewTarget");
+const suggestionReviewSubmit = document.getElementById("suggestionReviewSubmit");
+const suggestionReviewCancel = document.getElementById("suggestionReviewCancel");
+const suggestionReviewClose = document.getElementById("suggestionReviewClose");
 let latestOutputPath = null;
 let latestOutputProvider = null;
 let latestSuggestionId = null;
 let settingsCache = null;
 let uiLanguage = "zh";
 let learningReviewDraft = null;
+let suggestionReviewDraft = null;
 let auditManualForcedVisible = false;
 let messagesExpanded = false;
 let latestMessagePayload = { role: null, text: "" };
@@ -110,6 +128,12 @@ let auditUiSnapshot = {
   owner_todos: [],
   learning_candidates: [],
   candidate_pipeline_summary: {},
+  suggestion_review_queue: {
+    pending_total: 0,
+    reviewed_total: 0,
+    pending: [],
+    recently_reviewed: [],
+  },
 };
 let reviewFilterState = {
   stage: "all",
@@ -144,13 +168,15 @@ const I18N = {
     hint_audit: "在这里做漂移检查、报告复核和学习与进化候选治理。",
     audit_kicker: "Owner Review",
     review_inbox_title: "待判断事项",
-    review_inbox_desc: "先处理候选与 Owner 待办，再按需查看生命周期、报告和机器轨迹。",
+    review_inbox_desc: "先处理任务建议、学习候选与 Owner 待办，再按需查看生命周期、报告和机器轨迹。",
+    review_inbox_lead_suggestion: "当前有任务建议等待判断。先做 Accept / Modify / Reject，再处理学习候选或其他治理事项。",
     review_inbox_lead_review: "当前有待复核候选。先做 Accept / Modify / Reject，再决定哪些值得进入下一阶段。",
     review_inbox_lead_promote: "当前有候选已经通过复核。Accept 不等于 Promote，请单独判断是否值得晋升。",
     review_inbox_lead_todo: "当前主要是 Owner 待办。先处理这些异常与判断事项，再回看支持上下文。",
     review_inbox_lead_empty: "当前收件箱为空。你可以回到工作台补充学习素材，或按需运行一次 quick audit。",
     review_inbox_lead_filtered_empty: "当前筛选条件下没有匹配候选。你可以放宽筛选范围，或回到全部视图。",
     review_inbox_lead_mixed: "先处理真正需要你判断的对象；生命周期和机器轨迹只作为辅助上下文。",
+    review_count_suggestion: "建议复核",
     review_count_review: "待复核",
     review_count_promote: "可晋升",
     review_count_todo: "Owner 待办",
@@ -179,10 +205,16 @@ const I18N = {
     btn_reset_filters: "清空筛选",
     review_filter_meta_idle: "当前显示全部候选。",
     review_filter_meta_active: "当前显示 {shown} / {total} 条候选。",
-    review_queue_title: "待复核候选",
-    review_queue_desc: "这里做 Accept / Modify / Reject，不把判断淹没在日志里。",
-    promote_queue_title: "可晋升候选",
-    promote_queue_desc: "Accept 不等于 Promote。这里只处理已经通过复核的项。",
+    suggestion_queue_title: "任务建议复核",
+    suggestion_queue_desc: "这里处理最近执行产出的建议判断，不和学习候选治理混在一起。",
+    suggestion_queue_next: "下一步：判断这条建议是保留、改写还是拒绝。",
+    suggestion_queue_empty: "当前没有待复核的任务建议。",
+    suggestion_queue_open_detail: "查看细节",
+    suggestion_meta_created: "进入队列 {created}",
+    review_queue_title: "学习候选待复核",
+    review_queue_desc: "这里处理学习候选的 Accept / Modify / Reject，不把判断淹没在日志里。",
+    promote_queue_title: "学习候选可晋升",
+    promote_queue_desc: "Accept 不等于 Promote。这里只处理已经通过复核的学习项。",
     owner_todo_title: "Owner 待办",
     owner_todo_desc: "这是系统已经升级成 owner judgment 的异常与待确认事项。",
     review_history_summary: "近期已处理 / 冷却中",
@@ -246,7 +278,7 @@ const I18N = {
     audit_start_desc: "先点击一键审计，再按结果做手动动作。",
     btn_audit_quick_run: "一键审计（校验 -> 7天指标 -> Owner报告）",
     audit_guide_idle: "审计指引：先跑一键审计，再看右侧认知信号和待办。",
-    audit_zero_state_desc: "当前没有候选待办或待办任务。建议先去工作台输入学习素材，或先跑一次一键审计。",
+    audit_zero_state_desc: "当前没有待复核建议、学习候选或 Owner 待办。建议先去工作台输入学习素材，或先跑一次一键审计。",
     btn_go_workspace_learning: "去工作台学习与进化",
     btn_show_manual_actions: "仍然显示全部手动动作",
     audit_guide_title: "一键审计执行摘要",
@@ -346,6 +378,20 @@ const I18N = {
     learning_review_statement_placeholder: "输入修改后的候选陈述...",
     learning_review_cancel: "取消",
     learning_review_submit: "提交",
+    suggestion_review_modal_title_accept: "接受建议",
+    suggestion_review_modal_title_modify: "修改建议",
+    suggestion_review_modal_title_reject: "拒绝建议",
+    suggestion_review_modal_title: "复核建议",
+    suggestion_review_owner_note: "Owner 备注",
+    suggestion_review_note_placeholder: "写下你的判断依据...",
+    suggestion_review_replacement: "替代判断",
+    suggestion_review_replacement_placeholder: "输入修改后的判断...",
+    suggestion_review_reason: "不像我的原因",
+    suggestion_review_reason_placeholder: "说明原建议为什么不像你...",
+    suggestion_review_target: "目标层",
+    suggestion_review_target_placeholder: "decision",
+    suggestion_review_cancel: "取消",
+    suggestion_review_submit: "提交",
     settings_title: "连接与偏好设置",
     settings_intro: "只需配置一个 API Key 并保存即可。其余选项建议先保持默认。",
     settings_section_openai: "OpenAI（可选）",
@@ -381,7 +427,7 @@ const I18N = {
     msg_connection_failed: "连接失败：{error}",
     msg_copy_failed: "复制失败：{error}",
     msg_no_output_yet: "暂无输出，请先执行任务。",
-    msg_no_suggestion_selected: "还没有 suggestion，请先执行任务。",
+    msg_no_suggestion_selected: "还没有选中建议，请先选择一条建议或先执行任务。",
     demo_summary_idle: "演示摘要会显示在这里。",
     demo_summary_title: "演示模式执行摘要",
     demo_started: "演示模式开始：将自动执行 决策 -> 学习 -> 审计 三步。",
@@ -409,6 +455,11 @@ const I18N = {
     msg_owner_todo_resolve_failed: "完成 Owner Todo 失败：{error}",
     msg_review_note_required: "复核需要填写备注。",
     msg_modify_statement_required: "选择“修改”时必须填写修改后的陈述。",
+    msg_suggestion_note_required: "请输入对这条建议的 Owner 备注。",
+    msg_suggestion_replacement_required: "请输入替代判断。",
+    msg_suggestion_reason_required: "请输入不像我的原因。",
+    msg_suggestion_review_done: "建议已复核：{id} -> {verdict}",
+    msg_suggestion_review_failed: "建议复核失败：{error}",
     msg_candidate_review_done: "候选已复核：{id} -> {verdict}",
     msg_candidate_review_failed: "候选复核失败：{error}",
     msg_promotion_note_required: "晋升需要填写审批备注。",
@@ -444,13 +495,15 @@ const I18N = {
     hint_audit: "Review drift, reports, and Learning & Evolution candidates before promoting into judgment core.",
     audit_kicker: "Owner Review",
     review_inbox_title: "Items Requiring Judgment",
-    review_inbox_desc: "Handle candidates and owner todos first, then open lifecycle, reports, or machine traces only when needed.",
+    review_inbox_desc: "Handle task suggestions, learning candidates, and owner todos first, then open lifecycle, reports, or machine traces only when needed.",
+    review_inbox_lead_suggestion: "Task suggestions are waiting for judgment. Decide Accept / Modify / Reject before switching to learning governance or support context.",
     review_inbox_lead_review: "Pending candidates need review now. Decide Accept / Modify / Reject before thinking about promotion.",
     review_inbox_lead_promote: "Some candidates already passed review. Accept is not Promote, so judge promotion separately.",
     review_inbox_lead_todo: "Owner todos are the main work right now. Clear these judgment items first, then use support context if needed.",
     review_inbox_lead_empty: "The inbox is empty for now. Add new learning material from Workspace or run quick audit if you want fresh context.",
     review_inbox_lead_filtered_empty: "No candidates match the current filters. Relax the filters or return to the full inbox view.",
     review_inbox_lead_mixed: "Focus on the objects that need owner judgment first; lifecycle and machine traces stay in a support role.",
+    review_count_suggestion: "Suggestion Review",
     review_count_review: "Needs Review",
     review_count_promote: "Ready To Promote",
     review_count_todo: "Owner Todos",
@@ -479,10 +532,16 @@ const I18N = {
     btn_reset_filters: "Reset Filters",
     review_filter_meta_idle: "Showing all candidates.",
     review_filter_meta_active: "Showing {shown} / {total} candidates.",
-    review_queue_title: "Pending Review Candidates",
-    review_queue_desc: "This is where Accept / Modify / Reject happens, without burying judgment under logs.",
-    promote_queue_title: "Promotion Candidates",
-    promote_queue_desc: "Accept is not Promote. This queue is only for candidates that already passed review.",
+    suggestion_queue_title: "Task Suggestion Inbox",
+    suggestion_queue_desc: "Review execution suggestions here without mixing them into learning candidate governance.",
+    suggestion_queue_next: "Next action: decide whether this suggestion should be kept, rewritten, or rejected.",
+    suggestion_queue_empty: "No task suggestions currently need review.",
+    suggestion_queue_open_detail: "Open Detail",
+    suggestion_meta_created: "Queued {created}",
+    review_queue_title: "Learning Candidates Needing Review",
+    review_queue_desc: "This queue is for learning candidate Accept / Modify / Reject without burying judgment under logs.",
+    promote_queue_title: "Learning Candidates Ready To Promote",
+    promote_queue_desc: "Accept is not Promote. This queue is only for learning items that already passed review.",
     owner_todo_title: "Owner Todos",
     owner_todo_desc: "These are exceptions and decisions that have already escalated into owner judgment work.",
     review_history_summary: "Recently Reviewed / Cooling",
@@ -546,7 +605,7 @@ const I18N = {
     audit_start_desc: "Run quick audit first, then use manual actions based on results.",
     btn_audit_quick_run: "Run Quick Audit (Validate -> Metrics -> Owner Report)",
     audit_guide_idle: "Audit guide: run quick audit first, then check Cognition Signals and Owner Todos on the right.",
-    audit_zero_state_desc: "No owner todos or learning candidates yet. Start from Workspace learning input or run quick audit first.",
+    audit_zero_state_desc: "No task suggestions, learning candidates, or owner todos need attention right now. Start from Workspace learning input or run quick audit first.",
     btn_go_workspace_learning: "Go To Workspace Learning",
     btn_show_manual_actions: "Show Manual Actions Anyway",
     audit_guide_title: "Quick Audit Summary",
@@ -646,6 +705,20 @@ const I18N = {
     learning_review_statement_placeholder: "Refine the candidate statement...",
     learning_review_cancel: "Cancel",
     learning_review_submit: "Submit",
+    suggestion_review_modal_title_accept: "Accept Suggestion",
+    suggestion_review_modal_title_modify: "Modify Suggestion",
+    suggestion_review_modal_title_reject: "Reject Suggestion",
+    suggestion_review_modal_title: "Review Suggestion",
+    suggestion_review_owner_note: "Owner Note",
+    suggestion_review_note_placeholder: "Write your owner rationale...",
+    suggestion_review_replacement: "Replacement Judgment",
+    suggestion_review_replacement_placeholder: "Write the corrected judgment...",
+    suggestion_review_reason: "Unlike-Me Reason",
+    suggestion_review_reason_placeholder: "Explain why the current suggestion is unlike you...",
+    suggestion_review_target: "Target Layer",
+    suggestion_review_target_placeholder: "decision",
+    suggestion_review_cancel: "Cancel",
+    suggestion_review_submit: "Submit",
     settings_title: "Connection & Preferences",
     settings_intro: "You only need one API key and Save. Keep everything else as default first.",
     settings_section_openai: "OpenAI (Optional)",
@@ -681,7 +754,7 @@ const I18N = {
     msg_connection_failed: "Connection failed: {error}",
     msg_copy_failed: "Copy failed: {error}",
     msg_no_output_yet: "No output yet. Run a task first.",
-    msg_no_suggestion_selected: "No suggestion selected. Run a task first.",
+    msg_no_suggestion_selected: "No suggestion selected. Pick one from the inbox or run a task first.",
     demo_summary_idle: "Demo summary will appear here.",
     demo_summary_title: "Demo Mode Summary",
     demo_started: "Demo mode started: Decision -> Learning -> Audit will run automatically.",
@@ -707,6 +780,11 @@ const I18N = {
     msg_owner_todo_resolve_failed: "Resolve owner todo failed: {error}",
     msg_review_note_required: "Owner note is required for review.",
     msg_modify_statement_required: "Modified statement is required for modify verdict.",
+    msg_suggestion_note_required: "Owner note is required for suggestion review.",
+    msg_suggestion_replacement_required: "Replacement judgment is required for modify verdict.",
+    msg_suggestion_reason_required: "Unlike-me reason is required for modify verdict.",
+    msg_suggestion_review_done: "Suggestion reviewed: {id} -> {verdict}",
+    msg_suggestion_review_failed: "Suggestion review failed: {error}",
     msg_candidate_review_done: "Candidate reviewed: {id} -> {verdict}",
     msg_candidate_review_failed: "Candidate review failed: {error}",
     msg_promotion_note_required: "Approval note is required for promotion.",
@@ -815,7 +893,11 @@ function refreshAuditUiSnapshot(data) {
   if (data.candidate_pipeline_summary && typeof data.candidate_pipeline_summary === "object") {
     auditUiSnapshot.candidate_pipeline_summary = data.candidate_pipeline_summary;
   }
+  if (data.suggestion_review_queue && typeof data.suggestion_review_queue === "object") {
+    auditUiSnapshot.suggestion_review_queue = data.suggestion_review_queue;
+  }
   refreshReviewTypeOptions();
+  renderSuggestionReviewQueue(auditUiSnapshot.suggestion_review_queue);
   renderReviewInboxSummary();
   updateAuditConsoleDensity();
 }
@@ -832,6 +914,41 @@ function hasRealLearningCandidates(items) {
     return false;
   }
   return items.some((item) => item && typeof item === "object" && String(item.id || "").trim());
+}
+
+function isSuggestionReviewItem(item) {
+  return item && typeof item === "object" && String(item.id || "").trim();
+}
+
+function suggestionPendingItems(queue) {
+  if (!queue || typeof queue !== "object" || !Array.isArray(queue.pending)) {
+    return [];
+  }
+  return queue.pending.filter(isSuggestionReviewItem);
+}
+
+function suggestionPendingTotal(queue) {
+  if (!queue || typeof queue !== "object") {
+    return 0;
+  }
+  const total = Number(queue.pending_total);
+  if (Number.isFinite(total) && total >= 0) {
+    return total;
+  }
+  return suggestionPendingItems(queue).length;
+}
+
+function findSuggestionReviewItem(suggestionId) {
+  const sid = String(suggestionId || "").trim();
+  if (!sid) {
+    return null;
+  }
+  const queue = auditUiSnapshot.suggestion_review_queue || {};
+  const rows = [
+    ...(Array.isArray(queue.pending) ? queue.pending : []),
+    ...(Array.isArray(queue.recently_reviewed) ? queue.recently_reviewed : []),
+  ];
+  return rows.find((item) => String(item && item.id ? item.id : "").trim() === sid) || null;
 }
 
 function hasLifecycleSignals(summary) {
@@ -1113,6 +1230,96 @@ function formatCandidateCreatedAt(item) {
   });
 }
 
+function summarizeSuggestionTask(item) {
+  const raw = String((item && item.task_raw) || (item && item.id) || "").trim();
+  if (!raw) {
+    return "-";
+  }
+  return raw.length > 160 ? `${raw.slice(0, 157)}...` : raw;
+}
+
+function renderSuggestionReviewQueue(queue) {
+  if (!suggestionReviewList) {
+    return;
+  }
+  const items = suggestionPendingItems(queue);
+  const total = suggestionPendingTotal(queue);
+  const selectedId = String(latestSuggestionId || "").trim();
+
+  if (suggestionReviewCount) {
+    suggestionReviewCount.textContent = String(total);
+  }
+
+  suggestionReviewList.innerHTML = "";
+  if (items.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "todo-item todo-item-empty";
+    empty.textContent = t("suggestion_queue_empty");
+    suggestionReviewList.appendChild(empty);
+    return;
+  }
+
+  for (const item of items) {
+    const suggestionId = String(item.id || "").trim();
+    const wrap = document.createElement("div");
+    wrap.className = "todo-item suggestion-review-card";
+    wrap.dataset.active = suggestionId && suggestionId === selectedId ? "true" : "false";
+
+    const head = document.createElement("div");
+    head.className = "todo-head";
+    const metric = document.createElement("span");
+    metric.className = "todo-metric";
+    metric.textContent = summarizeSuggestionTask(item);
+    head.appendChild(metric);
+
+    const meta = document.createElement("div");
+    meta.className = "suggestion-meta";
+    if (item.module) {
+      const moduleChip = document.createElement("span");
+      moduleChip.className = "suggestion-meta-chip";
+      moduleChip.textContent = String(item.module);
+      meta.appendChild(moduleChip);
+    }
+    const createdChip = document.createElement("span");
+    createdChip.className = "suggestion-meta-chip";
+    createdChip.textContent = t("suggestion_meta_created", { created: formatCandidateCreatedAt(item) });
+    meta.appendChild(createdChip);
+
+    const nextAction = document.createElement("div");
+    nextAction.className = "todo-action suggestion-next";
+    nextAction.textContent = t("suggestion_queue_next");
+
+    const actions = document.createElement("div");
+    actions.className = "todo-actions";
+
+    const detailBtn = document.createElement("button");
+    detailBtn.className = "todo-resolve-btn";
+    detailBtn.type = "button";
+    detailBtn.textContent = t("suggestion_queue_open_detail");
+    detailBtn.addEventListener("click", () => {
+      void focusSuggestionReview(suggestionId);
+    });
+    actions.appendChild(detailBtn);
+
+    for (const verdict of ["accept", "modify", "reject"]) {
+      const button = document.createElement("button");
+      button.className = "todo-resolve-btn";
+      button.type = "button";
+      button.textContent = t(`btn_${verdict}`);
+      button.addEventListener("click", () => {
+        reviewSuggestion(verdict, suggestionId);
+      });
+      actions.appendChild(button);
+    }
+
+    wrap.appendChild(head);
+    wrap.appendChild(meta);
+    wrap.appendChild(nextAction);
+    wrap.appendChild(actions);
+    suggestionReviewList.appendChild(wrap);
+  }
+}
+
 function candidateRuntimeDetail(item) {
   if (!item || typeof item !== "object") {
     return t("candidate_detail_runtime_pending");
@@ -1131,10 +1338,14 @@ function candidateRuntimeDetail(item) {
 function renderReviewInboxSummary() {
   const filtered = filterLearningCandidates(auditUiSnapshot.learning_candidates);
   const buckets = splitLearningCandidates(filtered);
+  const suggestionTotal = suggestionPendingTotal(auditUiSnapshot.suggestion_review_queue);
   const todoTotal = Array.isArray(auditUiSnapshot.owner_todos)
     ? auditUiSnapshot.owner_todos.filter((item) => item && typeof item === "object" && String(item.id || "").trim()).length
     : 0;
 
+  if (reviewCountSuggestion) {
+    reviewCountSuggestion.textContent = String(suggestionTotal);
+  }
   if (reviewCountReview) {
     reviewCountReview.textContent = String(buckets.review.length);
   }
@@ -1159,7 +1370,9 @@ function renderReviewInboxSummary() {
   }
 
   let leadKey = "review_inbox_lead_mixed";
-  if (hasActiveReviewFilters() && filtered.length === 0) {
+  if (suggestionTotal > 0) {
+    leadKey = "review_inbox_lead_suggestion";
+  } else if (hasActiveReviewFilters() && filtered.length === 0) {
     leadKey = "review_inbox_lead_filtered_empty";
   } else if (buckets.review.length > 0) {
     leadKey = "review_inbox_lead_review";
@@ -1180,7 +1393,11 @@ function updateAuditConsoleDensity() {
     return;
   }
   const buckets = splitLearningCandidates(auditUiSnapshot.learning_candidates);
-  const empty = !hasRealOwnerTodos(auditUiSnapshot.owner_todos) && buckets.review.length === 0 && buckets.promote.length === 0;
+  const empty =
+    !hasRealOwnerTodos(auditUiSnapshot.owner_todos) &&
+    suggestionPendingTotal(auditUiSnapshot.suggestion_review_queue) === 0 &&
+    buckets.review.length === 0 &&
+    buckets.promote.length === 0;
   const showZero = empty && !auditManualForcedVisible;
   auditZeroState.hidden = !showZero;
   if (auditManualActions) {
@@ -1281,6 +1498,7 @@ function setLanguage(lang) {
     autoOption.textContent = t("option_auto_route");
   }
   refreshReviewTypeOptions();
+  renderSuggestionReviewQueue(auditUiSnapshot.suggestion_review_queue);
   renderReviewInboxSummary();
   renderLearningCandidates(auditUiSnapshot.learning_candidates);
   renderOwnerTodos(auditUiSnapshot.owner_todos);
@@ -1985,6 +2203,7 @@ function renderInspectResult(data) {
   latestSuggestionId = null;
   suggestionTrace.textContent = "-";
   setSuggestionReviewEnabled(false);
+  renderSuggestionReviewQueue(auditUiSnapshot.suggestion_review_queue);
   if (!data.output_preview) {
     setPreview("-");
     setOutputTokenMeta("-");
@@ -2008,12 +2227,19 @@ function renderSuggestionDetail(data) {
   setSuggestionReviewEnabled(true);
 }
 
-async function loadSuggestionDetail(suggestionId) {
+async function loadSuggestionDetail(suggestionId, options = {}) {
   const sid = String(suggestionId || "").trim();
   if (!sid) {
+    latestSuggestionId = null;
+    renderSuggestionReviewQueue(auditUiSnapshot.suggestion_review_queue);
     suggestionTrace.textContent = "-";
     setSuggestionReviewEnabled(false);
     return;
+  }
+  latestSuggestionId = sid;
+  renderSuggestionReviewQueue(auditUiSnapshot.suggestion_review_queue);
+  if (options && options.openSupport && auditMachineFold) {
+    auditMachineFold.open = true;
   }
   try {
     const data = await getJson(`/api/suggestion?id=${encodeURIComponent(sid)}`);
@@ -2022,6 +2248,10 @@ async function loadSuggestionDetail(suggestionId) {
     suggestionTrace.textContent = `load_failed: ${err.message}`;
     setSuggestionReviewEnabled(false);
   }
+}
+
+function focusSuggestionReview(suggestionId) {
+  return loadSuggestionDetail(suggestionId, { openSupport: true });
 }
 
 function setSuggestionReviewEnabled(enabled) {
@@ -2841,63 +3071,153 @@ async function runAuditQuickRun() {
   }
 }
 
-async function reviewSuggestion(verdict) {
-  const sid = String(latestSuggestionId || "").trim();
+function openSuggestionReviewModal(suggestionId, mode) {
+  if (
+    !suggestionReviewModal ||
+    !suggestionReviewTitle ||
+    !suggestionReviewMeta ||
+    !suggestionReviewNote ||
+    !suggestionReviewReplacementWrap ||
+    !suggestionReviewReplacement ||
+    !suggestionReviewReasonWrap ||
+    !suggestionReviewReason ||
+    !suggestionReviewTargetWrap ||
+    !suggestionReviewTarget
+  ) {
+    return;
+  }
+  const sid = String(suggestionId || "").trim();
   if (!sid) {
     addBubble("system", t("msg_no_suggestion_selected"));
     return;
   }
-  const choice = String(verdict || "").trim().toLowerCase();
-  if (!["accept", "modify", "reject"].includes(choice)) {
+  const verdict = String(mode || "").trim().toLowerCase();
+  if (!["accept", "modify", "reject"].includes(verdict)) {
     return;
   }
+  const item = findSuggestionReviewItem(sid);
+  suggestionReviewDraft = {
+    id: sid,
+    verdict,
+    module: String((item && item.module) || "").trim(),
+    task: String((item && item.task_raw) || "").trim(),
+  };
+  const titleMap = {
+    accept: "suggestion_review_modal_title_accept",
+    modify: "suggestion_review_modal_title_modify",
+    reject: "suggestion_review_modal_title_reject",
+  };
+  suggestionReviewTitle.textContent = t(titleMap[verdict] || "suggestion_review_modal_title");
+  const metaParts = [summarizeSuggestionTask(item || { id: sid })];
+  if (suggestionReviewDraft.module) {
+    metaParts.push(suggestionReviewDraft.module);
+  }
+  if (item && item.created_at) {
+    metaParts.push(formatCandidateCreatedAt(item));
+  }
+  suggestionReviewMeta.textContent = metaParts.filter(Boolean).join(" | ");
 
-  const ownerNote =
-    window.prompt("Owner note (required):", "Reviewed with current judgment context.") || "";
-  const note = ownerNote.trim();
-  if (!note) {
-    addBubble("system", "Review skipped: owner note is required.");
+  const defaultNotes = {
+    accept: uiLanguage === "zh" ? "与当前判断核心一致，建议保留。" : "Aligned with current judgment core.",
+    modify: uiLanguage === "zh" ? "方向可用，但表达和判断边界需要收紧。" : "Direction is usable, but the framing and judgment boundary need tightening.",
+    reject: uiLanguage === "zh" ? "与当前判断核心不一致，不建议保留。" : "Not aligned with current judgment core and should not be kept.",
+  };
+  suggestionReviewNote.value = defaultNotes[verdict] || "";
+
+  const needsCorrection = verdict === "modify";
+  suggestionReviewReplacementWrap.hidden = !needsCorrection;
+  suggestionReviewReasonWrap.hidden = !needsCorrection;
+  suggestionReviewTargetWrap.hidden = !needsCorrection;
+  suggestionReviewReplacement.value = "";
+  suggestionReviewReason.value = "";
+  suggestionReviewTarget.value = suggestionReviewDraft.module || "decision";
+
+  suggestionReviewModal.classList.remove("hidden");
+  suggestionReviewNote.focus();
+}
+
+function closeSuggestionReviewModal() {
+  if (!suggestionReviewModal) {
+    return;
+  }
+  suggestionReviewDraft = null;
+  suggestionReviewModal.classList.add("hidden");
+}
+
+async function submitSuggestionReviewModal() {
+  if (
+    !suggestionReviewDraft ||
+    !suggestionReviewNote ||
+    !suggestionReviewReplacement ||
+    !suggestionReviewReason ||
+    !suggestionReviewTarget
+  ) {
+    return;
+  }
+  const sid = String(suggestionReviewDraft.id || "").trim();
+  const verdict = String(suggestionReviewDraft.verdict || "").trim().toLowerCase();
+  const ownerNote = String(suggestionReviewNote.value || "").trim();
+
+  if (!sid) {
+    closeSuggestionReviewModal();
+    return;
+  }
+  if (!ownerNote) {
+    addBubble("system", t("msg_suggestion_note_required"));
     return;
   }
 
   const payload = {
     action: "review_suggestion",
     suggestion_id: sid,
-    verdict: choice,
-    owner_note: note,
+    verdict,
+    owner_note: ownerNote,
   };
 
-  if (choice === "modify") {
-    const replacement = window.prompt("Replacement judgment (required):", "") || "";
-    if (!replacement.trim()) {
-      addBubble("system", "Modify skipped: replacement judgment is required.");
+  if (verdict === "modify") {
+    const replacement = String(suggestionReviewReplacement.value || "").trim();
+    const unlikeReason = String(suggestionReviewReason.value || "").trim();
+    const targetLayer = String(suggestionReviewTarget.value || "").trim();
+    if (!replacement) {
+      addBubble("system", t("msg_suggestion_replacement_required"));
       return;
     }
-    const unlikeReason = window.prompt("Unlike-me reason (required):", "") || "";
-    if (!unlikeReason.trim()) {
-      addBubble("system", "Modify skipped: unlike-me reason is required.");
+    if (!unlikeReason) {
+      addBubble("system", t("msg_suggestion_reason_required"));
       return;
     }
-    const targetLayer = window.prompt("Target layer (optional):", "decision") || "";
-    payload.replacement_judgment = replacement.trim();
-    payload.unlike_me_reason = unlikeReason.trim();
-    if (targetLayer.trim()) {
-      payload.correction_target_layer = targetLayer.trim();
+    payload.replacement_judgment = replacement;
+    payload.unlike_me_reason = unlikeReason;
+    if (targetLayer) {
+      payload.correction_target_layer = targetLayer;
     }
   }
 
   try {
     const data = await postJson("/api/action", payload);
     renderActionResult(data);
+    latestSuggestionId = sid;
     if (data.suggestion_detail) {
       renderSuggestionDetail(data.suggestion_detail);
     } else {
       await loadSuggestionDetail(sid);
     }
-    addBubble("system", `Suggestion reviewed: ${sid} -> ${choice}`);
+    await loadStatus();
+    addBubble("system", t("msg_suggestion_review_done", { id: sid, verdict }));
+    closeSuggestionReviewModal();
   } catch (err) {
-    addBubble("system", `Suggestion review failed: ${err.message}`);
+    addBubble("system", t("msg_suggestion_review_failed", { error: err.message }));
   }
+}
+
+function reviewSuggestion(verdict, suggestionId = null) {
+  const sid = String(suggestionId || latestSuggestionId || "").trim();
+  if (!sid) {
+    addBubble("system", t("msg_no_suggestion_selected"));
+    return;
+  }
+  void focusSuggestionReview(sid);
+  openSuggestionReviewModal(sid, verdict);
 }
 
 async function runAction(action) {
@@ -3255,6 +3575,28 @@ if (learningReviewModal) {
   learningReviewModal.addEventListener("click", (event) => {
     if (event.target === learningReviewModal) {
       closeLearningReviewModal();
+    }
+  });
+}
+if (suggestionReviewClose) {
+  suggestionReviewClose.addEventListener("click", () => {
+    closeSuggestionReviewModal();
+  });
+}
+if (suggestionReviewCancel) {
+  suggestionReviewCancel.addEventListener("click", () => {
+    closeSuggestionReviewModal();
+  });
+}
+if (suggestionReviewSubmit) {
+  suggestionReviewSubmit.addEventListener("click", () => {
+    submitSuggestionReviewModal();
+  });
+}
+if (suggestionReviewModal) {
+  suggestionReviewModal.addEventListener("click", (event) => {
+    if (event.target === suggestionReviewModal) {
+      closeSuggestionReviewModal();
     }
   });
 }

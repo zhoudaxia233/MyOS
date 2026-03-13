@@ -125,9 +125,13 @@ Keep rollout evolutionary: preserve existing extraction/distillation pipelines a
     - default inbox views for `all / needs review / ready to promote / last 7d`
     - preset selection is remembered client-side so the audit page can reopen in the owner's usual queue
     - manual filter edits still work and automatically fall back to a custom view without changing backend contracts
+  - Follow-up suggestion review inbox shipped:
+    - task suggestions now have a dedicated review queue in Audit instead of living only as summary metrics + the latest trace detail
+    - owner can review any pending suggestion from the inbox with a guided modal instead of `window.prompt`
+    - execution suggestion judgment is now visually separated from learning candidate governance while keeping the same review contract
 - Remaining next:
-  - consider a dedicated suggestion-review inbox slice, separate from learning candidate governance
   - consider richer saved views only if operators need per-owner custom presets beyond the shipped defaults
+  - consider a structured suggestion detail panel so support context is less JSON-shaped when owners drill down
   - consider selective evidence compaction if longer transcripts start overwhelming the card context
 - Do not change yet:
   - do not collapse `accept` and `promote`

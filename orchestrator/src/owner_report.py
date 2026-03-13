@@ -309,6 +309,111 @@ def summarize_suggestion_reviews(
     }
 
 
+def list_suggestion_review_queue(
+    repo_root: Path,
+    *,
+    window_days: int = 30,
+    now: datetime | None = None,
+    limit: int = 8,
+) -> dict:
+    now = now or datetime.now(timezone.utc)
+
+    suggestions_rows = _window_filter(
+        _load_jsonl(repo_root / "orchestrator/logs/suggestions.jsonl"),
+        now,
+        window_days,
+    )
+    suggestions_rows = [row for row in suggestions_rows if str(row.get("status", "active")).strip().lower() == "active"]
+    suggestions_rows = sorted(suggestions_rows, key=lambda row: str(row.get("created_at", "")), reverse=True)
+
+    verdict_rows = _window_filter(
+        _load_jsonl(repo_root / "orchestrator/logs/owner_verdicts.jsonl"),
+        now,
+        window_days,
+    )
+    verdict_rows = [row for row in verdict_rows if str(row.get("status", "active")).strip().lower() == "active"]
+    verdict_rows = sorted(verdict_rows, key=lambda row: str(row.get("created_at", "")), reverse=True)
+
+    correction_rows = _window_filter(
+        _load_jsonl(repo_root / "orchestrator/logs/owner_corrections.jsonl"),
+        now,
+        window_days,
+    )
+    correction_rows = [row for row in correction_rows if str(row.get("status", "active")).strip().lower() == "active"]
+    correction_rows = sorted(correction_rows, key=lambda row: str(row.get("created_at", "")), reverse=True)
+
+    latest_verdict_by_suggestion: dict[str, dict] = {}
+    for row in verdict_rows:
+        suggestion_ref = str(row.get("suggestion_ref", "")).strip()
+        if suggestion_ref and suggestion_ref not in latest_verdict_by_suggestion:
+            latest_verdict_by_suggestion[suggestion_ref] = row
+
+    correction_by_verdict_ref: dict[str, dict] = {}
+    correction_by_suggestion_ref: dict[str, dict] = {}
+    for row in correction_rows:
+        verdict_ref = str(row.get("verdict_ref", "")).strip()
+        suggestion_ref = str(row.get("suggestion_ref", "")).strip()
+        if verdict_ref and verdict_ref not in correction_by_verdict_ref:
+            correction_by_verdict_ref[verdict_ref] = row
+        if suggestion_ref and suggestion_ref not in correction_by_suggestion_ref:
+            correction_by_suggestion_ref[suggestion_ref] = row
+
+    def queue_item(suggestion: dict, verdict: dict | None = None, correction: dict | None = None) -> dict:
+        payload = {
+            "id": str(suggestion.get("id", "")).strip(),
+            "created_at": str(suggestion.get("created_at", "")).strip(),
+            "module": str(suggestion.get("module", "")).strip() or None,
+            "task_raw": str(suggestion.get("task_raw", "")).strip() or None,
+            "recommendation_path": str(suggestion.get("recommendation_path", "")).strip() or None,
+            "run_ref": str(suggestion.get("run_ref", "")).strip() or None,
+            "output_hash": str(suggestion.get("output_hash", "")).strip() or None,
+        }
+        if verdict is None:
+            return payload
+
+        verdict_id = str(verdict.get("id", "")).strip()
+        payload["owner_review"] = {
+            "verdict_id": verdict_id or None,
+            "verdict": str(verdict.get("verdict", "")).strip().lower() or None,
+            "owner_note": str(verdict.get("owner_note", "")).strip() or None,
+            "reviewed_at": str(verdict.get("created_at", "")).strip() or None,
+            "correction_ref": str((correction or {}).get("id", "")).strip() or None,
+            "target_layer": str((correction or {}).get("target_layer", "")).strip() or None,
+            "replacement_judgment": str((correction or {}).get("replacement_judgment", "")).strip() or None,
+            "unlike_me_reason": str((correction or {}).get("unlike_me_reason", "")).strip() or None,
+        }
+        return payload
+
+    pending: list[dict] = []
+    recently_reviewed: list[dict] = []
+    for suggestion in suggestions_rows:
+        suggestion_id = str(suggestion.get("id", "")).strip()
+        if not suggestion_id:
+            continue
+
+        verdict = latest_verdict_by_suggestion.get(suggestion_id)
+        if verdict is None:
+            pending.append(queue_item(suggestion))
+            continue
+
+        verdict_id = str(verdict.get("id", "")).strip()
+        correction = correction_by_verdict_ref.get(verdict_id) or correction_by_suggestion_ref.get(suggestion_id)
+        recently_reviewed.append(queue_item(suggestion, verdict, correction))
+
+    recently_reviewed.sort(
+        key=lambda row: str(((row.get("owner_review") or {}).get("reviewed_at") or row.get("created_at") or "")),
+        reverse=True,
+    )
+
+    return {
+        "window_days": int(window_days),
+        "pending_total": len(pending),
+        "reviewed_total": len(recently_reviewed),
+        "pending": pending[: max(1, int(limit))],
+        "recently_reviewed": recently_reviewed[: max(1, int(limit))],
+    }
+
+
 def summarize_suggestion_review_trend(repo_root: Path, *, now: datetime | None = None) -> dict:
     now = now or datetime.now(timezone.utc)
     snap_7 = summarize_suggestion_reviews(repo_root, window_days=7, now=now, limit=5)

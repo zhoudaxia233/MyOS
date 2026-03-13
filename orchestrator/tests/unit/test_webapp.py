@@ -43,6 +43,7 @@ def test_api_status_lists_modules() -> None:
         assert isinstance(data["learning_candidates"], list)
         assert isinstance(data["candidate_pipeline_summary"], dict)
         assert isinstance(data["candidate_pipeline_trend"], dict)
+        assert isinstance(data["suggestion_review_queue"], dict)
         assert isinstance(data["suggestion_review_summary"], dict)
         assert isinstance(data["suggestion_review_trend"], dict)
         assert "ui_language" in data
@@ -310,6 +311,55 @@ def test_api_action_review_suggestion_writes_verdict_and_correction() -> None:
         assert correction_row["id"] == modify_result["correction_record_id"]
         assert correction_row["target_layer"] == "decision"
         assert correction_row["verdict_ref"] == modify_result["verdict_record_id"]
+
+
+def test_api_status_suggestion_review_queue_tracks_pending_items() -> None:
+    with TemporaryDirectory() as td:
+        root = _copy_repo_subset(Path(td))
+        run_a = api_run(
+            root,
+            {
+                "task": "run weekly decision review",
+                "provider": "dry-run",
+                "with_retrieval": False,
+            },
+        )
+        run_b = api_run(
+            root,
+            {
+                "task": "draft a short market narrative",
+                "provider": "dry-run",
+                "with_retrieval": False,
+            },
+        )
+
+        initial_status = api_status(root)
+        queue = initial_status["suggestion_review_queue"]
+        pending_ids = {row["id"] for row in queue["pending"]}
+        assert queue["pending_total"] >= 2
+        assert run_a["suggestion_id"] in pending_ids
+        assert run_b["suggestion_id"] in pending_ids
+
+        api_action(
+            root,
+            {
+                "action": "review_suggestion",
+                "suggestion_id": run_a["suggestion_id"],
+                "verdict": "accept",
+                "owner_note": "Aligned with current operating intent.",
+            },
+        )
+
+        updated_status = api_status(root)
+        updated_queue = updated_status["suggestion_review_queue"]
+        updated_pending_ids = {row["id"] for row in updated_queue["pending"]}
+        reviewed_items = updated_queue["recently_reviewed"]
+
+        assert run_a["suggestion_id"] not in updated_pending_ids
+        assert any(
+            row["id"] == run_a["suggestion_id"] and row["owner_review"]["verdict"] == "accept"
+            for row in reviewed_items
+        )
 
 
 def test_api_action_suggestion_review_summary_filters() -> None:

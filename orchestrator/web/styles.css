@@ -797,7 +797,7 @@ body {
 
 .review-inbox-counts {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
   min-width: min(340px, 100%);
 }
@@ -1301,6 +1301,15 @@ body {
   );
 }
 
+.review-queue-suggestion {
+  border-color: color-mix(in srgb, var(--warm) 38%, var(--border));
+  background: linear-gradient(
+    140deg,
+    color-mix(in srgb, var(--warm) 7%, var(--card) 93%),
+    color-mix(in srgb, var(--card) 96%, white 4%)
+  );
+}
+
 .review-queue-head {
   display: flex;
   justify-content: space-between;
@@ -1574,6 +1583,45 @@ body {
   color: var(--muted);
   cursor: not-allowed;
   opacity: 1;
+}
+
+.suggestion-review-card {
+  display: grid;
+  gap: 6px;
+}
+
+.suggestion-review-card[data-active="true"] {
+  border-color: color-mix(in srgb, var(--warm) 56%, var(--border));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--warm) 24%, transparent);
+}
+
+.suggestion-review-card .todo-head {
+  margin-bottom: 0;
+}
+
+.suggestion-task {
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--text);
+}
+
+.suggestion-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.suggestion-meta-chip {
+  border: 1px solid color-mix(in srgb, var(--border) 78%, white);
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-size: 0.7rem;
+  color: var(--muted);
+  background: color-mix(in srgb, var(--card) 92%, white 8%);
+}
+
+.suggestion-next {
+  margin-bottom: 0;
 }
 
 .learning-candidate-card {
