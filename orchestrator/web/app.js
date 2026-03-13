@@ -77,7 +77,10 @@ const ownerTodos = document.getElementById("ownerTodos");
 const learningLifecycle = document.getElementById("learningLifecycle");
 const candidatePipeline = document.getElementById("candidatePipeline");
 const suggestionReviewSummary = document.getElementById("suggestionReviewSummary");
+const auditSupportSubject = document.getElementById("auditSupportSubject");
 const suggestionDetailCard = document.getElementById("suggestionDetailCard");
+const auditDetailRawFold = document.getElementById("auditDetailRawFold");
+const suggestionDetailActions = document.getElementById("suggestionDetailActions");
 const mvpGuide = document.getElementById("mvpGuide");
 const demoSummary = document.getElementById("demoSummary");
 const settingsModal = document.getElementById("settingsModal");
@@ -124,6 +127,7 @@ const suggestionReviewClose = document.getElementById("suggestionReviewClose");
 let latestOutputPath = null;
 let latestOutputProvider = null;
 let latestSuggestionId = null;
+let auditSupportTarget = { kind: null, id: null };
 let settingsCache = null;
 let uiLanguage = "zh";
 let learningReviewDraft = null;
@@ -254,8 +258,8 @@ const I18N = {
     audit_timeline_meta_idle: "当前显示全部近期判断。",
     audit_timeline_meta_active: "当前显示 {shown} / {total} 条近期判断。",
     audit_timeline_empty_filtered: "当前没有符合时间线筛选的判断。",
-    suggestion_detail_empty: "选择一条建议以查看复核支撑。",
-    suggestion_detail_raw: "原始载荷（按需展开）",
+    suggestion_detail_empty: "选择一条建议或已处理学习项以查看复核支撑。",
+    suggestion_detail_raw: "原始快照（按需展开）",
     suggestion_detail_task: "任务",
     suggestion_detail_status: "当前状态",
     suggestion_detail_status_pending: "待复核",
@@ -274,6 +278,10 @@ const I18N = {
     suggestion_detail_reason: "不像我的原因",
     suggestion_detail_target: "目标层",
     suggestion_detail_next: "下一步",
+    judgment_detail_next: "下一步",
+    judgment_detail_subject_empty: "选择一条建议或已处理学习项以查看复核支撑。",
+    judgment_detail_subject_suggestion: "执行建议复核",
+    judgment_detail_subject_learning: "学习判断回看",
     suggestion_detail_next_pending: "提交 Accept / Modify / Reject，让这条执行建议完成 judgment。",
     suggestion_detail_next_accept: "已接受：如需沉淀，再单独判断是否值得进入学习流程。",
     suggestion_detail_next_modify: "已修改：修正记录已经写入，可继续对照输出与更正后的判断。",
@@ -388,6 +396,7 @@ const I18N = {
     trace_plan: "计划",
     trace_loaded_files: "已加载文件",
     trace_result: "结果",
+    trace_judgment_detail: "判断详情",
     trace_suggestion_detail: "建议详情",
     trace_output_preview: "输出预览",
     btn_accept: "接受",
@@ -636,8 +645,8 @@ const I18N = {
     audit_timeline_meta_idle: "Showing all recent judgments.",
     audit_timeline_meta_active: "Showing {shown} / {total} recent judgments.",
     audit_timeline_empty_filtered: "No recent judgments match the current timeline filters.",
-    suggestion_detail_empty: "Select a suggestion to open review support.",
-    suggestion_detail_raw: "Raw Payload (Open On Demand)",
+    suggestion_detail_empty: "Select a suggestion or reviewed learning item to open review support.",
+    suggestion_detail_raw: "Raw Snapshot (Open On Demand)",
     suggestion_detail_task: "Task",
     suggestion_detail_status: "Current Status",
     suggestion_detail_status_pending: "Needs Review",
@@ -656,6 +665,10 @@ const I18N = {
     suggestion_detail_reason: "Unlike-Me Reason",
     suggestion_detail_target: "Target Layer",
     suggestion_detail_next: "Next Action",
+    judgment_detail_next: "Next Action",
+    judgment_detail_subject_empty: "Select a suggestion or reviewed learning item to open review support.",
+    judgment_detail_subject_suggestion: "Execution Suggestion Review",
+    judgment_detail_subject_learning: "Learning Judgment Replay",
     suggestion_detail_next_pending: "Submit Accept / Modify / Reject so this execution suggestion completes judgment.",
     suggestion_detail_next_accept: "Accepted. If it should become durable learning, judge that separately in the learning flow.",
     suggestion_detail_next_modify: "Modified. The correction record is written; compare the output against the corrected judgment if needed.",
@@ -770,6 +783,7 @@ const I18N = {
     trace_plan: "Plan",
     trace_loaded_files: "Loaded Files",
     trace_result: "Result",
+    trace_judgment_detail: "Judgment Detail",
     trace_suggestion_detail: "Suggestion Detail",
     trace_output_preview: "Output Preview",
     btn_accept: "Accept",
@@ -1022,6 +1036,19 @@ function refreshAuditUiSnapshot(data) {
   renderSuggestionReviewQueue(auditUiSnapshot.suggestion_review_queue);
   renderAuditTimeline();
   renderReviewInboxSummary();
+  if (auditSupportTarget.kind === "learning" && auditSupportTarget.id) {
+    const item = findLearningCandidateItem(auditSupportTarget.id);
+    if (item) {
+      renderLearningSupportDetail(item);
+    } else {
+      syncAuditSupportSelection(null, null);
+      renderSuggestionDetailEmpty();
+      latestOutputPath = null;
+      latestOutputProvider = null;
+      setPreview("-");
+      setOutputTokenMeta("-");
+    }
+  }
   updateAuditConsoleDensity();
 }
 
@@ -1090,6 +1117,15 @@ function findSuggestionReviewItem(suggestionId) {
     ...(Array.isArray(queue.recently_reviewed) ? queue.recently_reviewed : []),
   ];
   return rows.find((item) => String(item && item.id ? item.id : "").trim() === sid) || null;
+}
+
+function findLearningCandidateItem(candidateId) {
+  const cid = String(candidateId || "").trim();
+  if (!cid) {
+    return null;
+  }
+  const rows = Array.isArray(auditUiSnapshot.learning_candidates) ? auditUiSnapshot.learning_candidates : [];
+  return rows.find((item) => String(item && item.id ? item.id : "").trim() === cid) || null;
 }
 
 function hasLifecycleSignals(summary) {
@@ -1538,7 +1574,9 @@ function buildAuditTimelineItems() {
       summaryText: detailLines[0] || "",
       noteText: detailLines.length > 1 ? detailLines.slice(1).join("\n") : "",
       timestamp,
-      active: suggestionId === String(latestSuggestionId || "").trim(),
+      active:
+        auditSupportTarget.kind === "suggestion" &&
+        suggestionId === String(auditSupportTarget.id || "").trim(),
       openLabel: t("audit_timeline_open_detail"),
       openAction() {
         void focusSuggestionReview(suggestionId);
@@ -1572,8 +1610,14 @@ function buildAuditTimelineItems() {
       summaryText: clipText(item.statement, 260),
       noteText: clipText(item.owner_note || item.modified_statement || lifecycleNextAction(item), 240),
       timestamp,
-      active: false,
+      active:
+        auditSupportTarget.kind === "learning" &&
+        candidateId === String(auditSupportTarget.id || "").trim(),
       sourceItem: item,
+      openLabel: t("audit_timeline_open_detail"),
+      openAction() {
+        void focusLearningTimelineReview(candidateId);
+      },
     });
   }
 
@@ -1700,7 +1744,8 @@ function renderSuggestionReviewQueue(queue) {
   }
   const items = suggestionPendingItems(queue);
   const total = suggestionPendingTotal(queue);
-  const selectedId = String(latestSuggestionId || "").trim();
+  const selectedId =
+    auditSupportTarget.kind === "suggestion" ? String(auditSupportTarget.id || "").trim() : "";
 
   if (suggestionReviewCount) {
     suggestionReviewCount.textContent = String(total);
@@ -1960,8 +2005,20 @@ function setLanguage(lang) {
   renderReviewInboxSummary();
   renderLearningCandidates(auditUiSnapshot.learning_candidates);
   renderOwnerTodos(auditUiSnapshot.owner_todos);
-  if (latestSuggestionId) {
-    void loadSuggestionDetail(latestSuggestionId);
+  if (auditSupportTarget.kind === "suggestion" && auditSupportTarget.id) {
+    void loadSuggestionDetail(auditSupportTarget.id);
+  } else if (auditSupportTarget.kind === "learning" && auditSupportTarget.id) {
+    const item = findLearningCandidateItem(auditSupportTarget.id);
+    if (item) {
+      renderLearningSupportDetail(item);
+    } else {
+      syncAuditSupportSelection(null, null);
+      renderSuggestionDetailEmpty();
+      latestOutputPath = null;
+      latestOutputProvider = null;
+      setPreview("-");
+      setOutputTokenMeta("-");
+    }
   } else {
     renderSuggestionDetailEmpty();
   }
@@ -2695,7 +2752,46 @@ function suggestionReviewStatusKey(ownerReview) {
   return "pending";
 }
 
+function setAuditSupportSubject(messageKey = "judgment_detail_subject_empty", messageText = "") {
+  if (!auditSupportSubject) {
+    return;
+  }
+  if (messageText) {
+    auditSupportSubject.removeAttribute("data-i18n");
+    auditSupportSubject.textContent = messageText;
+    return;
+  }
+  auditSupportSubject.setAttribute("data-i18n", messageKey);
+  auditSupportSubject.textContent = t(messageKey);
+}
+
+function setAuditSupportRawVisible(visible) {
+  if (auditDetailRawFold) {
+    auditDetailRawFold.hidden = !visible;
+  }
+}
+
+function setAuditSupportActionsVisible(visible) {
+  if (suggestionDetailActions) {
+    suggestionDetailActions.hidden = !visible;
+  }
+}
+
+function syncAuditSupportSelection(kind = null, id = null) {
+  auditSupportTarget = {
+    kind: kind ? String(kind).trim() : null,
+    id: id ? String(id).trim() : null,
+  };
+  renderSuggestionReviewQueue(auditUiSnapshot.suggestion_review_queue);
+  renderAuditTimeline();
+}
+
 function renderSuggestionDetailEmpty(messageKey = "suggestion_detail_empty", messageText = "") {
+  setAuditSupportSubject("judgment_detail_subject_empty");
+  setAuditSupportRawVisible(false);
+  setAuditSupportActionsVisible(false);
+  suggestionTrace.textContent = "-";
+  setSuggestionReviewEnabled(false);
   if (suggestionDetailCard) {
     suggestionDetailCard.innerHTML = "";
     const empty = document.createElement("div");
@@ -2731,11 +2827,106 @@ function appendSuggestionDetailSection(container, labelKey, value) {
   container.appendChild(section);
 }
 
+function renderLearningSupportDetail(item, options = {}) {
+  if (!item || typeof item !== "object") {
+    renderSuggestionDetailEmpty();
+    latestOutputPath = null;
+    latestOutputProvider = null;
+    setPreview("-");
+    setOutputTokenMeta("-");
+    return;
+  }
+
+  const candidateId = String(item.id || "").trim();
+  if (!candidateId) {
+    renderSuggestionDetailEmpty();
+    latestOutputPath = null;
+    latestOutputProvider = null;
+    setPreview("-");
+    setOutputTokenMeta("-");
+    return;
+  }
+
+  syncAuditSupportSelection("learning", candidateId);
+  setAuditSupportSubject(
+    "",
+    `${t("judgment_detail_subject_learning")}: ${String(item.title || item.candidate_type || candidateId)}`
+  );
+  setAuditSupportRawVisible(true);
+  setAuditSupportActionsVisible(false);
+  suggestionTrace.textContent = JSON.stringify(item, null, 2);
+
+  if (suggestionDetailCard) {
+    suggestionDetailCard.innerHTML = "";
+
+    const meta = document.createElement("div");
+    meta.className = "suggestion-detail-meta";
+
+    const typeChip = document.createElement("span");
+    typeChip.className = "suggestion-detail-chip";
+    typeChip.textContent = `${t("candidate_label_type")}: ${String(item.candidate_type || "-")}`;
+    meta.appendChild(typeChip);
+
+    const stageChip = document.createElement("span");
+    stageChip.className = `suggestion-detail-chip ${learningTimelineStageClass(item)}`;
+    stageChip.textContent = `${t("candidate_label_status")}: ${lifecycleStageLabel(item)}`;
+    meta.appendChild(stageChip);
+
+    const timeChip = document.createElement("span");
+    timeChip.className = "suggestion-detail-chip";
+    timeChip.textContent = t(learningTimelineTimeKey(item), {
+      created: formatCandidateCreatedAt({ created_at: learningTimelineTimestamp(item) || item.created_at || "" }),
+    });
+    meta.appendChild(timeChip);
+
+    suggestionDetailCard.appendChild(meta);
+    appendSuggestionDetailSection(suggestionDetailCard, "candidate_label_statement", item.statement || "-");
+    appendSuggestionDetailSection(
+      suggestionDetailCard,
+      "candidate_label_source",
+      item.source_material_ref || item.source_import_ref || t("candidate_source_unknown")
+    );
+    appendSuggestionDetailSection(suggestionDetailCard, "candidate_label_rationale", item.rationale || "-");
+    appendSuggestionDetailSection(
+      suggestionDetailCard,
+      "candidate_detail_evidence",
+      Array.isArray(item.evidence) && item.evidence.length > 0 ? item.evidence.join("\n\n") : t("candidate_detail_none")
+    );
+    appendSuggestionDetailSection(
+      suggestionDetailCard,
+      "candidate_detail_sources",
+      Array.isArray(item.source_refs) && item.source_refs.length > 0
+        ? item.source_refs.join("\n")
+        : item.source_material_ref || item.source_import_ref || t("candidate_source_unknown")
+    );
+    appendSuggestionDetailSection(suggestionDetailCard, "candidate_detail_owner_note", item.owner_note || "-");
+    appendSuggestionDetailSection(suggestionDetailCard, "candidate_detail_modified", item.modified_statement || "-");
+    appendSuggestionDetailSection(
+      suggestionDetailCard,
+      "candidate_detail_promotion_target",
+      item.promotion_target || item.proposal_target || "-"
+    );
+    appendSuggestionDetailSection(suggestionDetailCard, "candidate_detail_runtime", candidateRuntimeDetail(item));
+    appendSuggestionDetailSection(suggestionDetailCard, "judgment_detail_next", lifecycleNextAction(item));
+  }
+
+  latestOutputPath = null;
+  latestOutputProvider = null;
+  setPreview("-");
+  setOutputTokenMeta("-");
+  setSuggestionReviewEnabled(false);
+  if (options && options.openSupport && auditMachineFold) {
+    auditMachineFold.open = true;
+  }
+}
+
 function renderSuggestionDetail(data) {
   if (!data || typeof data !== "object" || !data.suggestion || typeof data.suggestion !== "object") {
     renderSuggestionDetailEmpty();
-    suggestionTrace.textContent = "-";
-    setSuggestionReviewEnabled(false);
+    latestOutputPath = null;
+    latestOutputProvider = null;
+    setPreview("-");
+    setOutputTokenMeta("-");
     return;
   }
   const suggestion = data.suggestion;
@@ -2751,8 +2942,11 @@ function renderSuggestionDetail(data) {
     output_preview: data.output_preview || null,
   };
   suggestionTrace.textContent = JSON.stringify(payload, null, 2);
+  syncAuditSupportSelection("suggestion", String(suggestion.id || "").trim());
+  setAuditSupportSubject("", `${t("judgment_detail_subject_suggestion")}: ${summarizeSuggestionTask(suggestion)}`);
+  setAuditSupportRawVisible(true);
+  setAuditSupportActionsVisible(statusKey === "pending");
 
-  renderSuggestionDetailEmpty();
   if (suggestionDetailCard) {
     suggestionDetailCard.innerHTML = "";
 
@@ -2852,23 +3046,28 @@ function renderSuggestionDetail(data) {
   }
   setPreview(data.output_preview || "-");
   refreshOutputTokenMeta();
-  setSuggestionReviewEnabled(true);
+  setSuggestionReviewEnabled(statusKey === "pending");
 }
 
 async function loadSuggestionDetail(suggestionId, options = {}) {
   const sid = String(suggestionId || "").trim();
   if (!sid) {
     latestSuggestionId = null;
-    renderSuggestionReviewQueue(auditUiSnapshot.suggestion_review_queue);
-    renderAuditTimeline();
+    if (auditSupportTarget.kind === "suggestion") {
+      syncAuditSupportSelection(null, null);
+    } else {
+      renderSuggestionReviewQueue(auditUiSnapshot.suggestion_review_queue);
+      renderAuditTimeline();
+    }
     renderSuggestionDetailEmpty();
-    suggestionTrace.textContent = "-";
-    setSuggestionReviewEnabled(false);
+    latestOutputPath = null;
+    latestOutputProvider = null;
+    setPreview("-");
+    setOutputTokenMeta("-");
     return;
   }
   latestSuggestionId = sid;
-  renderSuggestionReviewQueue(auditUiSnapshot.suggestion_review_queue);
-  renderAuditTimeline();
+  syncAuditSupportSelection("suggestion", sid);
   if (options && options.openSupport && auditMachineFold) {
     auditMachineFold.open = true;
   }
@@ -2878,12 +3077,31 @@ async function loadSuggestionDetail(suggestionId, options = {}) {
   } catch (err) {
     renderSuggestionDetailEmpty("", `load_failed: ${err.message}`);
     suggestionTrace.textContent = `load_failed: ${err.message}`;
-    setSuggestionReviewEnabled(false);
+    setAuditSupportRawVisible(true);
+    setAuditSupportActionsVisible(false);
+    latestOutputPath = null;
+    latestOutputProvider = null;
+    setPreview("-");
+    setOutputTokenMeta("-");
   }
 }
 
 function focusSuggestionReview(suggestionId) {
   return loadSuggestionDetail(suggestionId, { openSupport: true });
+}
+
+function focusLearningTimelineReview(candidateId) {
+  const item = findLearningCandidateItem(candidateId);
+  if (!item) {
+    syncAuditSupportSelection(null, null);
+    renderSuggestionDetailEmpty();
+    latestOutputPath = null;
+    latestOutputProvider = null;
+    setPreview("-");
+    setOutputTokenMeta("-");
+    return;
+  }
+  renderLearningSupportDetail(item, { openSupport: true });
 }
 
 function setSuggestionReviewEnabled(enabled) {
@@ -2915,6 +3133,24 @@ function renderRunResult(data) {
 function renderActionResult(data) {
   refreshAuditUiSnapshot(data);
   const out = [];
+  const shouldHoldLearningSupport = auditSupportTarget.kind === "learning" && Boolean(auditSupportTarget.id);
+  const refreshLearningSupport = () => {
+    if (!shouldHoldLearningSupport) {
+      return false;
+    }
+    const selected = findLearningCandidateItem(auditSupportTarget.id);
+    if (selected) {
+      renderLearningSupportDetail(selected);
+    } else {
+      syncAuditSupportSelection(null, null);
+      renderSuggestionDetailEmpty();
+      latestOutputPath = null;
+      latestOutputProvider = null;
+      setPreview("-");
+      setOutputTokenMeta("-");
+    }
+    return true;
+  };
   out.push(`action: ${data.action}`);
 
   if (data.status) {
@@ -3018,6 +3254,9 @@ function renderActionResult(data) {
   }
 
   if (data.output_preview) {
+    if (refreshLearningSupport()) {
+      return;
+    }
     latestOutputPath = data.output_path || latestOutputPath;
     if (providerSelect.value !== "auto") {
       latestOutputProvider = providerSelect.value || latestOutputProvider;
@@ -3027,6 +3266,9 @@ function renderActionResult(data) {
     return;
   }
   if (Array.isArray(data.runs) && data.runs.length > 0) {
+    if (refreshLearningSupport()) {
+      return;
+    }
     latestOutputPath = data.runs[0].output_path || latestOutputPath;
     if (providerSelect.value !== "auto") {
       latestOutputProvider = providerSelect.value || latestOutputProvider;
@@ -3045,11 +3287,17 @@ function renderActionResult(data) {
     if (insightPreview) {
       previewLines.push(`insight: ${insightPreview}`);
     }
+    if (refreshLearningSupport()) {
+      return;
+    }
     setPreview(previewLines.join("\n") || "-");
     setOutputTokenMeta("-");
     return;
   }
   if (data.action === "learning_handoff_packet" && data.packet_text) {
+    if (refreshLearningSupport()) {
+      return;
+    }
     setPreview(data.packet_text);
     setOutputTokenMeta("-");
     return;
@@ -3067,8 +3315,14 @@ function renderActionResult(data) {
     if (Array.isArray(data.learning_candidates)) {
       renderLearningCandidates(data.learning_candidates);
     }
+    if (refreshLearningSupport()) {
+      return;
+    }
     setPreview(previewLines.join("\n") || "-");
     setOutputTokenMeta("-");
+    return;
+  }
+  if (refreshLearningSupport()) {
     return;
   }
   setPreview("-");

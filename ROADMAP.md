@@ -145,10 +145,14 @@ Keep rollout evolutionary: preserve existing extraction/distillation pipelines a
     - the shared audit timeline now has its own `object / judgment / time` filters instead of borrowing the pending inbox filters
     - owners can replay only `execution suggestions`, only `learning candidates`, or narrow to `accept / modify / reject / promote` decisions
     - completed-judgment replay stays separate from pending triage, preserving the difference between doing judgment and revisiting judgment
+  - Follow-up cross-object detail pane shipped:
+    - the right-side support detail is no longer suggestion-only; reviewed learning judgments can now open the same support area from the timeline
+    - support chrome now switches by object type: suggestion items keep raw snapshot + output preview, while learning items clear unrelated output state and render structured judgment detail instead
+    - reviewed suggestion detail is now read-oriented from the timeline, so completed replay no longer exposes the same action buttons as pending review
 - Remaining next:
   - consider richer saved views only if operators need per-owner custom presets beyond the shipped defaults
-  - consider a cross-object detail pane only if inline context stops being enough for completed judgments
   - consider selective evidence compaction if longer transcripts start overwhelming the card context
+  - consider shared evidence compaction once both suggestion and learning replay detail start surfacing longer raw payloads
 - Do not change yet:
   - do not collapse `accept` and `promote`
   - do not weaken runtime maturity / promotion gates

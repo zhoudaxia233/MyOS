@@ -442,15 +442,18 @@
           <pre id="resultTrace">-</pre>
         </div>
         <div class="trace-block">
-          <h3 data-i18n="trace_suggestion_detail">Suggestion Detail</h3>
+          <h3 data-i18n="trace_judgment_detail">Judgment Detail</h3>
+          <p id="auditSupportSubject" class="helper-note audit-support-subject" data-i18n="judgment_detail_subject_empty">
+            选择一条建议或已处理学习项以查看复核支撑。
+          </p>
           <div id="suggestionDetailCard" class="suggestion-detail-card">
             <div class="suggestion-detail-empty" data-i18n="suggestion_detail_empty">选择一条建议以查看复核支撑。</div>
           </div>
-          <details class="suggestion-raw-fold">
-            <summary data-i18n="suggestion_detail_raw">原始载荷（按需展开）</summary>
+          <details id="auditDetailRawFold" class="suggestion-raw-fold" hidden>
+            <summary data-i18n="suggestion_detail_raw">原始快照（按需展开）</summary>
             <pre id="suggestionTrace">-</pre>
           </details>
-          <div class="todo-actions">
+          <div id="suggestionDetailActions" class="todo-actions" hidden>
             <button id="suggestionAcceptBtn" class="todo-resolve-btn" type="button" data-i18n="btn_accept">Accept</button>
             <button id="suggestionModifyBtn" class="todo-resolve-btn" type="button" data-i18n="btn_modify">Modify</button>
             <button id="suggestionRejectBtn" class="todo-resolve-btn" type="button" data-i18n="btn_reject">Reject</button>

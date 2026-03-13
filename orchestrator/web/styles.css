@@ -1677,6 +1677,10 @@ body {
   color: var(--text);
 }
 
+.audit-support-subject {
+  margin: 0 0 8px;
+}
+
 .suggestion-detail-card {
   display: grid;
   gap: 10px;
@@ -1727,6 +1731,30 @@ body {
 .suggestion-detail-chip.status-reject {
   border-color: color-mix(in srgb, var(--fail) 52%, white);
   background: color-mix(in srgb, var(--fail) 13%, var(--card) 87%);
+  color: var(--text);
+}
+
+.suggestion-detail-chip.stage-candidate {
+  border-color: color-mix(in srgb, var(--warn) 45%, white);
+  background: color-mix(in srgb, var(--warn) 16%, var(--card) 84%);
+  color: var(--text);
+}
+
+.suggestion-detail-chip.stage-reviewed {
+  border-color: color-mix(in srgb, var(--accent) 45%, white);
+  background: color-mix(in srgb, var(--accent) 14%, var(--card) 86%);
+  color: var(--text);
+}
+
+.suggestion-detail-chip.stage-promoted {
+  border-color: color-mix(in srgb, var(--warm) 56%, white);
+  background: color-mix(in srgb, var(--warm) 17%, var(--card) 83%);
+  color: var(--text);
+}
+
+.suggestion-detail-chip.stage-active_runtime {
+  border-color: color-mix(in srgb, var(--ok) 52%, white);
+  background: color-mix(in srgb, var(--ok) 15%, var(--card) 85%);
   color: var(--text);
 }
 
