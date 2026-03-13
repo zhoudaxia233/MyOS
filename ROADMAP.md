@@ -149,10 +149,14 @@ Keep rollout evolutionary: preserve existing extraction/distillation pipelines a
     - the right-side support detail is no longer suggestion-only; reviewed learning judgments can now open the same support area from the timeline
     - support chrome now switches by object type: suggestion items keep raw snapshot + output preview, while learning items clear unrelated output state and render structured judgment detail instead
     - reviewed suggestion detail is now read-oriented from the timeline, so completed replay no longer exposes the same action buttons as pending review
+  - Follow-up shared evidence compaction shipped:
+    - learning evidence/source refs and suggestion focus points now render as compact summaries first, with full content available only on demand
+    - support detail cards now add a small snapshot summary (`fields / approx size / list entries`) before the raw JSON fold
+    - replay surfaces stay operator-readable even when source refs or evidence snippets get longer, without removing the underlying audit trail
 - Remaining next:
   - consider richer saved views only if operators need per-owner custom presets beyond the shipped defaults
-  - consider selective evidence compaction if longer transcripts start overwhelming the card context
-  - consider shared evidence compaction once both suggestion and learning replay detail start surfacing longer raw payloads
+  - consider severity-based ranking inside replay history only if completed-judgment volume grows beyond the current timeline filters
+  - consider selective transcript chunk previews if evidence items become much longer than the current compaction layer can comfortably summarize
 - Do not change yet:
   - do not collapse `accept` and `promote`
   - do not weaken runtime maturity / promotion gates

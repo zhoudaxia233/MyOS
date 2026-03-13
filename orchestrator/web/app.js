@@ -282,6 +282,12 @@ const I18N = {
     judgment_detail_subject_empty: "选择一条建议或已处理学习项以查看复核支撑。",
     judgment_detail_subject_suggestion: "执行建议复核",
     judgment_detail_subject_learning: "学习判断回看",
+    detail_compact_showing: "显示 {shown} / {total} 条",
+    detail_compact_full: "展开完整内容",
+    detail_snapshot_summary: "快照摘要",
+    detail_snapshot_fields: "字段",
+    detail_snapshot_size: "估计体积",
+    detail_snapshot_lists: "列表项",
     suggestion_detail_next_pending: "提交 Accept / Modify / Reject，让这条执行建议完成 judgment。",
     suggestion_detail_next_accept: "已接受：如需沉淀，再单独判断是否值得进入学习流程。",
     suggestion_detail_next_modify: "已修改：修正记录已经写入，可继续对照输出与更正后的判断。",
@@ -669,6 +675,12 @@ const I18N = {
     judgment_detail_subject_empty: "Select a suggestion or reviewed learning item to open review support.",
     judgment_detail_subject_suggestion: "Execution Suggestion Review",
     judgment_detail_subject_learning: "Learning Judgment Replay",
+    detail_compact_showing: "Showing {shown} / {total}",
+    detail_compact_full: "Open Full Content",
+    detail_snapshot_summary: "Snapshot Summary",
+    detail_snapshot_fields: "Fields",
+    detail_snapshot_size: "Approx Size",
+    detail_snapshot_lists: "List Entries",
     suggestion_detail_next_pending: "Submit Accept / Modify / Reject so this execution suggestion completes judgment.",
     suggestion_detail_next_accept: "Accepted. If it should become durable learning, judge that separately in the learning flow.",
     suggestion_detail_next_modify: "Modified. The correction record is written; compare the output against the corrected judgment if needed.",
@@ -1468,6 +1480,13 @@ function clipText(value, maxLength = 240) {
     return "";
   }
   return raw.length > maxLength ? `${raw.slice(0, maxLength - 3)}...` : raw;
+}
+
+function normalizeTextItems(items) {
+  if (!Array.isArray(items)) {
+    return [];
+  }
+  return items.map((item) => String(item || "").trim()).filter(Boolean);
 }
 
 function suggestionReviewBadgeKey(item) {
@@ -2320,6 +2339,8 @@ function renderLearningLifecycle(summary) {
 function buildCandidateContext(item) {
   const sourceRef =
     (item && (item.source_material_ref || item.source_import_ref)) || t("candidate_source_unknown");
+  const evidenceItems = normalizeTextItems(item && item.evidence);
+  const sourceItems = normalizeTextItems(item && item.source_refs);
 
   const context = document.createElement("details");
   context.className = "candidate-context";
@@ -2330,17 +2351,32 @@ function buildCandidateContext(item) {
   const contextGrid = document.createElement("div");
   contextGrid.className = "candidate-context-grid";
 
+  const makeBlock = (labelText, bodyNode) => {
+    const block = document.createElement("div");
+    block.className = "candidate-context-block";
+    const label = document.createElement("div");
+    label.className = "candidate-context-label";
+    label.textContent = labelText;
+    block.appendChild(label);
+    block.appendChild(bodyNode);
+    contextGrid.appendChild(block);
+  };
+
+  const evidenceBody = buildCompactListBody(evidenceItems, t("candidate_detail_none"), {
+    maxVisible: 2,
+    maxChars: 170,
+    fullJoin: "\n\n",
+  });
+  makeBlock(t("candidate_detail_evidence"), evidenceBody);
+
+  const sourceBody = buildCompactListBody(sourceItems, sourceRef || t("candidate_source_unknown"), {
+    maxVisible: 3,
+    maxChars: 150,
+    fullJoin: "\n",
+  });
+  makeBlock(t("candidate_detail_sources"), sourceBody);
+
   const sections = [
-    [
-      t("candidate_detail_evidence"),
-      Array.isArray(item && item.evidence) && item.evidence.length > 0 ? item.evidence.join("\n\n") : t("candidate_detail_none"),
-    ],
-    [
-      t("candidate_detail_sources"),
-      Array.isArray(item && item.source_refs) && item.source_refs.length > 0
-        ? item.source_refs.join("\n")
-        : sourceRef || t("candidate_source_unknown"),
-    ],
     [t("candidate_detail_created"), formatCandidateCreatedAt(item)],
     [t("candidate_detail_owner_note"), (item && item.owner_note) || "-"],
     [t("candidate_detail_modified"), (item && item.modified_statement) || "-"],
@@ -2349,17 +2385,10 @@ function buildCandidateContext(item) {
   ];
 
   for (const [labelText, valueText] of sections) {
-    const block = document.createElement("div");
-    block.className = "candidate-context-block";
-    const label = document.createElement("div");
-    label.className = "candidate-context-label";
-    label.textContent = labelText;
     const value = document.createElement("div");
     value.className = "candidate-context-value";
     value.textContent = String(valueText || "-");
-    block.appendChild(label);
-    block.appendChild(value);
-    contextGrid.appendChild(block);
+    makeBlock(labelText, value);
   }
 
   context.appendChild(contextGrid);
@@ -2827,6 +2856,121 @@ function appendSuggestionDetailSection(container, labelKey, value) {
   container.appendChild(section);
 }
 
+function appendSuggestionDetailNodeSection(container, labelKey, bodyNode) {
+  if (!container || !bodyNode) {
+    return;
+  }
+  const section = document.createElement("div");
+  section.className = "suggestion-detail-section";
+
+  const label = document.createElement("div");
+  label.className = "suggestion-detail-label";
+  label.textContent = t(labelKey);
+
+  section.appendChild(label);
+  section.appendChild(bodyNode);
+  container.appendChild(section);
+}
+
+function formatApproxByteSize(bytes) {
+  const size = Number(bytes || 0);
+  if (!Number.isFinite(size) || size <= 0) {
+    return "0 B";
+  }
+  if (size < 1024) {
+    return `${size} B`;
+  }
+  if (size < 1024 * 1024) {
+    return `${(size / 1024).toFixed(size < 10 * 1024 ? 1 : 0)} KB`;
+  }
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function buildCompactListBody(items, emptyText, options = {}) {
+  const rows = normalizeTextItems(items);
+  const maxVisible = Math.max(1, Number(options.maxVisible || 2));
+  const maxChars = Math.max(40, Number(options.maxChars || 180));
+  const fullJoin = String(options.fullJoin || "\n");
+
+  const body = document.createElement("div");
+  body.className = "compact-detail-body";
+
+  if (rows.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "suggestion-detail-value";
+    empty.textContent = emptyText;
+    body.appendChild(empty);
+    return body;
+  }
+
+  const shownRows = rows.slice(0, maxVisible);
+  let truncated = rows.length > shownRows.length;
+
+  const list = document.createElement("ul");
+  list.className = "compact-detail-list";
+  for (const row of shownRows) {
+    const item = document.createElement("li");
+    const clipped = clipText(row, maxChars);
+    if (clipped !== row) {
+      truncated = true;
+    }
+    item.textContent = clipped;
+    list.appendChild(item);
+  }
+  body.appendChild(list);
+
+  if (rows.length > 1 || truncated) {
+    const meta = document.createElement("div");
+    meta.className = "compact-detail-meta";
+    meta.textContent = t("detail_compact_showing", {
+      shown: shownRows.length,
+      total: rows.length,
+    });
+    body.appendChild(meta);
+  }
+
+  if (truncated) {
+    const fold = document.createElement("details");
+    fold.className = "compact-detail-fold";
+    const summary = document.createElement("summary");
+    summary.textContent = t("detail_compact_full");
+    const full = document.createElement("div");
+    full.className = "compact-detail-full";
+    full.textContent = rows.join(fullJoin);
+    fold.appendChild(summary);
+    fold.appendChild(full);
+    body.appendChild(fold);
+  }
+
+  return body;
+}
+
+function buildSnapshotSummaryText(payload) {
+  if (!payload || typeof payload !== "object") {
+    return "-";
+  }
+  const keys = Object.keys(payload).filter((key) => payload[key] !== null && payload[key] !== undefined && payload[key] !== "");
+  const serialized = JSON.stringify(payload);
+  const byteSize = serialized ? serialized.length : 0;
+  const listCount = Object.values(payload).reduce((count, value) => {
+    if (Array.isArray(value)) {
+      return count + value.length;
+    }
+    return count;
+  }, 0);
+
+  const fieldLabel =
+    keys.length > 6 ? `${keys.slice(0, 6).join(", ")} +${keys.length - 6}` : keys.join(", ") || "-";
+  const lines = [
+    `${t("detail_snapshot_fields")}: ${fieldLabel}`,
+    `${t("detail_snapshot_size")}: ${formatApproxByteSize(byteSize)}`,
+  ];
+  if (listCount > 0) {
+    lines.push(`${t("detail_snapshot_lists")}: ${listCount}`);
+  }
+  return lines.join("\n");
+}
+
 function renderLearningSupportDetail(item, options = {}) {
   if (!item || typeof item !== "object") {
     renderSuggestionDetailEmpty();
@@ -2887,17 +3031,29 @@ function renderLearningSupportDetail(item, options = {}) {
       item.source_material_ref || item.source_import_ref || t("candidate_source_unknown")
     );
     appendSuggestionDetailSection(suggestionDetailCard, "candidate_label_rationale", item.rationale || "-");
-    appendSuggestionDetailSection(
+    appendSuggestionDetailNodeSection(
       suggestionDetailCard,
       "candidate_detail_evidence",
-      Array.isArray(item.evidence) && item.evidence.length > 0 ? item.evidence.join("\n\n") : t("candidate_detail_none")
+      buildCompactListBody(item.evidence, t("candidate_detail_none"), {
+        maxVisible: 2,
+        maxChars: 180,
+        fullJoin: "\n\n",
+      })
     );
-    appendSuggestionDetailSection(
+    appendSuggestionDetailNodeSection(
       suggestionDetailCard,
       "candidate_detail_sources",
-      Array.isArray(item.source_refs) && item.source_refs.length > 0
-        ? item.source_refs.join("\n")
-        : item.source_material_ref || item.source_import_ref || t("candidate_source_unknown")
+      buildCompactListBody(
+        Array.isArray(item.source_refs) && item.source_refs.length > 0
+          ? item.source_refs
+          : [item.source_material_ref || item.source_import_ref || t("candidate_source_unknown")],
+        item.source_material_ref || item.source_import_ref || t("candidate_source_unknown"),
+        {
+          maxVisible: 3,
+          maxChars: 160,
+          fullJoin: "\n",
+        }
+      )
     );
     appendSuggestionDetailSection(suggestionDetailCard, "candidate_detail_owner_note", item.owner_note || "-");
     appendSuggestionDetailSection(suggestionDetailCard, "candidate_detail_modified", item.modified_statement || "-");
@@ -2907,6 +3063,7 @@ function renderLearningSupportDetail(item, options = {}) {
       item.promotion_target || item.proposal_target || "-"
     );
     appendSuggestionDetailSection(suggestionDetailCard, "candidate_detail_runtime", candidateRuntimeDetail(item));
+    appendSuggestionDetailSection(suggestionDetailCard, "detail_snapshot_summary", buildSnapshotSummaryText(item));
     appendSuggestionDetailSection(suggestionDetailCard, "judgment_detail_next", lifecycleNextAction(item));
   }
 
@@ -2974,28 +3131,15 @@ function renderSuggestionDetail(data) {
     appendSuggestionDetailSection(suggestionDetailCard, "suggestion_detail_run", String(suggestion.run_ref || "").trim() || "-");
 
     const focusPoints = Array.isArray(suggestion.audit_focus_points) ? suggestion.audit_focus_points.filter(Boolean) : [];
-    const focusSection = document.createElement("div");
-    focusSection.className = "suggestion-detail-section";
-    const focusLabel = document.createElement("div");
-    focusLabel.className = "suggestion-detail-label";
-    focusLabel.textContent = t("suggestion_detail_focus");
-    focusSection.appendChild(focusLabel);
-    if (focusPoints.length > 0) {
-      const focusList = document.createElement("ul");
-      focusList.className = "suggestion-focus-list";
-      for (const point of focusPoints.slice(0, 6)) {
-        const item = document.createElement("li");
-        item.textContent = String(point);
-        focusList.appendChild(item);
-      }
-      focusSection.appendChild(focusList);
-    } else {
-      const emptyFocus = document.createElement("div");
-      emptyFocus.className = "suggestion-detail-value";
-      emptyFocus.textContent = t("suggestion_detail_focus_none");
-      focusSection.appendChild(emptyFocus);
-    }
-    suggestionDetailCard.appendChild(focusSection);
+    appendSuggestionDetailNodeSection(
+      suggestionDetailCard,
+      "suggestion_detail_focus",
+      buildCompactListBody(focusPoints, t("suggestion_detail_focus_none"), {
+        maxVisible: 3,
+        maxChars: 170,
+        fullJoin: "\n",
+      })
+    );
 
     if (verdictRow && String(verdictRow.owner_note || "").trim()) {
       appendSuggestionDetailSection(
@@ -3033,6 +3177,7 @@ function renderSuggestionDetail(data) {
       suggestionDetailCard.appendChild(correctionSection);
     }
 
+    appendSuggestionDetailSection(suggestionDetailCard, "detail_snapshot_summary", buildSnapshotSummaryText(payload));
     appendSuggestionDetailSection(
       suggestionDetailCard,
       "suggestion_detail_next",

@@ -1778,6 +1778,41 @@ body {
   word-break: break-word;
 }
 
+.compact-detail-body {
+  display: grid;
+  gap: 6px;
+}
+
+.compact-detail-list {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 4px;
+  color: var(--text);
+  font-size: 0.8rem;
+  line-height: 1.42;
+}
+
+.compact-detail-meta {
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.compact-detail-fold summary {
+  cursor: pointer;
+  font-size: 0.76rem;
+  color: var(--muted);
+}
+
+.compact-detail-full {
+  margin-top: 6px;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .suggestion-focus-list {
   margin: 0;
   padding-left: 18px;
