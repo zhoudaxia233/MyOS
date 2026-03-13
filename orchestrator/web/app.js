@@ -64,6 +64,8 @@ const reviewFilterResetBtn = document.getElementById("reviewFilterResetBtn");
 const reviewFilterMeta = document.getElementById("reviewFilterMeta");
 const reviewPresetButtons = Array.from(document.querySelectorAll("[data-review-preset]"));
 const suggestionReviewList = document.getElementById("suggestionReviewList");
+const suggestionReviewedCount = document.getElementById("suggestionReviewedCount");
+const suggestionReviewedList = document.getElementById("suggestionReviewedList");
 const reviewCandidates = document.getElementById("reviewCandidates");
 const promoteCandidates = document.getElementById("promoteCandidates");
 const reviewedCandidates = document.getElementById("reviewedCandidates");
@@ -212,6 +214,10 @@ const I18N = {
     suggestion_queue_empty: "当前没有待复核的任务建议。",
     suggestion_queue_open_detail: "查看细节",
     suggestion_meta_created: "进入队列 {created}",
+    suggestion_history_summary: "最近执行判断",
+    suggestion_history_desc: "这里回看最近已经完成的 execution judgment，不重新打开操作动作。",
+    suggestion_history_empty: "当前没有最近已复核的执行建议。",
+    suggestion_history_reviewed: "已判断 {created}",
     suggestion_detail_empty: "选择一条建议以查看复核支撑。",
     suggestion_detail_raw: "原始载荷（按需展开）",
     suggestion_detail_task: "任务",
@@ -563,6 +569,10 @@ const I18N = {
     suggestion_queue_empty: "No task suggestions currently need review.",
     suggestion_queue_open_detail: "Open Detail",
     suggestion_meta_created: "Queued {created}",
+    suggestion_history_summary: "Recent Execution Judgments",
+    suggestion_history_desc: "Review the latest completed execution judgments here without reopening decision actions.",
+    suggestion_history_empty: "No recently reviewed execution suggestions yet.",
+    suggestion_history_reviewed: "Reviewed {created}",
     suggestion_detail_empty: "Select a suggestion to open review support.",
     suggestion_detail_raw: "Raw Payload (Open On Demand)",
     suggestion_detail_task: "Task",
@@ -947,6 +957,7 @@ function refreshAuditUiSnapshot(data) {
   }
   refreshReviewTypeOptions();
   renderSuggestionReviewQueue(auditUiSnapshot.suggestion_review_queue);
+  renderRecentSuggestionReviews(auditUiSnapshot.suggestion_review_queue);
   renderReviewInboxSummary();
   updateAuditConsoleDensity();
 }
@@ -976,6 +987,13 @@ function suggestionPendingItems(queue) {
   return queue.pending.filter(isSuggestionReviewItem);
 }
 
+function suggestionReviewedItems(queue) {
+  if (!queue || typeof queue !== "object" || !Array.isArray(queue.recently_reviewed)) {
+    return [];
+  }
+  return queue.recently_reviewed.filter(isSuggestionReviewItem);
+}
+
 function suggestionPendingTotal(queue) {
   if (!queue || typeof queue !== "object") {
     return 0;
@@ -985,6 +1003,17 @@ function suggestionPendingTotal(queue) {
     return total;
   }
   return suggestionPendingItems(queue).length;
+}
+
+function suggestionReviewedTotal(queue) {
+  if (!queue || typeof queue !== "object") {
+    return 0;
+  }
+  const total = Number(queue.reviewed_total);
+  if (Number.isFinite(total) && total >= 0) {
+    return total;
+  }
+  return suggestionReviewedItems(queue).length;
 }
 
 function findSuggestionReviewItem(suggestionId) {
@@ -1287,6 +1316,20 @@ function summarizeSuggestionTask(item) {
   return raw.length > 160 ? `${raw.slice(0, 157)}...` : raw;
 }
 
+function suggestionReviewBadgeKey(item) {
+  const verdict = String((((item || {}).owner_review || {}).verdict) || "").trim().toLowerCase();
+  if (verdict === "accept") {
+    return "accept";
+  }
+  if (verdict === "modify") {
+    return "modify";
+  }
+  if (verdict === "reject") {
+    return "reject";
+  }
+  return "pending";
+}
+
 function renderSuggestionReviewQueue(queue) {
   if (!suggestionReviewList) {
     return;
@@ -1366,6 +1409,99 @@ function renderSuggestionReviewQueue(queue) {
     wrap.appendChild(nextAction);
     wrap.appendChild(actions);
     suggestionReviewList.appendChild(wrap);
+  }
+}
+
+function renderRecentSuggestionReviews(queue) {
+  if (!suggestionReviewedList) {
+    return;
+  }
+  const items = suggestionReviewedItems(queue);
+  const total = suggestionReviewedTotal(queue);
+  const selectedId = String(latestSuggestionId || "").trim();
+
+  if (suggestionReviewedCount) {
+    suggestionReviewedCount.textContent = String(total);
+  }
+
+  suggestionReviewedList.innerHTML = "";
+  if (items.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "todo-item todo-item-empty";
+    empty.textContent = t("suggestion_history_empty");
+    suggestionReviewedList.appendChild(empty);
+    return;
+  }
+
+  for (const item of items) {
+    const suggestionId = String(item.id || "").trim();
+    const badgeKey = suggestionReviewBadgeKey(item);
+    const wrap = document.createElement("div");
+    wrap.className = "todo-item suggestion-review-card reviewed-card";
+    wrap.dataset.active = suggestionId && suggestionId === selectedId ? "true" : "false";
+
+    const head = document.createElement("div");
+    head.className = "todo-head";
+    const metric = document.createElement("span");
+    metric.className = "todo-metric";
+    metric.textContent = summarizeSuggestionTask(item);
+    head.appendChild(metric);
+
+    const statusBadge = document.createElement("span");
+    statusBadge.className = `suggestion-detail-chip status-${badgeKey}`;
+    statusBadge.textContent = t(`suggestion_detail_status_${badgeKey}`);
+    head.appendChild(statusBadge);
+
+    const meta = document.createElement("div");
+    meta.className = "suggestion-meta";
+    if (item.module) {
+      const moduleChip = document.createElement("span");
+      moduleChip.className = "suggestion-meta-chip";
+      moduleChip.textContent = String(item.module);
+      meta.appendChild(moduleChip);
+    }
+    const reviewedAt = String((((item || {}).owner_review || {}).reviewed_at) || item.created_at || "").trim();
+    if (reviewedAt) {
+      const reviewedChip = document.createElement("span");
+      reviewedChip.className = "suggestion-meta-chip";
+      reviewedChip.textContent = t("suggestion_history_reviewed", {
+        created: formatCandidateCreatedAt({ created_at: reviewedAt }),
+      });
+      meta.appendChild(reviewedChip);
+    }
+    const correctionTarget = String((((item || {}).owner_review || {}).target_layer) || "").trim();
+    if (correctionTarget) {
+      const targetChip = document.createElement("span");
+      targetChip.className = "suggestion-meta-chip";
+      targetChip.textContent = `${t("suggestion_detail_target")}: ${correctionTarget}`;
+      meta.appendChild(targetChip);
+    }
+
+    const ownerNote = String((((item || {}).owner_review || {}).owner_note) || "").trim();
+    if (ownerNote) {
+      const note = document.createElement("div");
+      note.className = "suggestion-review-note";
+      note.textContent = ownerNote.length > 200 ? `${ownerNote.slice(0, 197)}...` : ownerNote;
+      wrap.appendChild(head);
+      wrap.appendChild(meta);
+      wrap.appendChild(note);
+    } else {
+      wrap.appendChild(head);
+      wrap.appendChild(meta);
+    }
+
+    const actions = document.createElement("div");
+    actions.className = "todo-actions";
+    const detailBtn = document.createElement("button");
+    detailBtn.className = "todo-resolve-btn";
+    detailBtn.type = "button";
+    detailBtn.textContent = t("suggestion_queue_open_detail");
+    detailBtn.addEventListener("click", () => {
+      void focusSuggestionReview(suggestionId);
+    });
+    actions.appendChild(detailBtn);
+    wrap.appendChild(actions);
+    suggestionReviewedList.appendChild(wrap);
   }
 }
 
@@ -1548,6 +1684,7 @@ function setLanguage(lang) {
   }
   refreshReviewTypeOptions();
   renderSuggestionReviewQueue(auditUiSnapshot.suggestion_review_queue);
+  renderRecentSuggestionReviews(auditUiSnapshot.suggestion_review_queue);
   renderReviewInboxSummary();
   renderLearningCandidates(auditUiSnapshot.learning_candidates);
   renderOwnerTodos(auditUiSnapshot.owner_todos);
@@ -2258,6 +2395,7 @@ function renderInspectResult(data) {
   suggestionTrace.textContent = "-";
   setSuggestionReviewEnabled(false);
   renderSuggestionReviewQueue(auditUiSnapshot.suggestion_review_queue);
+  renderRecentSuggestionReviews(auditUiSnapshot.suggestion_review_queue);
   if (!data.output_preview) {
     setPreview("-");
     setOutputTokenMeta("-");
@@ -2443,6 +2581,7 @@ async function loadSuggestionDetail(suggestionId, options = {}) {
   if (!sid) {
     latestSuggestionId = null;
     renderSuggestionReviewQueue(auditUiSnapshot.suggestion_review_queue);
+    renderRecentSuggestionReviews(auditUiSnapshot.suggestion_review_queue);
     renderSuggestionDetailEmpty();
     suggestionTrace.textContent = "-";
     setSuggestionReviewEnabled(false);
@@ -2450,6 +2589,7 @@ async function loadSuggestionDetail(suggestionId, options = {}) {
   }
   latestSuggestionId = sid;
   renderSuggestionReviewQueue(auditUiSnapshot.suggestion_review_queue);
+  renderRecentSuggestionReviews(auditUiSnapshot.suggestion_review_queue);
   if (options && options.openSupport && auditMachineFold) {
     auditMachineFold.open = true;
   }

@@ -1348,6 +1348,26 @@ body {
   color: var(--muted);
 }
 
+.history-summary-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.history-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--border) 78%, white);
+  background: color-mix(in srgb, var(--card) 90%, white 10%);
+  color: var(--muted);
+  padding: 2px 7px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
 .audit-advanced-fold {
   margin-top: 8px;
   border: 1px dashed color-mix(in srgb, var(--border) 76%, white);
@@ -1595,6 +1615,11 @@ body {
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--warm) 24%, transparent);
 }
 
+.suggestion-review-card.reviewed-card[data-active="true"] {
+  border-color: color-mix(in srgb, var(--accent) 48%, var(--border));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
 .suggestion-review-card .todo-head {
   margin-bottom: 0;
 }
@@ -1622,6 +1647,13 @@ body {
 
 .suggestion-next {
   margin-bottom: 0;
+}
+
+.suggestion-review-note {
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--muted);
+  white-space: pre-wrap;
 }
 
 .suggestion-detail-card {

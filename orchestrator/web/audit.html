@@ -211,6 +211,24 @@
           </div>
         </section>
 
+        <details class="review-history-fold suggestion-history-fold">
+          <summary>
+            <span class="history-summary-line">
+              <span data-i18n="suggestion_history_summary">最近执行判断</span>
+              <span id="suggestionReviewedCount" class="history-count-badge">0</span>
+            </span>
+          </summary>
+          <p class="helper-note" data-i18n="suggestion_history_desc">这里回看最近已经完成的 execution judgment，不重新打开操作动作。</p>
+          <div id="suggestionReviewedList" class="todo-list">
+            <div class="todo-item">
+              <div class="todo-head">
+                <span class="todo-metric">Loading...</span>
+              </div>
+              <div class="todo-action">-</div>
+            </div>
+          </div>
+        </details>
+
         <section id="auditZeroState" class="entrypoint-hint audit-zero-state" hidden>
           <p data-i18n="audit_zero_state_desc">
             当前没有待复核建议、学习候选或 Owner 待办。建议先去工作台输入学习素材，或先跑一次一键审计。
