@@ -734,6 +734,21 @@ def test_api_action_ratifies_promoted_principle_candidate_into_constitution() ->
         assert ratify_result["canonical_clause_id"] in constitution_text
         assert "Protect downside first across domains." in constitution_text
 
+        eligibility_result = api_action(
+            root,
+            {
+                "action": "set_runtime_eligibility",
+                "candidate_id": candidate_id,
+                "eligibility_status": "eligible",
+                "change_note": "release runtime authority after canonicalization",
+            },
+        )
+        assert eligibility_result["runtime_eligibility"]["runtime_eligibility_status"] == "eligible"
+        matched = next(item for item in eligibility_result["learning_candidates"] if item["id"] == candidate_id)
+        assert matched["lifecycle_stage"] == "canonicalized"
+        assert matched["runtime_eligibility_status"] == "eligible"
+        assert matched["runtime_state"] == "cooling"
+
         with pytest.raises(ValueError):
             api_action(
                 root,

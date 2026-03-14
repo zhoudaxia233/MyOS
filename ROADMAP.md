@@ -119,12 +119,13 @@ Keep rollout evolutionary: preserve existing extraction/distillation pipelines a
   - ratification appends one amendment record to `modules/principles/logs/principle_amendments.jsonl`
   - ratification also appends one new clause into `modules/principles/data/constitution.yaml`
   - Audit now shows a distinct `Canonicalized` state and a dedicated `Ratify Principle` action for promoted principle candidates
+  - after canonicalization, `principle` may now be explicitly marked runtime-eligible through the existing runtime release path
 - Kept intentionally minimal:
   - only `principle`
   - only new-clause (`add_clause`) canonicalization
   - no general canonicalization engine
   - no profile/cognition ratification yet
-  - no runtime eligibility expansion for Class C artifacts
+  - no automatic runtime eligibility expansion for Class C artifacts
 - Next continuation slice:
   - decide whether `principle` ratification should support amendment of existing clauses or stay add-only for another iteration
   - then implement the next typed path for either `profile_trait` or `cognition_revision`, but not both at once

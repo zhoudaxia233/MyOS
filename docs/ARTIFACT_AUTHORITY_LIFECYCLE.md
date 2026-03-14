@@ -369,6 +369,10 @@ The repo now has a first explicit Class C ratification path, but only for `princ
 - this means:
   - `principle` can now move from `promoted_ledger` to `canonicalized` through an explicit owner action
   - constitutional authority comes from `constitution.yaml` + amendment trail, not from runtime eligibility on the promoted candidate sink
+- follow-up guard now in code:
+  - a canonicalized `principle` may be explicitly marked runtime-eligible
+  - but that release still does not happen automatically at ratification time
+  - runtime authority therefore remains a separate owner action after canonical truth exists
 - what remains deferred:
   - amendment of existing clauses
   - exception-driven canonicalization flows from promoted candidates

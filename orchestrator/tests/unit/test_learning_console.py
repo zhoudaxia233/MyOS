@@ -14,6 +14,7 @@ from learning_console import (
     summarize_learning_pipeline,
     summarize_learning_pipeline_trend,
 )
+from principles_authority import ratify_principle_candidate
 from runtime_eligibility import set_runtime_eligibility
 
 
@@ -63,6 +64,46 @@ def _prepare_memory_logs(root: Path) -> None:
 
     events.write_text(json.dumps(events_schema) + "\n", encoding="utf-8")
     insights.write_text(json.dumps(insights_schema) + "\n", encoding="utf-8")
+
+
+def _prepare_principles_foundation(root: Path) -> None:
+    constitution = root / "modules/principles/data/constitution.yaml"
+    constitution.parent.mkdir(parents=True, exist_ok=True)
+    constitution.write_text(
+        "\n".join(
+            [
+                "constitution_version: 1",
+                "clauses:",
+                '  - clause_id: "pr_0001"',
+                '    title: "Existing principle"',
+                '    statement: "Keep a stable anchor under change."',
+                '    rationale: "Baseline constitutional guidance."',
+                '    override_policy: "allowed_with_owner_confirmation"',
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    _write_jsonl(
+        root / "modules/principles/logs/principle_amendments.jsonl",
+        "principle_amendments",
+        [
+            "id",
+            "created_at",
+            "status",
+            "object_type",
+            "principle_id",
+            "change_type",
+            "proposal_summary",
+            "rationale",
+            "evidence_refs",
+            "approval_ref",
+            "effective_from",
+            "source_refs",
+            "proposal_target",
+        ],
+        [],
+    )
 
 
 def _write_jsonl(path: Path, schema_name: str, fields: list[str], rows: list[dict]) -> None:
@@ -554,6 +595,59 @@ def test_class_c_artifacts_remain_held_pending_ratification() -> None:
                 message = str(exc)
                 assert candidate_type in message
                 assert "ratification" in message or "canonicalization" in message
+
+
+def test_principle_can_be_runtime_eligible_after_canonicalization() -> None:
+    with TemporaryDirectory() as td:
+        root = Path(td)
+        _prepare_memory_logs(root)
+        _prepare_principles_foundation(root)
+
+        result = ingest_learning_handoff_response(
+            root,
+            json.dumps(
+                {
+                    "source": {"title": "P", "url": "u-principle", "source_type": "video"},
+                    "summary": "principle candidate",
+                    "key_points": ["typed seriousness"],
+                    "candidate_artifacts": {"principles": [{"statement": "Protect downside first across domains."}]},
+                }
+            ),
+        )
+        candidate_id = result["candidate_record_ids"][0]
+        apply_learning_candidate_verdict(
+            root,
+            candidate_id=candidate_id,
+            verdict="accept",
+            owner_note="accept for ledger",
+        )
+        promotion = promote_learning_candidate(
+            root,
+            candidate_id=candidate_id,
+            approval_note="approve ledger promotion",
+        )
+        assert promotion["runtime_eligibility_status"] == "holding"
+
+        ratified = ratify_principle_candidate(
+            root,
+            candidate_ref=candidate_id,
+            ratification_note="Approve constitution write.",
+        )
+        assert ratified["canonical_clause_id"].startswith("pr_")
+
+        updated = set_runtime_eligibility(
+            root,
+            candidate_ref=candidate_id,
+            eligibility_status="eligible",
+            change_note="release runtime authority after canonicalization",
+        )
+        assert updated["runtime_eligibility_status"] == "eligible"
+
+        recent = list_recent_learning_candidates(root, include_resolved=True)
+        matched = next(item for item in recent if item["id"] == candidate_id)
+        assert matched["lifecycle_stage"] == "canonicalized"
+        assert matched["runtime_eligibility_status"] == "eligible"
+        assert matched["canonicalized_at"]
 
 
 def test_summarize_learning_pipeline_includes_promotion_readiness() -> None:

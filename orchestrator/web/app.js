@@ -485,7 +485,7 @@ const I18N = {
     candidate_next_ratify_principle:
       "下一步：把这条 principle 候选写入 amendment log，并显式更新 constitution.yaml，完成 canonicalization。",
     candidate_next_canonicalized:
-      "已写入 amendment log 并进入 constitution SSOT。后续若要改动，应走 amendment / exception 路径，而不是回到 generic promotion。",
+      "已写入 amendment log 并进入 constitution SSOT。若要进入 runtime authority，仍需显式授权；如要改动内容，应走 amendment / exception 路径。",
     candidate_next_revoked: "运行资格已撤销；如需恢复，必须重新显式授权。",
     candidate_next_cooling: "已晋升入账，成熟期剩余约 {hours} 小时，之后才可进入运行时上下文。",
     candidate_next_runtime: "已进入运行时上下文（成熟完成）。",
@@ -923,7 +923,7 @@ const I18N = {
     candidate_next_ratify_principle:
       "Next: write this principle candidate into the amendment log and constitution SSOT through an explicit canonicalization step.",
     candidate_next_canonicalized:
-      "Canonicalized into amendment log + constitution SSOT. Further changes should go through amendment / exception flow, not generic promotion.",
+      "Canonicalized into amendment log + constitution SSOT. Runtime authority still needs an explicit release; further content changes should go through amendment / exception flow.",
     candidate_next_revoked: "Runtime eligibility is revoked; explicit re-authorization is required before reuse.",
     candidate_next_cooling: "Promoted into the ledger and cooling. About {hours}h remaining before runtime context.",
     candidate_next_runtime: "Active in runtime context (maturity complete).",
@@ -1948,6 +1948,9 @@ const RUNTIME_RATIFICATION_REQUIRED_TYPES = new Set(["profile_trait", "principle
 
 function candidateRequiresRuntimeRatification(item) {
   const type = String(((item && item.candidate_type) || (item && item.artifact_type) || "")).trim().toLowerCase();
+  if (type === "principle") {
+    return !String((item && item.canonicalized_at) || "").trim();
+  }
   return RUNTIME_RATIFICATION_REQUIRED_TYPES.has(type);
 }
 
@@ -2475,6 +2478,14 @@ function lifecycleNextAction(item) {
     return t("candidate_next_cooling", { hours: Number(item.runtime_hours_remaining || 0) });
   }
   if (stage === "canonicalized") {
+    const runtimeState = String(item.runtime_state || "").trim().toLowerCase();
+    const eligibilityStatus = String(item.runtime_eligibility_status || "").trim().toLowerCase();
+    if (runtimeState === "revoked" || eligibilityStatus === "revoked") {
+      return t("candidate_next_revoked");
+    }
+    if (eligibilityStatus === "eligible") {
+      return t("candidate_next_cooling", { hours: Number(item.runtime_hours_remaining || 0) });
+    }
     return t("candidate_next_canonicalized");
   }
   return t("candidate_next_runtime");
@@ -2673,7 +2684,11 @@ function renderCandidateCards(container, items, emptyKey) {
         openLearningReviewModal(item, "promote");
       });
       actions.appendChild(promoteBtn);
-    } else if (item.lifecycle_stage === "promoted" || item.lifecycle_stage === "active_runtime") {
+    } else if (
+      item.lifecycle_stage === "promoted" ||
+      item.lifecycle_stage === "canonicalized" ||
+      item.lifecycle_stage === "active_runtime"
+    ) {
       const eligibilityStatus = String(item.runtime_eligibility_status || "").trim().toLowerCase();
       const runtimeReleaseBlocked = candidateRequiresRuntimeRatification(item);
 

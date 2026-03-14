@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from idgen import next_id_for_rel_path
+from principles_authority import principle_ratification_map
 from validators import append_jsonl
 
 RUNTIME_MATURITY_HOURS = 24
@@ -168,10 +169,36 @@ def _guarded_runtime_hold_note(artifact_type: str, *, seeded: bool = False) -> s
 
 def _generic_runtime_release_block_message(artifact_type: str) -> str:
     normalized = str(artifact_type or "").strip() or "artifact"
+    if normalized == "principle":
+        return (
+            "principle cannot be marked runtime-eligible until it is canonicalized through "
+            "the explicit principle ratification path"
+        )
     return (
         f"{normalized} cannot be marked runtime-eligible through the generic runtime path; "
         "explicit ratification/canonicalization is required first"
     )
+
+
+def _principle_is_canonicalized(repo_root: Path, candidate_ref: str | None) -> bool:
+    target_candidate_ref = str(candidate_ref or "").strip()
+    if not target_candidate_ref:
+        return False
+    return principle_ratification_map(repo_root).get(target_candidate_ref) is not None
+
+
+def can_release_runtime_authority(
+    repo_root: Path,
+    *,
+    artifact_type: str,
+    candidate_ref: str | None,
+) -> bool:
+    normalized = str(artifact_type or "").strip().lower()
+    if not requires_runtime_ratification(normalized):
+        return True
+    if normalized == "principle":
+        return _principle_is_canonicalized(repo_root, candidate_ref)
+    return False
 
 
 def _artifact_rows(repo_root: Path) -> dict[str, dict[str, Any]]:
@@ -498,8 +525,13 @@ def set_runtime_eligibility(
     if current is None:
         raise ValueError("runtime eligibility not found for candidate; promote it first")
     artifact_type = str(current.get("artifact_type", "")).strip() or "unknown"
-    if normalized_status == "eligible" and requires_runtime_ratification(artifact_type):
+    if normalized_status == "eligible" and not can_release_runtime_authority(
+        repo_root,
+        artifact_type=artifact_type,
+        candidate_ref=target_candidate_ref,
+    ):
         # Class C artifacts stay non-runtime-authoritative until a typed ratification path exists.
+        # `principle` becomes releasable only after the dedicated canonicalization step.
         raise ValueError(_generic_runtime_release_block_message(artifact_type))
 
     record = _build_runtime_eligibility_record(
