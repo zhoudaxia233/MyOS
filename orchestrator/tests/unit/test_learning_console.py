@@ -14,6 +14,7 @@ from learning_console import (
     summarize_learning_pipeline,
     summarize_learning_pipeline_trend,
 )
+from runtime_eligibility import set_runtime_eligibility
 
 
 def _prepare_memory_logs(root: Path) -> None:
@@ -441,6 +442,53 @@ def test_summarize_learning_pipeline_trend_compares_7d_vs_30d() -> None:
         assert comparisons["reject_ratio"]["trend"] == "worsening"
         assert comparisons["promotion_conversion_rate"]["trend"] == "worsening"
         assert comparisons["backlog_pressure"]["trend"] == "improving"
+
+
+def test_set_runtime_eligibility_appends_new_runtime_state() -> None:
+    with TemporaryDirectory() as td:
+        root = Path(td)
+        _prepare_memory_logs(root)
+        result = ingest_learning_handoff_response(
+            root,
+            json.dumps(
+                {
+                    "source": {"title": "P", "url": "u4", "source_type": "video"},
+                    "summary": "s4",
+                    "key_points": ["p4"],
+                    "candidate_artifacts": {"principles": [{"statement": "protect downside first"}]},
+                }
+            ),
+        )
+        candidate_id = result["candidate_record_ids"][0]
+        apply_learning_candidate_verdict(
+            root,
+            candidate_id=candidate_id,
+            verdict="accept",
+            owner_note="accept first",
+        )
+        promotion = promote_learning_candidate(
+            root,
+            candidate_id=candidate_id,
+            approval_note="approved for promotion",
+        )
+        assert promotion["runtime_eligibility_status"] == "holding"
+
+        updated = set_runtime_eligibility(
+            root,
+            candidate_ref=candidate_id,
+            eligibility_status="eligible",
+            change_note="owner explicitly allows runtime influence now",
+        )
+        assert updated["runtime_eligibility_status"] == "eligible"
+        assert updated["runtime_state"] in {"cooling", "active"}
+        assert updated["runtime_change_note"] == "owner explicitly allows runtime influence now"
+
+        eligibility_lines = (root / "modules/decision/logs/runtime_eligibility.jsonl").read_text(encoding="utf-8").splitlines()
+        assert len(eligibility_lines) >= 3
+        latest = json.loads(eligibility_lines[-1])
+        assert latest["candidate_ref"] == candidate_id
+        assert latest["eligibility_status"] == "eligible"
+        assert latest["replaces_eligibility_ref"]
 
 
 def test_summarize_learning_pipeline_includes_promotion_readiness() -> None:

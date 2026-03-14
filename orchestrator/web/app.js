@@ -416,6 +416,9 @@ const I18N = {
     btn_modify: "修改",
     btn_reject: "拒绝",
     btn_promote: "晋升",
+    btn_runtime_eligible: "设为可用",
+    btn_runtime_hold: "运行保留",
+    btn_runtime_revoke: "撤销运行",
     btn_resolve: "完成",
     lifecycle_step_imported: "已导入",
     lifecycle_step_candidate: "候选中",
@@ -450,6 +453,7 @@ const I18N = {
     candidate_detail_runtime_eligibility: "运行资格",
     candidate_detail_runtime_scope: "运行范围",
     candidate_detail_runtime_autonomy: "自治上限",
+    candidate_detail_runtime_note: "运行资格备注",
     candidate_detail_none: "暂无更细证据。",
     candidate_detail_runtime_pending: "尚未进入运行时上下文。",
     candidate_detail_runtime_unassigned: "尚未写入 runtime eligibility 记录。",
@@ -473,6 +477,9 @@ const I18N = {
     learning_review_modal_title_modify: "修改候选",
     learning_review_modal_title_reject: "拒绝候选",
     learning_review_modal_title_promote: "晋升候选",
+    learning_review_modal_title_runtime_eligible: "授权运行资格",
+    learning_review_modal_title_runtime_hold: "保留运行资格",
+    learning_review_modal_title_runtime_revoke: "撤销运行资格",
     learning_review_modal_title: "复核候选",
     learning_review_owner_note: "复核备注",
     learning_review_note_placeholder: "写下你的判断依据...",
@@ -567,6 +574,8 @@ const I18N = {
     msg_promotion_note_required: "晋升需要填写审批备注。",
     msg_candidate_promoted_done: "候选已晋升：{id} -> {target}",
     msg_candidate_promote_failed: "候选晋升失败：{error}",
+    msg_runtime_eligibility_done: "运行资格已更新：{id} -> {status}",
+    msg_runtime_eligibility_failed: "运行资格更新失败：{error}",
     msg_learning_text_required: "请先粘贴学习文本。",
     msg_learning_source_required: "学习 Handoff 需要先填写来源链接 / 引用。",
     msg_learning_packet_generating: "正在生成学习 Handoff 包...",
@@ -827,6 +836,9 @@ const I18N = {
     btn_modify: "Modify",
     btn_reject: "Reject",
     btn_promote: "Promote",
+    btn_runtime_eligible: "Mark Eligible",
+    btn_runtime_hold: "Hold Runtime",
+    btn_runtime_revoke: "Revoke Runtime",
     btn_resolve: "Resolve",
     lifecycle_step_imported: "Imported",
     lifecycle_step_candidate: "Candidate",
@@ -861,6 +873,7 @@ const I18N = {
     candidate_detail_runtime_eligibility: "Runtime Eligibility",
     candidate_detail_runtime_scope: "Runtime Scope",
     candidate_detail_runtime_autonomy: "Autonomy Ceiling",
+    candidate_detail_runtime_note: "Runtime Eligibility Note",
     candidate_detail_none: "No deeper evidence available.",
     candidate_detail_runtime_pending: "Not in runtime context yet.",
     candidate_detail_runtime_unassigned: "No runtime eligibility record has been written yet.",
@@ -884,6 +897,9 @@ const I18N = {
     learning_review_modal_title_modify: "Modify Candidate",
     learning_review_modal_title_reject: "Reject Candidate",
     learning_review_modal_title_promote: "Promote Candidate",
+    learning_review_modal_title_runtime_eligible: "Authorize Runtime Eligibility",
+    learning_review_modal_title_runtime_hold: "Hold Runtime Eligibility",
+    learning_review_modal_title_runtime_revoke: "Revoke Runtime Eligibility",
     learning_review_modal_title: "Review Candidate",
     learning_review_owner_note: "Owner Note",
     learning_review_note_placeholder: "Write your owner rationale...",
@@ -976,6 +992,8 @@ const I18N = {
     msg_promotion_note_required: "Approval note is required for promotion.",
     msg_candidate_promoted_done: "Candidate promoted: {id} -> {target}",
     msg_candidate_promote_failed: "Candidate promotion failed: {error}",
+    msg_runtime_eligibility_done: "Runtime eligibility updated: {id} -> {status}",
+    msg_runtime_eligibility_failed: "Runtime eligibility update failed: {error}",
     msg_learning_text_required: "Learning text is required. Paste transcript/article/notes first.",
     msg_learning_source_required: "Source URL/reference is required for learning handoff packet.",
     msg_learning_packet_generating: "Generating learning handoff packet...",
@@ -2459,6 +2477,7 @@ function buildCandidateContext(item) {
     [t("candidate_detail_runtime_eligibility"), candidateRuntimeEligibilityLabel(item)],
     [t("candidate_detail_runtime_scope"), candidateRuntimeScopeText(item)],
     [t("candidate_detail_runtime_autonomy"), (item && item.runtime_autonomy_ceiling) || "-"],
+    [t("candidate_detail_runtime_note"), (item && item.runtime_change_note) || "-"],
     [t("candidate_detail_runtime"), candidateRuntimeDetail(item)],
   ];
 
@@ -2572,13 +2591,41 @@ function renderCandidateCards(container, items, emptyKey) {
         openLearningReviewModal(item, "promote");
       });
       actions.appendChild(promoteBtn);
-    } else if (item.lifecycle_stage === "promoted") {
-      const coolingBtn = document.createElement("button");
-      coolingBtn.className = "todo-resolve-btn";
-      coolingBtn.type = "button";
-      coolingBtn.disabled = true;
-      coolingBtn.textContent = t("lifecycle_stage_promoted");
-      actions.appendChild(coolingBtn);
+    } else if (item.lifecycle_stage === "promoted" || item.lifecycle_stage === "active_runtime") {
+      const eligibilityStatus = String(item.runtime_eligibility_status || "").trim().toLowerCase();
+
+      if (eligibilityStatus !== "eligible") {
+        const enableBtn = document.createElement("button");
+        enableBtn.className = "todo-resolve-btn";
+        enableBtn.type = "button";
+        enableBtn.textContent = t("btn_runtime_eligible");
+        enableBtn.addEventListener("click", () => {
+          openLearningReviewModal(item, "runtime_eligible");
+        });
+        actions.appendChild(enableBtn);
+      }
+
+      if (eligibilityStatus !== "holding") {
+        const holdBtn = document.createElement("button");
+        holdBtn.className = "todo-resolve-btn";
+        holdBtn.type = "button";
+        holdBtn.textContent = t("btn_runtime_hold");
+        holdBtn.addEventListener("click", () => {
+          openLearningReviewModal(item, "runtime_hold");
+        });
+        actions.appendChild(holdBtn);
+      }
+
+      if (eligibilityStatus !== "revoked") {
+        const revokeBtn = document.createElement("button");
+        revokeBtn.className = "todo-resolve-btn";
+        revokeBtn.type = "button";
+        revokeBtn.textContent = t("btn_runtime_revoke");
+        revokeBtn.addEventListener("click", () => {
+          openLearningReviewModal(item, "runtime_revoke");
+        });
+        actions.appendChild(revokeBtn);
+      }
     }
 
     wrap.appendChild(head);
@@ -3214,6 +3261,11 @@ function renderLearningSupportDetail(item, options = {}) {
       "candidate_detail_runtime_autonomy",
       item.runtime_autonomy_ceiling || "-"
     );
+    appendSuggestionDetailSection(
+      suggestionDetailCard,
+      "candidate_detail_runtime_note",
+      item.runtime_change_note || "-"
+    );
     appendSuggestionDetailSection(suggestionDetailCard, "candidate_detail_runtime", candidateRuntimeDetail(item));
     appendSuggestionDetailSection(suggestionDetailCard, "detail_snapshot_summary", buildSnapshotSummaryText(item));
     appendSuggestionDetailSection(suggestionDetailCard, "judgment_detail_next", lifecycleNextAction(item));
@@ -3774,7 +3826,7 @@ function openLearningReviewModal(item, mode) {
     return;
   }
   const verdict = String(mode || "").trim().toLowerCase();
-  if (!["accept", "modify", "reject", "promote"].includes(verdict)) {
+  if (!["accept", "modify", "reject", "promote", "runtime_eligible", "runtime_hold", "runtime_revoke"].includes(verdict)) {
     return;
   }
   learningReviewDraft = {
@@ -3790,6 +3842,9 @@ function openLearningReviewModal(item, mode) {
     modify: "learning_review_modal_title_modify",
     reject: "learning_review_modal_title_reject",
     promote: "learning_review_modal_title_promote",
+    runtime_eligible: "learning_review_modal_title_runtime_eligible",
+    runtime_hold: "learning_review_modal_title_runtime_hold",
+    runtime_revoke: "learning_review_modal_title_runtime_revoke",
   };
   learningReviewTitle.textContent = t(titleMap[verdict] || "learning_review_modal_title");
   learningReviewMeta.textContent =
@@ -3800,6 +3855,12 @@ function openLearningReviewModal(item, mode) {
     modify: uiLanguage === "zh" ? "方向可用，但表达需收紧。" : "Useful direction but wording needs tightening.",
     reject: uiLanguage === "zh" ? "与当前判断核心不一致，拒绝晋升。" : "Not aligned with current judgment core.",
     promote: uiLanguage === "zh" ? "已完成复核，批准 Promote。" : "Reviewed and approved for promotion.",
+    runtime_eligible:
+      uiLanguage === "zh" ? "批准该条目进入 runtime eligibility，并接受当前边界。" : "Authorize runtime eligibility under current boundaries.",
+    runtime_hold:
+      uiLanguage === "zh" ? "暂不允许该条目影响 runtime，先保留观察。" : "Keep this artifact out of runtime influence for now.",
+    runtime_revoke:
+      uiLanguage === "zh" ? "撤销该条目的 runtime 影响资格，避免继续注入。" : "Revoke this artifact's runtime influence eligibility.",
   };
   learningReviewNote.value = defaultNotes[verdict] || "";
   const needsStatement = verdict === "modify";
@@ -3841,6 +3902,16 @@ async function submitLearningReviewModal() {
 
   if (verdict === "promote") {
     await promoteLearningCandidate(id, ownerNote);
+    closeLearningReviewModal();
+    return;
+  }
+  if (verdict === "runtime_eligible" || verdict === "runtime_hold" || verdict === "runtime_revoke") {
+    const statusMap = {
+      runtime_eligible: "eligible",
+      runtime_hold: "holding",
+      runtime_revoke: "revoked",
+    };
+    await updateRuntimeEligibility(id, statusMap[verdict], ownerNote);
     closeLearningReviewModal();
     return;
   }
@@ -3904,6 +3975,32 @@ async function promoteLearningCandidate(candidateId, approvalNote) {
     addBubble("system", t("msg_candidate_promoted_done", { id, target: data.promotion_target || "-" }));
   } catch (err) {
     addBubble("system", t("msg_candidate_promote_failed", { error: err.message }));
+  }
+}
+
+async function updateRuntimeEligibility(candidateId, eligibilityStatus, changeNote) {
+  const id = String(candidateId || "").trim();
+  const status = String(eligibilityStatus || "").trim().toLowerCase();
+  const note = String(changeNote || "").trim();
+  if (!id || !["eligible", "holding", "revoked"].includes(status)) {
+    return;
+  }
+  if (!note) {
+    addBubble("system", t("msg_review_note_required"));
+    return;
+  }
+
+  try {
+    const data = await postJson("/api/action", {
+      action: "set_runtime_eligibility",
+      candidate_id: id,
+      eligibility_status: status,
+      change_note: note,
+    });
+    renderActionResult(data);
+    addBubble("system", t("msg_runtime_eligibility_done", { id, status }));
+  } catch (err) {
+    addBubble("system", t("msg_runtime_eligibility_failed", { error: err.message }));
   }
 }
 

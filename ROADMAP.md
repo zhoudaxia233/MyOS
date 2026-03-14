@@ -69,13 +69,16 @@ Keep rollout evolutionary: preserve existing extraction/distillation pipelines a
     - Audit lifecycle strip adds `Runtime Eligible` between `Promoted` and `Active Runtime`
     - candidate detail now surfaces runtime eligibility, scope, autonomy ceiling, and runtime state
     - suggestion detail and workspace technical view now show active runtime influences for the current run/suggestion
+  - follow-up control slice now exists on top of the same model:
+    - owners can append explicit `holding / eligible / revoked` runtime eligibility transitions for promoted candidates
+    - runtime eligibility changes remain append-only and latest-record-wins, instead of mutating promotion history
+    - Audit candidate cards expose minimal runtime governance controls without introducing a generalized policy UI
 - Kept intentionally minimal:
   - no generalized policy engine
-  - no mutation UI for `hold / eligible / revoke` yet
+  - runtime eligibility control is status-only; no broad per-type rule editor or policy matrix
   - no broad autonomy feature expansion
   - no changes to `candidate -> review -> promote` safeguards
 - Next continuation slice:
-  - add explicit owner actions for `hold / eligible / revoke`
   - add lightweight influence replay / drift views across recent runs
   - deepen stricter workflows for `principle / profile / cognition` without flattening them into generic runtime rules
 - Do not overbuild yet:

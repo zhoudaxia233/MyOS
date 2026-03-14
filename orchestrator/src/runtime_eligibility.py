@@ -67,6 +67,8 @@ RUNTIME_ELIGIBILITY_SCHEMA = {
             "maturity_hours",
             "scope_modules",
             "autonomy_ceiling",
+            "change_note",
+            "replaces_eligibility_ref",
             "source_refs",
             "object_type",
             "proposal_target",
@@ -197,6 +199,8 @@ def _build_runtime_eligibility_record(
     autonomy_ceiling: str | None = None,
     eligibility_status: str | None = None,
     maturity_hours: int = RUNTIME_MATURITY_HOURS,
+    change_note: str | None = None,
+    replaces_eligibility_ref: str | None = None,
     source_refs: list[str] | None = None,
 ) -> dict[str, Any]:
     normalized_type = str(artifact_type or "").strip() or "unknown"
@@ -219,6 +223,8 @@ def _build_runtime_eligibility_record(
         "maturity_hours": max(0, int(maturity_hours)),
         "scope_modules": _normalize_scope_modules(normalized_type, scope_modules),
         "autonomy_ceiling": _normalize_autonomy_ceiling(normalized_type, autonomy_ceiling),
+        "change_note": str(change_note or "").strip() or None,
+        "replaces_eligibility_ref": str(replaces_eligibility_ref or "").strip() or None,
         "source_refs": _ordered_unique([str(item) for item in (source_refs or []) if str(item).strip()]),
         "object_type": "decision",
         "proposal_target": str(proposal_target or "").strip() or None,
@@ -274,6 +280,7 @@ def seed_missing_runtime_eligibility(repo_root: Path) -> list[dict[str, Any]]:
             approval_ref=str(artifact.get("approval_ref", "")).strip() or None,
             promotion_ref=promotion_ref,
             proposal_target=str(artifact.get("proposal_target", "")).strip() or None,
+            change_note="seeded_from_promotion",
             source_refs=[
                 str(artifact.get("candidate_ref", "")).strip(),
                 promotion_ref,
@@ -348,6 +355,7 @@ def list_runtime_eligibility(
                 "artifact_path": str(artifact.get("artifact_path", "")).strip() or None,
                 "artifact_module": str(artifact.get("artifact_module", "")).strip() or None,
                 "eligibility_status": eligibility_status,
+                "runtime_eligibility_status": eligibility_status,
                 "runtime_state": runtime_state,
                 "runtime_active": runtime_active,
                 "runtime_hours_remaining": runtime_hours_remaining,
@@ -357,6 +365,9 @@ def list_runtime_eligibility(
                     artifact_type,
                     str(eligibility.get("autonomy_ceiling", "")).strip(),
                 ),
+                "change_note": str(eligibility.get("change_note", "")).strip() or None,
+                "runtime_change_note": str(eligibility.get("change_note", "")).strip() or None,
+                "replaces_eligibility_ref": str(eligibility.get("replaces_eligibility_ref", "")).strip() or None,
                 "promoted_at": promoted_at,
             }
         )
@@ -428,3 +439,53 @@ def summarize_runtime_eligibility(
         "cooling_total": int(state_counter.get("cooling", 0)),
         "preview": preview,
     }
+
+
+def set_runtime_eligibility(
+    repo_root: Path,
+    *,
+    candidate_ref: str,
+    eligibility_status: str,
+    change_note: str,
+) -> dict[str, Any]:
+    target_candidate_ref = str(candidate_ref or "").strip()
+    if not target_candidate_ref:
+        raise ValueError("candidate_ref is required")
+
+    normalized_status = _normalize_eligibility_status("unknown", eligibility_status)
+    if normalized_status not in {"holding", "eligible", "revoked"}:
+        raise ValueError("eligibility_status must be one of: holding, eligible, revoked")
+
+    note = str(change_note or "").strip()
+    if not note:
+        raise ValueError("change_note is required")
+
+    current = candidate_runtime_eligibility_map(repo_root).get(target_candidate_ref)
+    if current is None:
+        raise ValueError("runtime eligibility not found for candidate; promote it first")
+
+    record = _build_runtime_eligibility_record(
+        repo_root,
+        artifact_ref=str(current.get("artifact_ref", "")).strip(),
+        artifact_type=str(current.get("artifact_type", "")).strip() or "unknown",
+        candidate_ref=target_candidate_ref,
+        approval_ref=str(current.get("approval_ref", "")).strip() or None,
+        promotion_ref=str(current.get("promotion_ref", "")).strip(),
+        proposal_target=str(current.get("proposal_target", "")).strip() or None,
+        scope_modules=list(current.get("scope_modules", [])) if isinstance(current.get("scope_modules"), list) else None,
+        autonomy_ceiling=str(current.get("autonomy_ceiling", "")).strip() or None,
+        eligibility_status=normalized_status,
+        maturity_hours=int(current.get("maturity_hours", RUNTIME_MATURITY_HOURS) or RUNTIME_MATURITY_HOURS),
+        change_note=note,
+        replaces_eligibility_ref=str(current.get("eligibility_ref", "")).strip() or None,
+        source_refs=[
+            target_candidate_ref,
+            str(current.get("promotion_ref", "")).strip(),
+            str(current.get("eligibility_ref", "")).strip(),
+        ],
+    )
+    _append_runtime_eligibility_record(repo_root, record)
+    updated = candidate_runtime_eligibility_map(repo_root).get(target_candidate_ref)
+    if updated is None:
+        raise ValueError("runtime eligibility update failed")
+    return updated

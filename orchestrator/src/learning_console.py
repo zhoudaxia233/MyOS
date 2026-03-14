@@ -1380,6 +1380,7 @@ def list_recent_learning_candidates(
             "runtime_autonomy_ceiling": str((runtime_row or {}).get("autonomy_ceiling", "")).strip() or None,
             "runtime_state": str((runtime_row or {}).get("runtime_state", "")).strip() or None,
             "runtime_maturity_hours": int((runtime_row or {}).get("maturity_hours", maturity_hours) or maturity_hours),
+            "runtime_change_note": str((runtime_row or {}).get("change_note", "")).strip() or None,
         }
         staged_rows.append((stage_rank.get(lifecycle_stage, 9), str(row.get("created_at", "")), out_row))
 

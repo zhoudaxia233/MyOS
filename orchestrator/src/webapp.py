@@ -48,6 +48,7 @@ from prompting import schema_debugger_output_sections, schema_debugger_questions
 from retrieval import build_index, load_retrieval_config, search_index
 from route_selector import select_route
 from runner import run_with_provider
+from runtime_eligibility import set_runtime_eligibility
 from schedulers.manual import get_cycle
 from scheduling import task_from_routine
 from settings import (
@@ -1249,6 +1250,26 @@ def api_action(root: Path, payload: dict[str, Any]) -> dict:
             "ok": True,
             "action": action,
             **result,
+            "learning_candidates": list_recent_learning_candidates(root, limit=12, include_resolved=True),
+            "candidate_pipeline_summary": summarize_learning_pipeline(root, window_days=30),
+            "candidate_pipeline_trend": summarize_learning_pipeline_trend(root),
+        }
+
+    if action == "set_runtime_eligibility":
+        candidate_id = str(payload.get("candidate_id", "")).strip()
+        eligibility_status = str(payload.get("eligibility_status", "")).strip().lower()
+        change_note = str(payload.get("change_note", "")).strip()
+        result = set_runtime_eligibility(
+            root,
+            candidate_ref=candidate_id,
+            eligibility_status=eligibility_status,
+            change_note=change_note,
+        )
+        return {
+            "ok": True,
+            "action": action,
+            "candidate_ref": candidate_id,
+            "runtime_eligibility": result,
             "learning_candidates": list_recent_learning_candidates(root, limit=12, include_resolved=True),
             "candidate_pipeline_summary": summarize_learning_pipeline(root, window_days=30),
             "candidate_pipeline_trend": summarize_learning_pipeline_trend(root),

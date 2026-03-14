@@ -308,3 +308,93 @@ def test_load_context_bundle_respects_typed_runtime_holding() -> None:
         assert eligibility_path.exists()
         eligibility_lines = eligibility_path.read_text(encoding="utf-8").splitlines()
         assert any('"eligibility_status": "holding"' in line for line in eligibility_lines[1:])
+
+
+def test_load_context_bundle_includes_explicitly_enabled_principle_runtime() -> None:
+    with TemporaryDirectory() as td:
+        root = Path(td)
+        (root / "core").mkdir(parents=True, exist_ok=True)
+        (root / "core/ROUTER.md").write_text("router", encoding="utf-8")
+
+        (root / "modules/principles").mkdir(parents=True, exist_ok=True)
+        (root / "modules/principles/MODULE.md").write_text("principles module", encoding="utf-8")
+
+        _write_jsonl(
+            root / "modules/decision/logs/learning_candidate_promotions.jsonl",
+            "learning_candidate_promotions",
+            ["id", "created_at", "status", "candidate_ref", "promotion_target", "approval_ref"],
+            [
+                {
+                    "id": "lp_principle",
+                    "created_at": "2020-03-07T00:00:00Z",
+                    "status": "active",
+                    "candidate_ref": "lc_principle",
+                    "promotion_target": "principle",
+                    "approval_ref": "la_principle",
+                }
+            ],
+        )
+        _write_jsonl(
+            root / "modules/principles/logs/principle_candidates.jsonl",
+            "principle_candidates",
+            ["id", "created_at", "status", "candidate_ref", "candidate_type", "title", "statement", "approval_ref", "promotion_ref"],
+            [
+                {
+                    "id": "prc_ready",
+                    "created_at": "2020-03-07T00:05:00Z",
+                    "status": "active",
+                    "candidate_ref": "lc_principle",
+                    "candidate_type": "principle",
+                    "title": "Enabled principle",
+                    "statement": "This should enter runtime only after explicit eligibility.",
+                    "approval_ref": "la_principle",
+                    "promotion_ref": "lp_principle",
+                }
+            ],
+        )
+        _write_jsonl(
+            root / "modules/decision/logs/runtime_eligibility.jsonl",
+            "runtime_eligibility",
+            [
+                "id",
+                "created_at",
+                "status",
+                "artifact_ref",
+                "artifact_type",
+                "candidate_ref",
+                "approval_ref",
+                "promotion_ref",
+                "eligibility_status",
+                "maturity_hours",
+                "scope_modules",
+                "autonomy_ceiling",
+            ],
+            [
+                {
+                    "id": "re_principle",
+                    "created_at": "2020-03-07T00:06:00Z",
+                    "status": "active",
+                    "artifact_ref": "prc_ready",
+                    "artifact_type": "principle",
+                    "candidate_ref": "lc_principle",
+                    "approval_ref": "la_principle",
+                    "promotion_ref": "lp_principle",
+                    "eligibility_status": "eligible",
+                    "maturity_hours": 24,
+                    "scope_modules": ["principles"],
+                    "autonomy_ceiling": "review_required",
+                }
+            ],
+        )
+
+        bundle = load_context_bundle(
+            root,
+            module="principles",
+            max_chars=10000,
+            skill_path=None,
+        )
+        paths = [f["path"] for f in bundle["files"]]
+        assert "orchestrator://runtime_eligible_artifacts" in paths
+        runtime_block = next(f for f in bundle["files"] if f["path"] == "orchestrator://runtime_eligible_artifacts")
+        assert "Enabled principle" in runtime_block["content"]
+        assert any(item["artifact_ref"] == "prc_ready" for item in bundle["runtime_influences"])
