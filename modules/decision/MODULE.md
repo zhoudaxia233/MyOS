@@ -70,6 +70,7 @@ This module stores judgment memory for decisions, failures, meaningful experienc
    - Read the last 7 days of logs.
    - Include precommit checks and guardrail overrides to spot policy drift.
    - Summarize patterns and propose heuristic updates.
+   - If the review produces a real owner-facing recommendation, end the output with an explicit `## Owner Action Proposal` section so owner review sees the proposal object instead of the run shell.
 7. Decision audit
    - Score recent behavior against `audit_rules.yaml`.
    - Produce owner-facing exception report with actions.
@@ -90,6 +91,7 @@ This module stores judgment memory for decisions, failures, meaningful experienc
 - For high-risk calls, require explicit downside, invalidation condition, and disconfirming signal.
 - For precommit-required domains, require explicit principle context (`principle_refs` or active `exception_ref`) before appending decisions.
 - Keep outputs audit-friendly: concise exceptions, metrics, and actions.
+- When a decision output truly needs owner judgment, emit an explicit proposal section (`## Judgment Proposal` or `## Owner Action Proposal`) instead of expecting task/run metadata to stand in for the proposal.
 - Preserve append-only integrity; never rewrite or delete history.
 - Use explicit uncertainty language when evidence is incomplete.
 </instructions>

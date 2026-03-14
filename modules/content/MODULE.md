@@ -69,6 +69,7 @@ This module handles the content creation pipeline for short-form writing, thread
 - Follow `modules/content/data/voice.yaml` numeric style targets.
 - Avoid all banned openings, banned phrases, and structural traps in `modules/content/data/anti_patterns.md`.
 - Keep output in the exact section structure required by the selected template.
+- Treat generated drafts as output artifacts, not owner-review objects. Do not append proposal-review sections to normal drafting skills.
 - Flag unsourced or uncertain claims with `[NEEDS SOURCE]`.
 - Prefer precise nouns and verbs over hype language.
 - If the user asks for a platform-specific variant, adapt wording but keep the template structure unless explicitly told otherwise.

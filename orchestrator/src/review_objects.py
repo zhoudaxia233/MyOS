@@ -11,14 +11,38 @@ _TRACE_PREFIXES = (
     "[begin personal core os handoff]",
 )
 
-_EXPLICIT_PROPOSAL_HEADINGS = (
-    "judgment proposal",
-    "owner proposal",
-    "suggested judgment",
-    "retained judgment",
-    "content direction proposal",
-    "owner action proposal",
-)
+_EXPLICIT_PROPOSAL_HEADINGS = {
+    "judgment proposal": (
+        "retained_judgment",
+        "Judgment proposal",
+        "Extracted from an explicit judgment proposal section in the run output.",
+    ),
+    "owner proposal": (
+        "retained_judgment",
+        "Owner proposal",
+        "Extracted from an explicit owner proposal section in the run output.",
+    ),
+    "suggested judgment": (
+        "retained_judgment",
+        "Suggested judgment",
+        "Extracted from an explicit suggested judgment section in the run output.",
+    ),
+    "retained judgment": (
+        "retained_judgment",
+        "Retained judgment",
+        "Extracted from an explicit retained judgment section in the run output.",
+    ),
+    "content direction proposal": (
+        "content_direction_proposal",
+        "Content direction proposal",
+        "Extracted from an explicit content-direction proposal section in the run output.",
+    ),
+    "owner action proposal": (
+        "owner_action_proposal",
+        "Owner action proposal",
+        "Extracted from an explicit owner-action proposal section in the run output.",
+    ),
+}
 
 _ACTION_SECTION_HEADINGS = (
     "owner actions",
@@ -149,15 +173,24 @@ def extract_judgment_proposal(*, module: str, skill: str, content: str) -> dict[
     if not text or _is_execution_trace_content(text):
         return None
 
-    explicit = _extract_markdown_section(text, _EXPLICIT_PROPOSAL_HEADINGS)
+    explicit = _extract_markdown_section(text, tuple(_EXPLICIT_PROPOSAL_HEADINGS.keys()))
     if explicit is not None:
         heading, body_lines = explicit
+        normalized_heading = _normalize_heading(heading)
+        proposal_kind, default_title, review_reason = _EXPLICIT_PROPOSAL_HEADINGS.get(
+            normalized_heading,
+            (
+                "retained_judgment",
+                "Judgment proposal",
+                "Extracted from an explicit proposal section in the run output.",
+            ),
+        )
         return _proposal_from_section(
             heading=heading,
             body_lines=body_lines,
-            kind="retained_judgment",
-            default_title="Judgment proposal",
-            review_reason="Extracted from an explicit proposal section in the run output.",
+            kind=proposal_kind,
+            default_title=default_title,
+            review_reason=review_reason,
         )
 
     if str(module or "").strip().lower() == "decision":

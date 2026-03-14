@@ -28,6 +28,10 @@ def _norm(text: str) -> str:
     return " ".join(TOKEN_RE.findall(str(text).lower()))
 
 
+def _skill_norm(skill: str | None) -> str:
+    return str(skill or "").strip().replace("\\", "/").lower()
+
+
 def schema_debugger_enabled(module: str, task: str) -> bool:
     mod = str(module).strip().lower()
     if mod in SCHEMA_DEBUGGER_MODULES:
@@ -95,7 +99,40 @@ def schema_debugger_output_sections(module: str, task: str) -> list[str]:
     return sections
 
 
-def execution_instruction(task: str, module: str) -> str:
+def review_object_instruction(task: str, module: str, skill: str | None = None) -> str:
+    mod = str(module).strip().lower()
+    skill_norm = _skill_norm(skill)
+    lines: list[str] = []
+
+    if mod == "decision" and skill_norm.endswith("weekly_review.md"):
+        lines.extend(
+            [
+                "Owner-review object contract:",
+                "- This weekly review only becomes an owner-review object when it contains a distilled proposal.",
+                "- Never use the task title, output path, file list, or run metadata as the proposal itself.",
+                "- Keep the review body as the main artifact and, only when the evidence supports a real recommendation, end with exactly one explicit section heading:",
+                "  `## Owner Action Proposal`",
+                "- Put 1-3 concrete bullets under that heading, each with a short risk note in the same bullet.",
+                "- If sample size is too thin or no stable recommendation exists, do not emit the proposal block.",
+            ]
+        )
+        return "\n".join(lines)
+
+    if mod == "content" and skill_norm.endswith("write_after_meal_story.md"):
+        lines.extend(
+            [
+                "Review-object boundary:",
+                "- This skill normally produces a draft artifact, not an owner-review object.",
+                "- Do not append any `## Content Direction Proposal`, `## Judgment Proposal`, or other owner-review block to the story draft.",
+                "- If owner direction or framing judgment is needed, that should be handled as a separate proposal-producing task, not embedded into this draft artifact.",
+            ]
+        )
+        return "\n".join(lines)
+
+    return ""
+
+
+def execution_instruction(task: str, module: str, skill: str | None = None) -> str:
     lines = [BASE_EXECUTION_INSTRUCTION]
     prompts = schema_debugger_questions(module, task)
     if prompts:
@@ -107,4 +144,8 @@ def execution_instruction(task: str, module: str) -> str:
         lines.append("Output structure guideline (unless task requires a strict template):")
         for i, section in enumerate(schema_debugger_output_sections(module, task), start=1):
             lines.append(f"{i}. {section}")
+    review_contract = review_object_instruction(task, module, skill)
+    if review_contract:
+        lines.append("")
+        lines.append(review_contract)
     return "\n".join(lines)

@@ -1,5 +1,6 @@
 from prompting import (
     execution_instruction,
+    review_object_instruction,
     schema_debugger_enabled,
     schema_debugger_output_sections,
     schema_debugger_questions,
@@ -26,3 +27,25 @@ def test_execution_instruction_includes_debugger_prompts_when_enabled() -> None:
     assert len(sections) >= 8
     assert prompts[0] in text
     assert sections[0] in text
+
+
+def test_review_object_instruction_adds_explicit_weekly_review_contract() -> None:
+    text = review_object_instruction(
+        "run weekly decision review and output top 3 owner actions with risk notes",
+        "decision",
+        "modules/decision/skills/weekly_review.md",
+    )
+    assert "Owner-review object contract" in text
+    assert "## Owner Action Proposal" in text
+    assert "do not emit the proposal block" in text
+
+
+def test_review_object_instruction_marks_after_meal_story_as_output_only() -> None:
+    text = review_object_instruction(
+        "write an after-meal story about BTC market regime",
+        "content",
+        "modules/content/skills/write_after_meal_story.md",
+    )
+    assert "Review-object boundary" in text
+    assert "draft artifact" in text
+    assert "Do not append any `## Content Direction Proposal`" in text

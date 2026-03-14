@@ -17,7 +17,7 @@ def run_manual(task: str, module: str, plan: dict, bundle: dict) -> str:
         lines.append(f"- {f['path']}")
     lines.append("")
     lines.append("## Instruction")
-    lines.append(execution_instruction(task, module))
+    lines.append(execution_instruction(task, module, plan.get("skill")))
     lines.append("")
     lines.append("Return only the final content for the required output path.")
     return "\n".join(lines) + "\n"

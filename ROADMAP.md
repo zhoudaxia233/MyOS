@@ -46,6 +46,30 @@ Any roadmap item that fails this gate should be treated as drift and redesigned 
 
 Keep rollout evolutionary: preserve existing extraction/distillation pipelines as first-class upstream inputs.
 
+#### Explicit Proposal Emitter Slice (2026-03-14)
+
+- Why this slice:
+  - the review-boundary fix removed raw execution residue from the owner inbox, but proposal creation was still too implicit
+  - suggestion review still depended mainly on extraction heuristics because modules were not yet told exactly when to emit a real review object
+- Shipped in this iteration:
+  - prompt contract is now skill-aware for review-object emission
+  - `decision/weekly_review` now gets explicit owner-review guidance:
+    - it ends with `## Owner Action Proposal` only when the review yields a real owner-facing recommendation
+    - task/run/output metadata are explicitly forbidden from standing in for the proposal text
+  - content draft skills now explicitly opt out of proposal emission:
+    - `write_after_meal_story` remains an output artifact, not a review object
+  - proposal extraction now preserves explicit proposal kind:
+    - `Owner Action Proposal` -> `owner_action_proposal`
+    - `Content Direction Proposal` -> `content_direction_proposal`
+- Kept intentionally minimal:
+  - no generalized proposal sidecar file
+  - no new content strategy module/skill yet
+  - no broad schema rewrite across all modules
+  - no runtime/delegation redesign
+- Next continuation slice:
+  - add explicit proposal blocks to the next small set of decision/report skills that genuinely need owner verdicts
+  - then introduce a dedicated content-direction skill instead of overloading normal draft outputs
+
 #### Runtime Eligibility + Influence Visibility Slice (2026-03-14)
 
 - Why this slice:

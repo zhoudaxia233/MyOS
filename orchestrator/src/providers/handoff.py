@@ -28,7 +28,7 @@ def run_handoff(task: str, module: str, plan: dict, bundle: dict) -> str:
     lines.append(plan["output_path"])
     lines.append("")
     lines.append("Execution instruction:")
-    lines.append(execution_instruction(task, module))
+    lines.append(execution_instruction(task, module, plan.get("skill")))
     lines.append("")
     lines.append("Context files:")
 

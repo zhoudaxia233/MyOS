@@ -49,5 +49,6 @@ Do not load `x_thread.md` unless the user asks for a thread version.
 ## Output Rules
 
 - Keep the exact template headings and order.
+- Do not append owner-review proposal sections to this artifact. A finished after-meal story is an output artifact, not a judgment proposal.
 - Do not add extra sections.
 - If file writing is unavailable, return the exact target path and the full file content ready to save.

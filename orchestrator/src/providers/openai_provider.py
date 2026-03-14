@@ -18,7 +18,7 @@ def _build_prompt(task: str, module: str, plan: dict, bundle: dict) -> str:
         f"Skill file: {plan['skill']}\n"
         f"Required output path: {plan['output_path']}\n"
         "Execution instruction:\n"
-        f"{execution_instruction(task, module)}\n"
+        f"{execution_instruction(task, module, plan.get('skill'))}\n"
         "Return only final output content for the required output path."
         "\n\nContext:\n" + "\n".join(context_lines)
     )
