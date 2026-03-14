@@ -114,6 +114,28 @@ Keep rollout evolutionary: preserve existing extraction/distillation pipelines a
 - Next continuation slice:
   - let drafting tasks optionally consume an accepted content-direction proposal as context
 
+#### Content Direction Context Reference Slice (2026-03-14)
+
+- Why this slice:
+  - the content-direction proposal object was now reachable from Workspace, but accepted direction still had no explicit bridge into content drafting
+  - without that bridge, drafting would either ignore accepted direction work or fall back into hidden implicit reuse
+- Shipped in this iteration:
+  - content drafting now supports explicit accepted-direction references in the task brief:
+    - `Accepted content direction proposal ref: sg_...`
+    - `内容方向提案 ref：sg_...`
+    - `已接受的内容方向提案 ref：sg_...`
+  - loader injects a typed virtual support file only when the referenced proposal is actually accepted or modified:
+    - `orchestrator://accepted_content_direction/<suggestion_id>`
+  - modified content-direction proposals now pass their rewritten judgment forward instead of the raw original proposal text
+  - rejected or unresolved content-direction proposals are intentionally ignored
+  - Workspace now includes a draft template for writing from an accepted direction proposal
+- Kept intentionally minimal:
+  - no automatic proposal lookup UI
+  - no audit-to-workspace one-click bridge yet
+  - no generalized cross-object reference system
+- Next continuation slice:
+  - add a lightweight picker or follow-up action so accepted content-direction proposals can be selected instead of manually typing `sg_...`
+
 #### Runtime Eligibility + Influence Visibility Slice (2026-03-14)
 
 - Why this slice:

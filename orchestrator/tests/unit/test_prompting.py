@@ -49,6 +49,7 @@ def test_review_object_instruction_marks_after_meal_story_as_output_only() -> No
     assert "Review-object boundary" in text
     assert "draft artifact" in text
     assert "Do not append any `## Content Direction Proposal`" in text
+    assert "accepted content-direction proposal" in text
 
 
 def test_review_object_instruction_requires_content_direction_proposal_for_strategy_skill() -> None:

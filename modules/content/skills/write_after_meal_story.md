@@ -7,7 +7,7 @@ Produce a short-form "after-meal story" using the content module SSOT rules and 
 ## Inputs
 
 - Required: topic (ask the user if missing)
-- Optional: audience, angle, target platform, source notes, idea ID
+- Optional: audience, angle, target platform, source notes, idea ID, accepted content direction proposal ref
 
 ## Required Files to Load (Progressive Disclosure)
 
@@ -23,9 +23,10 @@ Do not load `x_thread.md` unless the user asks for a thread version.
 
 1. If topic is missing, ask a minimal question: "What topic should the after-meal story cover?"
 2. Read the required files listed above.
-3. Draft the message strictly in the template section order.
-4. Run self-checks before finalizing.
-5. Return the final Markdown and write it to:
+3. If an accepted content direction proposal ref is provided and loaded into context, treat it as framing guidance for the draft.
+4. Draft the message strictly in the template section order.
+5. Run self-checks before finalizing.
+6. Return the final Markdown and write it to:
    - `modules/content/outputs/after_meal_story_<YYYYMMDD>_<topic_slug>.md`
 
 ## Self-Checks (Required)
@@ -50,5 +51,6 @@ Do not load `x_thread.md` unless the user asks for a thread version.
 
 - Keep the exact template headings and order.
 - Do not append owner-review proposal sections to this artifact. A finished after-meal story is an output artifact, not a judgment proposal.
+- If an accepted content direction proposal is present in context, use its framing guidance but do not copy its heading, metadata, or proposal bullets verbatim into the final draft.
 - Do not add extra sections.
 - If file writing is unavailable, return the exact target path and the full file content ready to save.

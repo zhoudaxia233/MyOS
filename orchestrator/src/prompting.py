@@ -124,6 +124,7 @@ def review_object_instruction(task: str, module: str, skill: str | None = None) 
                 "Review-object boundary:",
                 "- This skill normally produces a draft artifact, not an owner-review object.",
                 "- Do not append any `## Content Direction Proposal`, `## Judgment Proposal`, or other owner-review block to the story draft.",
+                "- If context includes an accepted content-direction proposal, use it as framing guidance only; do not copy its heading or proposal bullets verbatim into the draft.",
                 "- If owner direction or framing judgment is needed, that should be handled as a separate proposal-producing task, not embedded into this draft artifact.",
             ]
         )

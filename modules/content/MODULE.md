@@ -63,6 +63,7 @@ This module handles the content creation pipeline for short-form writing, thread
 - Do not load both templates unless the user explicitly asks to compare formats.
 - Only load `ideas.jsonl` if the task requires idea selection or linkage.
 - Only load `posts.jsonl` if the task requires publication logging or performance lookup.
+- For content drafting, an accepted `content_direction_proposal` may be loaded only when the task explicitly references its `suggestion_ref`.
 
 ## Quality Gates Checklist
 
@@ -77,6 +78,7 @@ This module handles the content creation pipeline for short-form writing, thread
 - Keep output in the exact section structure required by the selected template.
 - Treat generated drafts as output artifacts, not owner-review objects. Do not append proposal-review sections to normal drafting skills.
 - Use `## Content Direction Proposal` only from the dedicated content-direction skill; keep it as a true review object, not a draft add-on.
+- When an accepted content-direction proposal is explicitly referenced, use it as framing guidance rather than copying proposal metadata into the draft.
 - Flag unsourced or uncertain claims with `[NEEDS SOURCE]`.
 - Prefer precise nouns and verbs over hype language.
 - If the user asks for a platform-specific variant, adapt wording but keep the template structure unless explicitly told otherwise.

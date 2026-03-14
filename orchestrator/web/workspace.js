@@ -155,6 +155,7 @@ const I18N = {
     review_definition: "复盘 = 回顾本周关键决策、结果原因、改进动作，并给下周执行清单。",
     starter_weekly_review: "本周总结+下周3件事",
     starter_content_direction: "内容方向提案",
+    starter_after_meal_from_direction: "按已接受方向写成稿",
     starter_extract_patterns: "目标拆解行动清单",
     starter_write_story: "风险检查+应对动作",
     task_template_weekly_review:
@@ -165,6 +166,8 @@ const I18N = {
       "任务目标：\n- 把当前目标拆成今天 / 本周 / 延后处理的可执行清单。\n\n希望输出：\n1. 今天必须推进的动作\n2. 本周应完成的动作\n3. 可以延期的事项与原因\n4. 每项的优先级与依赖关系\n\n已知背景：\n- 如果目标之间冲突，请直接指出并给排序建议。\n\n约束与边界：\n- 优先给行动，而不是长篇解释。",
     task_template_risk_check:
       "任务目标：\n- 找出当前计划里最需要 owner 提前注意的风险。\n\n希望输出：\n1. 前三个风险点\n2. 每个风险的触发条件\n3. 对应的预防动作或应对动作\n4. 哪个风险需要优先盯住\n\n已知背景：\n- 如果风险来自信息不足，请明确标出来。\n\n约束与边界：\n- 风险描述要具体到行动层。",
+    task_template_after_meal_from_direction:
+      "任务目标：\n- 基于一个已接受的内容方向提案，写成一篇 after-meal story 成稿。\n\n主题：\n- [在这里写主题]\n\n已接受的内容方向提案 ref：\n- sg_[在这里填 suggestion id]\n\n希望输出：\n1. 严格按 after-meal story 模板成稿\n2. 沿用已接受方向中的 framing、切口和强调重点\n3. 不要把 proposal heading / proposal bullets 原样抄进成稿\n\n已知背景：\n- 如 proposal 与现有背景冲突，请指出冲突后再决定如何取舍。\n\n约束与边界：\n- 这是成稿，不是新的方向提案。\n- 如果 proposal ref 无效或未被接受，请先指出问题。",
     learning_intro: "把你新的经验、资料、文章要点放进系统，帮助后续任务更贴合你。",
     learning_flow_title: "学习会怎么进入系统",
     learning_flow_step_1: "直接输入：写入 memory_events + memory_insights（可检索）。",
@@ -388,6 +391,7 @@ const I18N = {
     review_definition: "Review means: what happened, why it happened, what to improve, and next-week checklist.",
     starter_weekly_review: "Weekly Summary + Top 3 Next Actions",
     starter_content_direction: "Content Direction Proposal",
+    starter_after_meal_from_direction: "Draft From Accepted Direction",
     starter_extract_patterns: "Break Goals Into Action List",
     starter_write_story: "Risk Check + Response Actions",
     task_template_weekly_review:
@@ -398,6 +402,8 @@ const I18N = {
       "Task goal:\n- Break the current goal into an executable today / this week / later plan.\n\nDesired output:\n1. Actions that must move today\n2. Actions that should be completed this week\n3. Items that can be delayed and why\n4. Priority and dependency notes for each item\n\nKnown context:\n- If goals conflict, say so explicitly and recommend an order.\n\nConstraints and boundaries:\n- Prefer action lists over long explanation.",
     task_template_risk_check:
       "Task goal:\n- Identify the risks in the current plan that the owner should watch first.\n\nDesired output:\n1. Top three risks\n2. Trigger condition for each risk\n3. Preventive or response action for each risk\n4. Which one deserves the closest attention now\n\nKnown context:\n- If a risk exists because information is missing, make that explicit.\n\nConstraints and boundaries:\n- Keep risks specific to decisions and actions.",
+    task_template_after_meal_from_direction:
+      "Task goal:\n- Write an after-meal story draft from an already accepted content direction proposal.\n\nTopic:\n- [Write the topic here]\n\nAccepted content direction proposal ref:\n- sg_[fill the suggestion id here]\n\nDesired output:\n1. Draft strictly in the after-meal story template\n2. Carry forward the accepted framing, angle, and emphasis\n3. Do not copy the proposal heading or proposal bullets verbatim into the draft\n\nKnown context:\n- If the proposal conflicts with the current brief, call out the conflict before choosing a direction.\n\nConstraints and boundaries:\n- This is a draft artifact, not a new direction proposal.\n- If the proposal ref is invalid or not accepted, say so first.",
     learning_intro: "Feed your new experiences and notes into the system so future tasks fit you better.",
     learning_flow_title: "How Learning Enters MyOS",
     learning_flow_step_1: "Direct input writes to memory_events + memory_insights (searchable).",
@@ -680,6 +686,7 @@ function taskTemplateConfig(templateKey) {
   const map = {
     weekly_review: { i18nKey: "task_template_weekly_review", module: "decision" },
     content_direction: { i18nKey: "task_template_content_direction", module: "content" },
+    after_meal_from_direction: { i18nKey: "task_template_after_meal_from_direction", module: "content" },
     goal_breakdown: { i18nKey: "task_template_goal_breakdown", module: null },
     risk_check: { i18nKey: "task_template_risk_check", module: null },
   };

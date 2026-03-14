@@ -310,6 +310,282 @@ def test_load_context_bundle_respects_typed_runtime_holding() -> None:
         assert any('"eligibility_status": "holding"' in line for line in eligibility_lines[1:])
 
 
+def test_load_context_bundle_includes_explicitly_referenced_accepted_content_direction() -> None:
+    with TemporaryDirectory() as td:
+        root = Path(td)
+        (root / "core").mkdir(parents=True, exist_ok=True)
+        (root / "core/ROUTER.md").write_text("router", encoding="utf-8")
+
+        (root / "modules/content").mkdir(parents=True, exist_ok=True)
+        (root / "modules/content/MODULE.md").write_text("content module", encoding="utf-8")
+        (root / "modules/content/skills").mkdir(parents=True, exist_ok=True)
+        (root / "modules/content/skills/write_after_meal_story.md").write_text("# Skill", encoding="utf-8")
+
+        _write_jsonl(
+            root / "orchestrator/logs/suggestions.jsonl",
+            "suggestions",
+            [
+                "id",
+                "created_at",
+                "status",
+                "module",
+                "proposal_kind",
+                "proposal_title",
+                "proposal_summary",
+                "proposal_statement",
+                "recommendation_path",
+            ],
+            [
+                {
+                    "id": "sg_content_1",
+                    "created_at": "2026-03-14T10:00:00Z",
+                    "status": "active",
+                    "module": "content",
+                    "proposal_kind": "content_direction_proposal",
+                    "proposal_title": "Content direction proposal: BTC as behavior-shift story",
+                    "proposal_summary": "Frame BTC regime as behavior shift, not prediction.",
+                    "proposal_statement": "- Frame BTC regime as a behavior-shift story.\n- Lead with one concrete contrast.\n- Avoid prediction-first framing.",
+                    "recommendation_path": "modules/content/outputs/content_direction_20260314_btc.md",
+                }
+            ],
+        )
+        _write_jsonl(
+            root / "orchestrator/logs/owner_verdicts.jsonl",
+            "owner_verdicts",
+            ["id", "created_at", "status", "suggestion_ref", "verdict", "owner_note", "correction_ref", "source_refs"],
+            [
+                {
+                    "id": "ov_content_1",
+                    "created_at": "2026-03-14T10:05:00Z",
+                    "status": "active",
+                    "suggestion_ref": "sg_content_1",
+                    "verdict": "accept",
+                    "owner_note": "Use this framing for the draft.",
+                    "correction_ref": None,
+                    "source_refs": ["sg_content_1"],
+                }
+            ],
+        )
+
+        bundle = load_context_bundle(
+            root,
+            module="content",
+            max_chars=10000,
+            skill_path="modules/content/skills/write_after_meal_story.md",
+            intent_text="write an after-meal story about BTC market regime\nAccepted content direction proposal ref: sg_content_1",
+        )
+        paths = [f["path"] for f in bundle["files"]]
+        context_path = "orchestrator://accepted_content_direction/sg_content_1"
+        assert context_path in paths
+        context_file = next(f for f in bundle["files"] if f["path"] == context_path)
+        assert "Effective Direction" in context_file["content"]
+        assert "behavior-shift story" in context_file["content"]
+        assert "Use this framing for the draft." in context_file["content"]
+
+
+def test_load_context_bundle_uses_modified_content_direction_replacement_judgment() -> None:
+    with TemporaryDirectory() as td:
+        root = Path(td)
+        (root / "core").mkdir(parents=True, exist_ok=True)
+        (root / "core/ROUTER.md").write_text("router", encoding="utf-8")
+
+        (root / "modules/content").mkdir(parents=True, exist_ok=True)
+        (root / "modules/content/MODULE.md").write_text("content module", encoding="utf-8")
+        (root / "modules/content/skills").mkdir(parents=True, exist_ok=True)
+        (root / "modules/content/skills/write_after_meal_story.md").write_text("# Skill", encoding="utf-8")
+
+        _write_jsonl(
+            root / "orchestrator/logs/suggestions.jsonl",
+            "suggestions",
+            [
+                "id",
+                "created_at",
+                "status",
+                "module",
+                "proposal_kind",
+                "proposal_statement",
+            ],
+            [
+                {
+                    "id": "sg_content_2",
+                    "created_at": "2026-03-14T11:00:00Z",
+                    "status": "active",
+                    "module": "content",
+                    "proposal_kind": "content_direction_proposal",
+                    "proposal_statement": "- Old framing that should be replaced.",
+                }
+            ],
+        )
+        _write_jsonl(
+            root / "orchestrator/logs/owner_verdicts.jsonl",
+            "owner_verdicts",
+            ["id", "created_at", "status", "suggestion_ref", "verdict", "owner_note", "correction_ref", "source_refs"],
+            [
+                {
+                    "id": "ov_content_2",
+                    "created_at": "2026-03-14T11:05:00Z",
+                    "status": "active",
+                    "suggestion_ref": "sg_content_2",
+                    "verdict": "modify",
+                    "owner_note": "Use the rewritten framing instead.",
+                    "correction_ref": "oc_content_2",
+                    "source_refs": ["sg_content_2"],
+                }
+            ],
+        )
+        _write_jsonl(
+            root / "orchestrator/logs/owner_corrections.jsonl",
+            "owner_corrections",
+            [
+                "id",
+                "created_at",
+                "status",
+                "suggestion_ref",
+                "verdict_ref",
+                "target_layer",
+                "replacement_judgment",
+                "unlike_me_reason",
+                "source_refs",
+            ],
+            [
+                {
+                    "id": "oc_content_2",
+                    "created_at": "2026-03-14T11:06:00Z",
+                    "status": "active",
+                    "suggestion_ref": "sg_content_2",
+                    "verdict_ref": "ov_content_2",
+                    "target_layer": "content",
+                    "replacement_judgment": "- Frame BTC regime as a behavior/adaptation story, not a market-call story.",
+                    "unlike_me_reason": "The original version sounded too prediction-heavy.",
+                    "source_refs": ["sg_content_2", "ov_content_2"],
+                }
+            ],
+        )
+
+        bundle = load_context_bundle(
+            root,
+            module="content",
+            max_chars=10000,
+            skill_path="modules/content/skills/write_after_meal_story.md",
+            intent_text="write an after-meal story about BTC market regime\n内容方向提案 ref：sg_content_2",
+        )
+        context_path = "orchestrator://accepted_content_direction/sg_content_2"
+        context_file = next(f for f in bundle["files"] if f["path"] == context_path)
+        assert "behavior/adaptation story" in context_file["content"]
+        assert "prediction-heavy" in context_file["content"]
+        assert "Old framing that should be replaced." not in context_file["content"]
+
+
+def test_load_context_bundle_ignores_unaccepted_content_direction_reference() -> None:
+    with TemporaryDirectory() as td:
+        root = Path(td)
+        (root / "core").mkdir(parents=True, exist_ok=True)
+        (root / "core/ROUTER.md").write_text("router", encoding="utf-8")
+
+        (root / "modules/content").mkdir(parents=True, exist_ok=True)
+        (root / "modules/content/MODULE.md").write_text("content module", encoding="utf-8")
+        (root / "modules/content/skills").mkdir(parents=True, exist_ok=True)
+        (root / "modules/content/skills/write_after_meal_story.md").write_text("# Skill", encoding="utf-8")
+
+        _write_jsonl(
+            root / "orchestrator/logs/suggestions.jsonl",
+            "suggestions",
+            ["id", "created_at", "status", "module", "proposal_kind", "proposal_statement"],
+            [
+                {
+                    "id": "sg_content_3",
+                    "created_at": "2026-03-14T12:00:00Z",
+                    "status": "active",
+                    "module": "content",
+                    "proposal_kind": "content_direction_proposal",
+                    "proposal_statement": "- Unaccepted direction.",
+                }
+            ],
+        )
+        _write_jsonl(
+            root / "orchestrator/logs/owner_verdicts.jsonl",
+            "owner_verdicts",
+            ["id", "created_at", "status", "suggestion_ref", "verdict", "owner_note", "correction_ref", "source_refs"],
+            [
+                {
+                    "id": "ov_content_3",
+                    "created_at": "2026-03-14T12:05:00Z",
+                    "status": "active",
+                    "suggestion_ref": "sg_content_3",
+                    "verdict": "reject",
+                    "owner_note": "Do not use this angle.",
+                    "correction_ref": None,
+                    "source_refs": ["sg_content_3"],
+                }
+            ],
+        )
+
+        bundle = load_context_bundle(
+            root,
+            module="content",
+            max_chars=10000,
+            skill_path="modules/content/skills/write_after_meal_story.md",
+            intent_text="write an after-meal story\nAccepted content direction proposal ref: sg_content_3",
+        )
+        paths = [f["path"] for f in bundle["files"]]
+        assert "orchestrator://accepted_content_direction/sg_content_3" not in paths
+
+
+def test_load_context_bundle_does_not_inject_direction_context_into_direction_skill() -> None:
+    with TemporaryDirectory() as td:
+        root = Path(td)
+        (root / "core").mkdir(parents=True, exist_ok=True)
+        (root / "core/ROUTER.md").write_text("router", encoding="utf-8")
+
+        (root / "modules/content").mkdir(parents=True, exist_ok=True)
+        (root / "modules/content/MODULE.md").write_text("content module", encoding="utf-8")
+        (root / "modules/content/skills").mkdir(parents=True, exist_ok=True)
+        (root / "modules/content/skills/propose_content_direction.md").write_text("# Skill", encoding="utf-8")
+
+        _write_jsonl(
+            root / "orchestrator/logs/suggestions.jsonl",
+            "suggestions",
+            ["id", "created_at", "status", "module", "proposal_kind", "proposal_statement"],
+            [
+                {
+                    "id": "sg_content_4",
+                    "created_at": "2026-03-14T13:00:00Z",
+                    "status": "active",
+                    "module": "content",
+                    "proposal_kind": "content_direction_proposal",
+                    "proposal_statement": "- Existing accepted direction.",
+                }
+            ],
+        )
+        _write_jsonl(
+            root / "orchestrator/logs/owner_verdicts.jsonl",
+            "owner_verdicts",
+            ["id", "created_at", "status", "suggestion_ref", "verdict", "owner_note", "correction_ref", "source_refs"],
+            [
+                {
+                    "id": "ov_content_4",
+                    "created_at": "2026-03-14T13:05:00Z",
+                    "status": "active",
+                    "suggestion_ref": "sg_content_4",
+                    "verdict": "accept",
+                    "owner_note": "Accepted.",
+                    "correction_ref": None,
+                    "source_refs": ["sg_content_4"],
+                }
+            ],
+        )
+
+        bundle = load_context_bundle(
+            root,
+            module="content",
+            max_chars=10000,
+            skill_path="modules/content/skills/propose_content_direction.md",
+            intent_text="propose a content direction\nAccepted content direction proposal ref: sg_content_4",
+        )
+        paths = [f["path"] for f in bundle["files"]]
+        assert "orchestrator://accepted_content_direction/sg_content_4" not in paths
+
+
 def test_load_context_bundle_includes_explicitly_enabled_principle_runtime() -> None:
     with TemporaryDirectory() as td:
         root = Path(td)
