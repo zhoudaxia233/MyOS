@@ -11,6 +11,12 @@ from typing import Any
 
 from idgen import next_id_for_rel_path
 from learning_ingest import ingest_learning_text
+from runtime_eligibility import (
+    RUNTIME_MATURITY_HOURS,
+    candidate_runtime_eligibility_map,
+    create_promotion_runtime_eligibility,
+    summarize_runtime_eligibility,
+)
 from validators import append_jsonl
 
 LEARNING_IMPORTS_SCHEMA = {
@@ -238,7 +244,7 @@ CANDIDATE_SINK_CONFIG: dict[str, dict[str, Any]] = {
     },
 }
 
-PROMOTION_MATURITY_HOURS = 24
+PROMOTION_MATURITY_HOURS = RUNTIME_MATURITY_HOURS
 PROMOTION_READINESS_PREVIEW_LIMIT = 5
 
 FENCED_JSON_RE = re.compile(r"```(?:json)?\s*(\{[\s\S]*?\})\s*```", re.IGNORECASE)
@@ -1022,6 +1028,15 @@ def promote_learning_candidate(
         approval_id=approval_id,
         promotion_id=promotion_id,
     )
+    eligibility_record = None
+    if sink_record_id is not None:
+        eligibility_record = create_promotion_runtime_eligibility(
+            repo_root,
+            candidate=target,
+            artifact_ref=sink_record_id,
+            promotion_ref=promotion_id,
+            approval_ref=approval_id,
+        )
 
     return {
         "approval_record_id": approval_id,
@@ -1030,6 +1045,8 @@ def promote_learning_candidate(
         "promotion_target": promotion_record["promotion_target"],
         "module_candidate_ref": sink_record_id,
         "module_candidate_path": sink_path,
+        "runtime_eligibility_ref": str((eligibility_record or {}).get("id", "")).strip() or None,
+        "runtime_eligibility_status": str((eligibility_record or {}).get("eligibility_status", "")).strip() or None,
     }
 
 
@@ -1077,17 +1094,9 @@ def summarize_learning_pipeline(
     reviewed_total = sum(verdict_counter.values())
     accepted_total = verdict_counter.get("accept", 0)
     promoted_total = len(promotions)
-    active_runtime_total = 0
-    readiness_window_hours = PROMOTION_MATURITY_HOURS
-    for row in promotions:
-        created = _parse_iso8601(str(row.get("created_at", "")).strip())
-        if created is None:
-            continue
-        age_hours = max(0.0, (now - created).total_seconds() / 3600.0)
-        if age_hours >= readiness_window_hours:
-            active_runtime_total += 1
     promotion_conversion_rate = (promoted_total / accepted_total) if accepted_total > 0 else 0.0
     promotion_readiness = summarize_promotion_readiness(repo_root, now=now)
+    runtime_eligibility = summarize_runtime_eligibility(repo_root, now=now)
 
     return {
         "window_days": window_days,
@@ -1105,12 +1114,14 @@ def summarize_learning_pipeline(
         "promoted_by_target": dict(promotion_by_target),
         "promotion_conversion_rate": round(promotion_conversion_rate, 3),
         "promotion_readiness": promotion_readiness,
+        "runtime_eligibility": runtime_eligibility,
         "lifecycle": {
             "imported": len(imports),
             "candidate": len(candidates_window),
             "reviewed": reviewed_total,
             "promoted": promoted_total,
-            "active_runtime": active_runtime_total,
+            "runtime_eligible": int(runtime_eligibility.get("eligible_total", 0)),
+            "active_runtime": int(runtime_eligibility.get("active_total", 0)),
         },
     }
 
@@ -1275,6 +1286,7 @@ def list_recent_learning_candidates(
     verdict_map = _active_verdict_map(repo_root)
     promotion_map = _active_promotion_map(repo_root)
     now = datetime.now(timezone.utc)
+    runtime_map = candidate_runtime_eligibility_map(repo_root, now=now)
     maturity_hours = max(0, int(PROMOTION_MATURITY_HOURS))
 
     stage_rank = {
@@ -1296,6 +1308,7 @@ def list_recent_learning_candidates(
             continue
         verdict_row = verdict_map.get(candidate_id)
         promotion_row = promotion_map.get(candidate_id)
+        runtime_row = runtime_map.get(candidate_id)
 
         lifecycle_stage = "candidate"
         verdict = None
@@ -1311,18 +1324,12 @@ def list_recent_learning_candidates(
             can_review = False
             can_promote = False
             promoted_at = str(promotion_row.get("created_at", "")).strip() or None
-            created = _parse_iso8601(str(promotion_row.get("created_at", "")).strip())
-            if created is None:
-                lifecycle_stage = "promoted"
-                runtime_hours_remaining = maturity_hours
-            else:
-                age_hours = max(0.0, (now - created).total_seconds() / 3600.0)
-                if age_hours >= maturity_hours:
+            lifecycle_stage = "promoted"
+            if runtime_row is not None:
+                runtime_hours_remaining = runtime_row.get("runtime_hours_remaining")
+                if runtime_row.get("runtime_active") is True:
                     lifecycle_stage = "active_runtime"
                     runtime_hours_remaining = 0
-                else:
-                    lifecycle_stage = "promoted"
-                    runtime_hours_remaining = max(0, int(ceil(maturity_hours - age_hours)))
         elif verdict_row is not None:
             lifecycle_stage = "reviewed"
             verdict = str(verdict_row.get("verdict", "")).strip().lower() or None
@@ -1366,6 +1373,13 @@ def list_recent_learning_candidates(
             "runtime_hours_remaining": runtime_hours_remaining,
             "promotion_target": str(promotion_row.get("promotion_target", "")).strip() if promotion_row else None,
             "runtime_active": lifecycle_stage == "active_runtime",
+            "runtime_eligible": bool(runtime_row and str(runtime_row.get("eligibility_status", "")).strip() == "eligible"),
+            "runtime_eligibility_ref": str((runtime_row or {}).get("eligibility_ref", "")).strip() or None,
+            "runtime_eligibility_status": str((runtime_row or {}).get("eligibility_status", "")).strip() or None,
+            "runtime_scope_modules": list(runtime_row.get("scope_modules", [])) if runtime_row else [],
+            "runtime_autonomy_ceiling": str((runtime_row or {}).get("autonomy_ceiling", "")).strip() or None,
+            "runtime_state": str((runtime_row or {}).get("runtime_state", "")).strip() or None,
+            "runtime_maturity_hours": int((runtime_row or {}).get("maturity_hours", maturity_hours) or maturity_hours),
         }
         staged_rows.append((stage_rank.get(lifecycle_stage, 9), str(row.get("created_at", "")), out_row))
 

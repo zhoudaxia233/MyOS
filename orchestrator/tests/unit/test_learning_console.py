@@ -332,6 +332,16 @@ def test_promote_learning_candidate_requires_accept_and_creates_records() -> Non
         assert promotion["candidate_ref"] == candidate_id
         assert promotion["module_candidate_ref"].startswith("ic_")
         assert promotion["module_candidate_path"] == "modules/memory/logs/insight_candidates.jsonl"
+        assert promotion["runtime_eligibility_ref"].startswith("re_")
+        assert promotion["runtime_eligibility_status"] == "eligible"
+
+        eligibility_lines = (root / "modules/decision/logs/runtime_eligibility.jsonl").read_text(encoding="utf-8").splitlines()
+        eligibility_record = json.loads(eligibility_lines[-1])
+        assert eligibility_record["artifact_ref"] == promotion["module_candidate_ref"]
+        assert eligibility_record["promotion_ref"] == promotion["promotion_record_id"]
+        assert eligibility_record["eligibility_status"] == "eligible"
+        assert eligibility_record["scope_modules"] == ["memory"]
+        assert eligibility_record["autonomy_ceiling"] == "suggest_only"
 
 
 def test_summarize_learning_pipeline_trend_compares_7d_vs_30d() -> None:

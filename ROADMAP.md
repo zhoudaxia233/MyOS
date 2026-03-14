@@ -46,6 +46,43 @@ Any roadmap item that fails this gate should be treated as drift and redesigned 
 
 Keep rollout evolutionary: preserve existing extraction/distillation pipelines as first-class upstream inputs.
 
+#### Runtime Eligibility + Influence Visibility Slice (2026-03-14)
+
+- Why this slice:
+  - promotion was still too close to runtime activation
+  - owner could see what was promoted, but not cleanly distinguish `promoted truth` from `runtime eligible`, nor inspect what actually influenced a run
+- Shipped in this iteration:
+  - added append-only runtime eligibility log:
+    - `modules/decision/logs/runtime_eligibility.jsonl`
+  - promotion now writes a separate runtime eligibility record instead of letting runtime infer solely from promoted existence
+  - legacy promoted artifacts are seeded into explicit eligibility records on first read, so the distinction becomes explicit without breaking existing promoted data
+  - typed default seriousness baseline is now encoded:
+    - `insight / rule / skill` default to `eligible` with `suggest_only`
+    - `principle / profile_trait / cognition_revision` default to `holding` with `review_required`
+  - runtime loading now consumes runtime eligibility, not just promoted age:
+    - loader injects only `eligible + matured + scope-matched` artifacts
+    - runtime synthetic context source renamed to `orchestrator://runtime_eligible_artifacts`
+  - run/suggestion traces now log actual runtime influences:
+    - `runs.jsonl` and `suggestions.jsonl` include `runtime_influences`
+    - each influence records artifact ref/type plus promotion/eligibility linkage, scope, autonomy ceiling, and selection reason
+  - owner-visible surfaces now show the distinction and the influence path:
+    - Audit lifecycle strip adds `Runtime Eligible` between `Promoted` and `Active Runtime`
+    - candidate detail now surfaces runtime eligibility, scope, autonomy ceiling, and runtime state
+    - suggestion detail and workspace technical view now show active runtime influences for the current run/suggestion
+- Kept intentionally minimal:
+  - no generalized policy engine
+  - no mutation UI for `hold / eligible / revoke` yet
+  - no broad autonomy feature expansion
+  - no changes to `candidate -> review -> promote` safeguards
+- Next continuation slice:
+  - add explicit owner actions for `hold / eligible / revoke`
+  - add lightweight influence replay / drift views across recent runs
+  - deepen stricter workflows for `principle / profile / cognition` without flattening them into generic runtime rules
+- Do not overbuild yet:
+  - no policy DSL
+  - no delegated action/autonomy system
+  - no auto-amend of principle/profile from runtime behavior
+
 #### Immediate Priority - Perceivable MVP Flow (2026-03-09)
 
 - Principle:
@@ -207,7 +244,7 @@ Keep rollout evolutionary: preserve existing extraction/distillation pipelines a
 - Required behavior:
   - candidate lifecycle: `candidate -> reviewed -> promoted|rejected`
   - promotion requires explicit `approval_ref`
-  - runtime uses promoted truths only, not raw candidates
+  - runtime uses explicit runtime-eligible promoted truths only, not raw candidates
 - Exit criteria:
   - extraction outputs become governable candidates without directly mutating canonical state
 
@@ -284,13 +321,13 @@ Completed in this iteration:
   - owner report surfaces cooling backlog exceptions/auto-triggers for promotion governance
   - UI trace now shows promotion readiness by target
 - Added first consumption wiring for promoted artifacts:
-  - `load_context_bundle` now appends `orchestrator://promoted_candidates_ready`
-  - only promoted candidates past maturity window are injected into runtime context by module
-  - cooling (not-yet-ready) promoted items are excluded by default
+  - originally `load_context_bundle` appended `orchestrator://promoted_candidates_ready`
+  - this has now been superseded by runtime eligibility gating (`orchestrator://runtime_eligible_artifacts`)
+  - runtime no longer treats promoted existence as sufficient for injection
 - Added promotion consumption tuning baseline:
-  - promoted candidate loading now supports intent-aware ranking from current task text
-  - when intent terms match, context load prioritizes matched promoted candidates
-  - when no intent match exists, loading falls back to recent-ready candidates (no empty context drop)
+  - runtime-eligible artifact loading supports intent-aware ranking from current task text
+  - when intent terms match, context load prioritizes matched eligible artifacts
+  - when no intent match exists, loading falls back to recent eligible artifacts (no empty context drop)
 - Added minimal UI evolution toward three-entrypoint model:
   - Task Console / Learning Console / Audit Console selector
   - Learning Console direct ingest and handoff controls

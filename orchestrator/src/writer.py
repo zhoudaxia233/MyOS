@@ -7,7 +7,7 @@ from validators import append_jsonl, ensure_parent
 RUNS_SCHEMA = {
     "_schema": {
         "name": "runs",
-        "version": "1.2",
+        "version": "1.3",
         "fields": [
             "id",
             "created_at",
@@ -19,6 +19,7 @@ RUNS_SCHEMA = {
             "route_reason",
             "matched_keywords",
             "loaded_files",
+            "runtime_influences",
             "result_path",
             "output_hash",
             "object_type",
@@ -227,7 +228,7 @@ DECISION_CONSTITUTION_CHECKS_SCHEMA = {
 SUGGESTIONS_SCHEMA = {
     "_schema": {
         "name": "suggestions",
-        "version": "1.1",
+        "version": "1.2",
         "fields": [
             "id",
             "created_at",
@@ -239,6 +240,7 @@ SUGGESTIONS_SCHEMA = {
             "route_reason",
             "matched_keywords",
             "loaded_files",
+            "runtime_influences",
             "retrieval_hit_ids",
             "retrieval_hit_count",
             "invoked_artifacts",

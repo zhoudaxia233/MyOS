@@ -31,6 +31,15 @@ def _copy_repo_subset(dst_root: Path) -> Path:
     return dst_root
 
 
+def _write_jsonl(path: Path, schema_name: str, fields: list[str], rows: list[dict]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    schema = {"_schema": {"name": schema_name, "version": "1.0", "fields": fields, "notes": "append-only"}}
+    with path.open("w", encoding="utf-8") as handle:
+        handle.write(json.dumps(schema) + "\n")
+        for row in rows:
+            handle.write(json.dumps(row) + "\n")
+
+
 def test_api_status_lists_modules() -> None:
     with TemporaryDirectory() as td:
         root = _copy_repo_subset(Path(td))
@@ -176,6 +185,7 @@ def test_api_inspect_and_run_writes_output() -> None:
         assert len(inspect_result["loaded_files"]) >= 2
         assert isinstance(inspect_result["debug_prompts"], list)
         assert isinstance(inspect_result["debug_sections"], list)
+        assert isinstance(inspect_result["runtime_influences"], list)
 
         run_result = api_run(root, inspect_payload)
         assert run_result["ok"] is True
@@ -186,6 +196,7 @@ def test_api_inspect_and_run_writes_output() -> None:
         assert len(run_result["output_preview"]) > 0
         assert isinstance(run_result["debug_prompts"], list)
         assert isinstance(run_result["debug_sections"], list)
+        assert isinstance(run_result["runtime_influences"], list)
         assert (root / run_result["output_path"]).exists()
 
         output_payload = api_output(root, run_result["output_path"])
@@ -206,6 +217,7 @@ def test_api_inspect_and_run_writes_output() -> None:
         assert "|s=" in str(run_record["route_reason"])
         assert run_record["object_type"] == "system"
         assert run_record["proposal_target"] is None
+        assert isinstance(run_record["runtime_influences"], list)
 
         suggestions_path = root / "orchestrator/logs/suggestions.jsonl"
         suggestion_lines = suggestions_path.read_text(encoding="utf-8").splitlines()
@@ -214,6 +226,7 @@ def test_api_inspect_and_run_writes_output() -> None:
         assert suggestion_record["run_ref"] == run_record["id"]
         assert suggestion_record["object_type"] == "system"
         assert suggestion_record["proposal_target"] is None
+        assert isinstance(suggestion_record["runtime_influences"], list)
         assert isinstance(suggestion_record["invoked_rules"], list)
         assert isinstance(suggestion_record["invoked_traits"], list)
         assert any(str(item).startswith("route_reason:") for item in suggestion_record["invoked_rules"])
@@ -225,11 +238,104 @@ def test_api_inspect_and_run_writes_output() -> None:
         assert suggestion_detail["suggestion"]["run_ref"] == run_record["id"]
         assert isinstance(suggestion_detail["suggestion"]["invoked_rules"], list)
         assert isinstance(suggestion_detail["suggestion"]["invoked_traits"], list)
+        assert isinstance(suggestion_detail["suggestion"]["runtime_influences"], list)
         assert suggestion_detail["run"] is not None
         assert suggestion_detail["run"]["id"] == run_record["id"]
+        assert isinstance(suggestion_detail["run"]["runtime_influences"], list)
         assert suggestion_detail["output_path"] == run_result["output_path"]
         assert isinstance(suggestion_detail["output_preview"], str)
         assert len(suggestion_detail["output_preview"]) > 0
+
+
+def test_api_run_logs_runtime_influences_from_runtime_eligibility() -> None:
+    with TemporaryDirectory() as td:
+        root = _copy_repo_subset(Path(td))
+        _write_jsonl(
+            root / "modules/decision/logs/learning_candidate_promotions.jsonl",
+            "learning_candidate_promotions",
+            ["id", "created_at", "status", "candidate_ref", "promotion_target", "approval_ref"],
+            [
+                {
+                    "id": "lp_runtime",
+                    "created_at": "2020-03-07T00:00:00Z",
+                    "status": "active",
+                    "candidate_ref": "lc_runtime",
+                    "promotion_target": "decision",
+                    "approval_ref": "la_runtime",
+                }
+            ],
+        )
+        _write_jsonl(
+            root / "modules/decision/logs/rule_candidates.jsonl",
+            "rule_candidates",
+            ["id", "created_at", "status", "candidate_ref", "candidate_type", "title", "statement", "approval_ref", "promotion_ref"],
+            [
+                {
+                    "id": "rc_runtime",
+                    "created_at": "2020-03-07T00:05:00Z",
+                    "status": "active",
+                    "candidate_ref": "lc_runtime",
+                    "candidate_type": "rule",
+                    "title": "Runtime review guard",
+                    "statement": "Use a short review pass before irreversible decisions.",
+                    "approval_ref": "la_runtime",
+                    "promotion_ref": "lp_runtime",
+                }
+            ],
+        )
+        _write_jsonl(
+            root / "modules/decision/logs/runtime_eligibility.jsonl",
+            "runtime_eligibility",
+            [
+                "id",
+                "created_at",
+                "status",
+                "artifact_ref",
+                "artifact_type",
+                "candidate_ref",
+                "approval_ref",
+                "promotion_ref",
+                "eligibility_status",
+                "maturity_hours",
+                "scope_modules",
+                "autonomy_ceiling",
+            ],
+            [
+                {
+                    "id": "re_runtime",
+                    "created_at": "2020-03-07T00:06:00Z",
+                    "status": "active",
+                    "artifact_ref": "rc_runtime",
+                    "artifact_type": "rule",
+                    "candidate_ref": "lc_runtime",
+                    "approval_ref": "la_runtime",
+                    "promotion_ref": "lp_runtime",
+                    "eligibility_status": "eligible",
+                    "maturity_hours": 24,
+                    "scope_modules": ["decision"],
+                    "autonomy_ceiling": "suggest_only",
+                }
+            ],
+        )
+
+        run_result = api_run(
+            root,
+            {
+                "task": "run weekly decision review",
+                "provider": "dry-run",
+                "with_retrieval": False,
+            },
+        )
+        assert run_result["ok"] is True
+        assert any(item["artifact_ref"] == "rc_runtime" for item in run_result["runtime_influences"])
+
+        run_record = json.loads((root / "orchestrator/logs/runs.jsonl").read_text(encoding="utf-8").splitlines()[-1])
+        suggestion_record = json.loads((root / "orchestrator/logs/suggestions.jsonl").read_text(encoding="utf-8").splitlines()[-1])
+        assert any(item["artifact_ref"] == "rc_runtime" for item in run_record["runtime_influences"])
+        assert any(item["artifact_ref"] == "rc_runtime" for item in suggestion_record["runtime_influences"])
+
+        suggestion_detail = api_suggestion(root, run_result["suggestion_id"])
+        assert any(item["artifact_ref"] == "rc_runtime" for item in suggestion_detail["suggestion"]["runtime_influences"])
 
 
 def test_api_suggestion_rejects_missing_or_unknown_id() -> None:

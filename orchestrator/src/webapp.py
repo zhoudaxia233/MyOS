@@ -461,6 +461,7 @@ def _inspect_task(
         "plan": plan,
         "retrieval_hits": len(hits),
         "loaded_files": [f["path"] for f in bundle["files"]],
+        "runtime_influences": list(bundle.get("runtime_influences", [])),
         "debug_prompts": schema_debugger_questions(module, task),
         "debug_sections": schema_debugger_output_sections(module, task),
     }
@@ -519,6 +520,7 @@ def _execute_task(
         "route_reason": _route_reason_for_log(route),
         "matched_keywords": route["matched_keywords"],
         "loaded_files": [f["path"] for f in bundle["files"]],
+        "runtime_influences": list(bundle.get("runtime_influences", [])),
         "result_path": _root_relative(out, root),
         "output_hash": output_hash,
     }
@@ -541,6 +543,7 @@ def _execute_task(
         "route_reason": run_record["route_reason"],
         "matched_keywords": route["matched_keywords"],
         "loaded_files": [f["path"] for f in bundle["files"]],
+        "runtime_influences": list(bundle.get("runtime_influences", [])),
         "retrieval_hit_ids": [str(hit.get("record_id", "")).strip() for hit in hits if str(hit.get("record_id", "")).strip()],
         "retrieval_hit_count": len(hits),
         "invoked_artifacts": [f["path"] for f in bundle["files"]],
@@ -564,6 +567,7 @@ def _execute_task(
         "output_preview": _preview_text(content),
         "retrieval_hits": len(hits),
         "loaded_files": [f["path"] for f in bundle["files"]],
+        "runtime_influences": list(bundle.get("runtime_influences", [])),
         "debug_prompts": debug_prompts,
         "debug_sections": debug_sections,
     }

@@ -134,12 +134,17 @@ def test_load_context_bundle_includes_only_ready_promoted_candidates() -> None:
         )
         files = bundle["files"]
         paths = [f["path"] for f in files]
-        assert "orchestrator://promoted_candidates_ready" in paths
+        assert "orchestrator://runtime_eligible_artifacts" in paths
 
-        promoted = next(f for f in files if f["path"] == "orchestrator://promoted_candidates_ready")
+        promoted = next(f for f in files if f["path"] == "orchestrator://runtime_eligible_artifacts")
         content = promoted["content"]
         assert "Ready rule" in content
         assert "Cooling rule" not in content
+        eligibility_path = root / "modules/decision/logs/runtime_eligibility.jsonl"
+        assert eligibility_path.exists()
+        eligibility_lines = eligibility_path.read_text(encoding="utf-8").splitlines()
+        assert len(eligibility_lines) >= 2
+        assert any('"eligibility_status": "eligible"' in line for line in eligibility_lines[1:])
 
 
 def test_load_context_bundle_promoted_candidates_intent_ranking_and_fallback() -> None:
@@ -227,7 +232,7 @@ def test_load_context_bundle_promoted_candidates_intent_ranking_and_fallback() -
             intent_text="risk cooldown decision",
         )
         files = intent_bundle["files"]
-        promoted = next(f for f in files if f["path"] == "orchestrator://promoted_candidates_ready")
+        promoted = next(f for f in files if f["path"] == "orchestrator://runtime_eligible_artifacts")
         content = promoted["content"]
         assert "intent_filter: matched_only" in content
         assert "Risk cooldown rule" in content
@@ -242,7 +247,64 @@ def test_load_context_bundle_promoted_candidates_intent_ranking_and_fallback() -
             intent_text="biochemistry molecule synthesis",
         )
         fallback_files = fallback_bundle["files"]
-        fallback_promoted = next(f for f in fallback_files if f["path"] == "orchestrator://promoted_candidates_ready")
+        fallback_promoted = next(f for f in fallback_files if f["path"] == "orchestrator://runtime_eligible_artifacts")
         fallback_content = fallback_promoted["content"]
         assert "intent_filter: recent_fallback" in fallback_content
         assert "Admin cleanup" in fallback_content
+
+
+def test_load_context_bundle_respects_typed_runtime_holding() -> None:
+    with TemporaryDirectory() as td:
+        root = Path(td)
+        (root / "core").mkdir(parents=True, exist_ok=True)
+        (root / "core/ROUTER.md").write_text("router", encoding="utf-8")
+
+        (root / "modules/principles").mkdir(parents=True, exist_ok=True)
+        (root / "modules/principles/MODULE.md").write_text("principles module", encoding="utf-8")
+
+        _write_jsonl(
+            root / "modules/decision/logs/learning_candidate_promotions.jsonl",
+            "learning_candidate_promotions",
+            ["id", "created_at", "status", "candidate_ref", "promotion_target"],
+            [
+                {
+                    "id": "lp_principle",
+                    "created_at": "2020-03-07T00:00:00Z",
+                    "status": "active",
+                    "candidate_ref": "lc_principle",
+                    "promotion_target": "principle",
+                }
+            ],
+        )
+        _write_jsonl(
+            root / "modules/principles/logs/principle_candidates.jsonl",
+            "principle_candidates",
+            ["id", "created_at", "status", "candidate_ref", "candidate_type", "title", "statement", "approval_ref", "promotion_ref"],
+            [
+                {
+                    "id": "prc_ready",
+                    "created_at": "2020-03-07T00:05:00Z",
+                    "status": "active",
+                    "candidate_ref": "lc_principle",
+                    "candidate_type": "principle",
+                    "title": "Hold principle",
+                    "statement": "This should not auto-enter runtime.",
+                    "approval_ref": "la_principle",
+                    "promotion_ref": "lp_principle",
+                }
+            ],
+        )
+
+        bundle = load_context_bundle(
+            root,
+            module="principles",
+            max_chars=10000,
+            skill_path=None,
+        )
+        paths = [f["path"] for f in bundle["files"]]
+        assert "orchestrator://runtime_eligible_artifacts" not in paths
+
+        eligibility_path = root / "modules/decision/logs/runtime_eligibility.jsonl"
+        assert eligibility_path.exists()
+        eligibility_lines = eligibility_path.read_text(encoding="utf-8").splitlines()
+        assert any('"eligibility_status": "holding"' in line for line in eligibility_lines[1:])

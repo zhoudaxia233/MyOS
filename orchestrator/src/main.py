@@ -231,6 +231,7 @@ def execute_task(
         "route_reason": _route_reason_for_log(route),
         "matched_keywords": route["matched_keywords"],
         "loaded_files": [f["path"] for f in bundle["files"]],
+        "runtime_influences": list(bundle.get("runtime_influences", [])),
         "result_path": _root_relative(out, root),
         "output_hash": output_hash,
     }
@@ -253,6 +254,7 @@ def execute_task(
         "route_reason": run_record["route_reason"],
         "matched_keywords": route["matched_keywords"],
         "loaded_files": [f["path"] for f in bundle["files"]],
+        "runtime_influences": list(bundle.get("runtime_influences", [])),
         "retrieval_hit_ids": [str(hit.get("record_id", "")).strip() for hit in hits if str(hit.get("record_id", "")).strip()],
         "retrieval_hit_count": len(hits),
         "invoked_artifacts": [f["path"] for f in bundle["files"]],
@@ -275,6 +277,7 @@ def execute_task(
         "output_hash": output_hash,
         "retrieval_hits": len(hits),
         "loaded_files": [f["path"] for f in bundle["files"]],
+        "runtime_influences": list(bundle.get("runtime_influences", [])),
         "debug_prompts": debug_prompts,
         "debug_sections": debug_sections,
     }
@@ -318,6 +321,13 @@ def cmd_inspect(args: argparse.Namespace) -> int:
     print("Files:")
     for f in bundle["files"]:
         print(f"- {f['path']}")
+    if bundle.get("runtime_influences"):
+        print("Runtime influences:")
+        for item in bundle["runtime_influences"]:
+            title = str(item.get("title", "")).strip() or str(item.get("artifact_ref", "")).strip() or "artifact"
+            artifact_type = str(item.get("artifact_type", "")).strip() or "unknown"
+            reason = str(item.get("selection_reason", "")).strip() or "runtime"
+            print(f"- [{artifact_type}] {title} via={reason}")
     return 0
 
 
@@ -354,6 +364,13 @@ def cmd_run(args: argparse.Namespace) -> int:
     print("Loaded files:")
     for path in result["loaded_files"]:
         print(f"- {path}")
+    if result["runtime_influences"]:
+        print("Runtime influences:")
+        for item in result["runtime_influences"]:
+            title = str(item.get("title", "")).strip() or str(item.get("artifact_ref", "")).strip() or "artifact"
+            artifact_type = str(item.get("artifact_type", "")).strip() or "unknown"
+            reason = str(item.get("selection_reason", "")).strip() or "runtime"
+            print(f"- [{artifact_type}] {title} via={reason}")
     print(f"Suggestion ID: {result['suggestion_id']}")
     print(f"Wrote: {root / result['output_path']}")
     return 0

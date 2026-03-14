@@ -30,6 +30,7 @@ const learningResponseInput = document.getElementById("learningResponseInput");
 const routeTrace = document.getElementById("routeTrace");
 const planTrace = document.getElementById("planTrace");
 const loadedFiles = document.getElementById("loadedFiles");
+const runtimeInfluences = document.getElementById("runtimeInfluences");
 const resultTrace = document.getElementById("resultTrace");
 const suggestionTrace = document.getElementById("suggestionTrace");
 const outputPreview = document.getElementById("outputPreview");
@@ -164,7 +165,7 @@ const I18N = {
     learning_flow_title: "学习会怎么进入系统",
     learning_flow_step_1: "直接输入：写入 memory_events + memory_insights（可检索）。",
     learning_flow_step_2: "外部辅助：生成学习请求包，导入 JSON 后进入候选队列。",
-    learning_flow_step_3: "候选需在审计中心复核并晋升后，才会进入运行时上下文。",
+    learning_flow_step_3: "候选在审计中心复核并晋升后，仍需获得 runtime eligibility，才可能进入运行时上下文。",
     btn_go_audit_candidates: "去审计中心审核候选",
     learning_direct_title: "直接学习输入",
     label_learning_text: "学习文本",
@@ -207,6 +208,7 @@ const I18N = {
     trace_route: "路由",
     trace_plan: "计划",
     trace_loaded_files: "已加载文件",
+    trace_active_influences: "运行影响源",
     trace_result: "结果元信息",
     trace_suggestion_detail: "系统建议",
     settings_title: "连接与偏好设置",
@@ -253,6 +255,7 @@ const I18N = {
     msg_report_copied: "完整报告已复制。",
     msg_followup_prepared: "回填任务模板已放入任务框。请粘贴外部模型结果后执行。",
     msg_followup_truncated: "外部结果太长，已自动截断到可编辑范围。",
+    msg_no_runtime_influences: "本次没有注入任何已获资格的已晋升 artifact。",
     followup_template_intro:
       "请基于下面的外部模型输出，整理成最终版复盘。要求：1) 先给3条优先行动；2) 给每条行动的风险提示；3) 最后给本周执行清单。",
     msg_no_output_yet: "暂无可复制输出，请先执行任务。",
@@ -305,7 +308,7 @@ const I18N = {
     msg_learning_ingest_stage_note: "这一步属于 Imported（记忆层吸收），不会直接改写 judgment core。",
     msg_learning_import_where: "下一步：到审计中心执行 Accept/Modify/Reject，并按需 Promote。",
     msg_learning_import_lifecycle: "生命周期：Imported +1，Candidate +{count}（rule={rule} insight={insight} skill={skill} trait={trait} principle={principle} schema={schema}）。",
-    msg_learning_import_runtime_gate: "注意：Promoted 项仍需成熟期（默认 24h）后才会进入 runtime context。",
+    msg_learning_import_runtime_gate: "注意：Promoted 项不会自动进入 runtime。它们还需要显式 runtime eligibility，并在 eligible 后通过成熟期（默认 24h）。",
     msg_learning_ingest_failed: "学习保存失败：{error}",
   },
   en: {
@@ -390,7 +393,8 @@ const I18N = {
     learning_flow_title: "How Learning Enters MyOS",
     learning_flow_step_1: "Direct input writes to memory_events + memory_insights (searchable).",
     learning_flow_step_2: "External assist generates a learning packet; imported JSON enters candidate queue.",
-    learning_flow_step_3: "Candidates enter runtime context only after audit review and promotion.",
+    learning_flow_step_3:
+      "Candidates still need runtime eligibility after audit review and promotion before they can enter runtime context.",
     btn_go_audit_candidates: "Review Candidates In Audit Center",
     learning_direct_title: "Direct Learning Input",
     label_learning_text: "Learning Text",
@@ -433,6 +437,7 @@ const I18N = {
     trace_route: "Route",
     trace_plan: "Plan",
     trace_loaded_files: "Loaded Files",
+    trace_active_influences: "Active Influences",
     trace_result: "Result Metadata",
     trace_suggestion_detail: "System Suggestion",
     settings_title: "Connection & Preferences",
@@ -479,6 +484,7 @@ const I18N = {
     msg_report_copied: "Full report copied.",
     msg_followup_prepared: "Follow-up template is ready in the task box. Paste external result and run.",
     msg_followup_truncated: "External content was too long and has been truncated for editing.",
+    msg_no_runtime_influences: "No eligible promoted artifacts were injected for this context.",
     followup_template_intro:
       "Based on the external model output below, produce a final review: 1) top 3 prioritized actions, 2) risk note for each action, 3) this-week execution checklist.",
     msg_no_output_yet: "No output yet. Run a task first.",
@@ -531,7 +537,8 @@ const I18N = {
     msg_learning_ingest_stage_note: "This is Imported memory absorption only and does not overwrite judgment core.",
     msg_learning_import_where: "Next: review candidates in Audit Center (Accept/Modify/Reject, then Promote as needed).",
     msg_learning_import_lifecycle: "Lifecycle update: Imported +1, Candidate +{count} (rule={rule} insight={insight} skill={skill} trait={trait} principle={principle} schema={schema}).",
-    msg_learning_import_runtime_gate: "Promoted artifacts still require maturity (default 24h) before runtime context injection.",
+    msg_learning_import_runtime_gate:
+      "Promoted artifacts do not enter runtime automatically. They still need explicit runtime eligibility and then maturity (default 24h) before injection.",
     msg_learning_ingest_failed: "Learning save failed: {error}",
   },
 };
@@ -901,6 +908,51 @@ function renderLoadedFiles(files) {
   }
 }
 
+function formatRuntimeInfluence(item) {
+  if (!item || typeof item !== "object") {
+    return "-";
+  }
+  const type = String(item.artifact_type || "artifact").trim() || "artifact";
+  const title = String(item.title || item.artifact_ref || "artifact").trim() || "artifact";
+  const sourceSummary = String(item.source_summary || "").trim();
+  const scope = Array.isArray(item.scope_modules) ? item.scope_modules.filter(Boolean).join(", ") : "";
+  const meta = [
+    item.artifact_ref ? `artifact=${item.artifact_ref}` : "",
+    item.promotion_ref ? `promotion=${item.promotion_ref}` : "",
+    item.selection_reason ? `via=${item.selection_reason}` : "",
+    scope ? `scope=${scope}` : "",
+    item.autonomy_ceiling ? `autonomy=${item.autonomy_ceiling}` : "",
+  ].filter(Boolean);
+
+  const lines = [`[${type}] ${title}`];
+  if (sourceSummary && sourceSummary !== title) {
+    lines.push(sourceSummary);
+  }
+  if (meta.length > 0) {
+    lines.push(meta.join(" | "));
+  }
+  return lines.join("\n");
+}
+
+function renderRuntimeInfluences(items) {
+  if (!runtimeInfluences) {
+    return;
+  }
+  runtimeInfluences.innerHTML = "";
+  const rows = Array.isArray(items) ? items.filter((item) => item && typeof item === "object") : [];
+  if (rows.length === 0) {
+    const li = document.createElement("li");
+    li.textContent = t("msg_no_runtime_influences");
+    runtimeInfluences.appendChild(li);
+    return;
+  }
+  for (const item of rows) {
+    const li = document.createElement("li");
+    li.textContent = formatRuntimeInfluence(item);
+    runtimeInfluences.appendChild(li);
+  }
+}
+
 function formatRouteScoring(route) {
   if (!route || typeof route !== "object") {
     return [];
@@ -955,6 +1007,7 @@ function renderInspectResult(data) {
   planTrace.textContent = planLines.join("\n");
 
   renderLoadedFiles(data.loaded_files || []);
+  renderRuntimeInfluences(data.runtime_influences || []);
   latestSuggestionId = null;
   suggestionTrace.textContent = "-";
 }
@@ -1052,6 +1105,7 @@ function renderReadableSummary(task, provider, outputText) {
 function renderSuggestionDetail(data) {
   if (!data || typeof data !== "object" || !data.suggestion || typeof data.suggestion !== "object") {
     suggestionTrace.textContent = "-";
+    renderRuntimeInfluences([]);
     return;
   }
   const payload = {
@@ -1062,12 +1116,16 @@ function renderSuggestionDetail(data) {
     output_preview: data.output_preview || null,
   };
   suggestionTrace.textContent = JSON.stringify(payload, null, 2);
+  renderRuntimeInfluences(
+    (data.suggestion && data.suggestion.runtime_influences) || (data.run && data.run.runtime_influences) || []
+  );
 }
 
 async function loadSuggestionDetail(suggestionId) {
   const sid = String(suggestionId || "").trim();
   if (!sid) {
     suggestionTrace.textContent = "-";
+    renderRuntimeInfluences([]);
     addBubble("system", t("msg_no_suggestion"));
     return;
   }
@@ -1076,6 +1134,7 @@ async function loadSuggestionDetail(suggestionId) {
     renderSuggestionDetail(data);
   } catch (err) {
     suggestionTrace.textContent = `load_failed: ${err.message}`;
+    renderRuntimeInfluences([]);
   }
 }
 
@@ -1090,6 +1149,7 @@ function renderRunResult(data, userTask) {
     `output_hash: ${data.output_hash}`,
     `module: ${data.module}`,
     `provider: ${data.provider || "-"}`,
+    `runtime_influences: ${Array.isArray(data.runtime_influences) ? data.runtime_influences.length : 0}`,
   ];
   if (data.suggestion_id) {
     lines.push(`suggestion_id: ${data.suggestion_id}`);

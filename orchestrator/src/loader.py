@@ -1,25 +1,15 @@
 from __future__ import annotations
 
-import json
 import re
 from datetime import datetime, timezone
 from pathlib import Path
 
-from learning_console import PROMOTION_MATURITY_HOURS
+from runtime_eligibility import RUNTIME_MATURITY_HOURS, list_runtime_influence_candidates
 
 PATH_RE = re.compile(r"(?:core|modules|routines|orchestrator)/[A-Za-z0-9_./-]+\.(?:md|yaml|yml|jsonl|json)")
 TOKEN_RE = re.compile(r"[a-z0-9_]+")
-PROMOTED_CONTEXT_LIMIT = 12
-PROMOTED_CONTEXT_SINK_PATHS: dict[str, list[str]] = {
-    "memory": ["modules/memory/logs/insight_candidates.jsonl"],
-    "decision": [
-        "modules/decision/logs/rule_candidates.jsonl",
-        "modules/decision/logs/skill_candidates.jsonl",
-    ],
-    "profile": ["modules/profile/logs/profile_trait_candidates.jsonl"],
-    "cognition": ["modules/cognition/logs/schema_candidates.jsonl"],
-    "principles": ["modules/principles/logs/principle_candidates.jsonl"],
-}
+RUNTIME_CONTEXT_LIMIT = 12
+RUNTIME_CONTEXT_PATH = "orchestrator://runtime_eligible_artifacts"
 INTENT_STOPWORDS = {
     "the",
     "and",
@@ -91,25 +81,6 @@ def _extract_paths_from_skill(text: str, module: str) -> list[str]:
     return _ordered_unique(out)
 
 
-def _read_jsonl(path: Path) -> list[dict]:
-    if not path.exists() or not path.is_file():
-        return []
-    out: list[dict] = []
-    for i, raw in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
-        line = raw.strip()
-        if not line:
-            continue
-        if i == 1 and '"_schema"' in line:
-            continue
-        try:
-            payload = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        if isinstance(payload, dict):
-            out.append(payload)
-    return out
-
-
 def _parse_iso8601(ts: str) -> datetime | None:
     text = str(ts or "").strip()
     if not text:
@@ -118,25 +89,6 @@ def _parse_iso8601(ts: str) -> datetime | None:
         return datetime.fromisoformat(text.replace("Z", "+00:00"))
     except ValueError:
         return None
-
-
-def _ready_promotion_refs(repo_root: Path, now: datetime, maturity_hours: int) -> set[str]:
-    path = repo_root / "modules/decision/logs/learning_candidate_promotions.jsonl"
-    rows = _read_jsonl(path)
-    ready_refs: set[str] = set()
-    for row in rows:
-        if str(row.get("status", "")).strip().lower() != "active":
-            continue
-        promotion_ref = str(row.get("id", "")).strip()
-        if not promotion_ref:
-            continue
-        created = _parse_iso8601(row.get("created_at", ""))
-        if created is None:
-            continue
-        age_hours = (now - created).total_seconds() / 3600.0
-        if age_hours >= maturity_hours:
-            ready_refs.add(promotion_ref)
-    return ready_refs
 
 
 def _clip(text: str, limit: int) -> str:
@@ -168,6 +120,7 @@ def _intent_terms(text: str | None, *, limit: int = 12) -> list[str]:
 def _candidate_terms(row: dict) -> set[str]:
     text = " ".join(
         [
+            str(row.get("artifact_type", "")).strip(),
             str(row.get("candidate_type", "")).strip(),
             str(row.get("title", "")).strip(),
             str(row.get("statement", "")).strip(),
@@ -184,14 +137,14 @@ def _candidate_terms(row: dict) -> set[str]:
     return out
 
 
-def _rank_promoted_rows(rows: list[dict], intent_terms: list[str]) -> tuple[list[tuple[dict, int]], bool]:
+def _rank_runtime_rows(rows: list[dict], intent_terms: list[str]) -> tuple[list[tuple[dict, int]], bool]:
     terms = set(intent_terms)
     scored: list[tuple[int, datetime, dict]] = []
     for row in rows:
         overlap = 0
         if terms:
             overlap = len(terms.intersection(_candidate_terms(row)))
-        created = _parse_iso8601(str(row.get("created_at", "")).strip())
+        created = _parse_iso8601(str(row.get("promoted_at", "")).strip()) or _parse_iso8601(str(row.get("created_at", "")).strip())
         if created is None:
             created = datetime(1970, 1, 1, tzinfo=timezone.utc)
         scored.append((overlap, created, row))
@@ -205,37 +158,24 @@ def _rank_promoted_rows(rows: list[dict], intent_terms: list[str]) -> tuple[list
     return ranked, has_matches
 
 
-def _build_promoted_context(repo_root: Path, module: str, now: datetime, intent_text: str | None = None) -> str:
-    sink_paths = PROMOTED_CONTEXT_SINK_PATHS.get(module, [])
-    if not sink_paths:
-        return ""
-
-    ready_refs = _ready_promotion_refs(repo_root, now, PROMOTION_MATURITY_HOURS)
-    if not ready_refs:
-        return ""
-
-    rows: list[dict] = []
-    for rel in sink_paths:
-        path = repo_root / rel
-        for row in _read_jsonl(path):
-            if str(row.get("status", "")).strip().lower() != "active":
-                continue
-            promotion_ref = str(row.get("promotion_ref", "")).strip()
-            if promotion_ref not in ready_refs:
-                continue
-            rows.append(row)
-
+def _build_runtime_context(
+    repo_root: Path,
+    module: str,
+    now: datetime,
+    intent_text: str | None = None,
+) -> tuple[str, list[dict]]:
+    rows = list_runtime_influence_candidates(repo_root, module, now=now)
     if not rows:
-        return ""
+        return "", []
 
     intent_terms = _intent_terms(intent_text)
-    ranked_rows, has_intent_matches = _rank_promoted_rows(rows, intent_terms)
+    ranked_rows, has_intent_matches = _rank_runtime_rows(rows, intent_terms)
 
     lines = [
-        "# Promoted Candidates (Ready)",
+        "# Runtime Eligible Artifacts (Injected)",
         "",
         f"- module: {module}",
-        f"- maturity_hours: {PROMOTION_MATURITY_HOURS}",
+        f"- maturity_hours: {RUNTIME_MATURITY_HOURS}",
         f"- source_count: {len(rows)}",
         f"- selected_count: {len(ranked_rows)}",
     ]
@@ -247,16 +187,47 @@ def _build_promoted_context(repo_root: Path, module: str, now: datetime, intent_
             "",
         ]
     )
-    for row, overlap in ranked_rows[:PROMOTED_CONTEXT_LIMIT]:
-        candidate_type = str(row.get("candidate_type", "")).strip() or "unknown"
+    influences: list[dict] = []
+    for row, overlap in ranked_rows[:RUNTIME_CONTEXT_LIMIT]:
+        candidate_type = str(row.get("artifact_type", "")).strip() or "unknown"
         title = _clip(str(row.get("title", "")).strip() or "candidate", 96)
-        statement = _clip(str(row.get("statement", "")).strip(), 280)
+        statement = _clip(str(row.get("statement", "")).strip(), 240)
         match_tag = f" [match={overlap}]" if intent_terms else ""
+        selection_reason = "intent_match" if intent_terms and overlap > 0 else "recent_fallback"
+        scope_modules = [str(item).strip() for item in row.get("scope_modules", []) if str(item).strip()]
+        scope_summary = ",".join(scope_modules) if scope_modules else "-"
+        autonomy_ceiling = str(row.get("autonomy_ceiling", "")).strip() or "suggest_only"
+        artifact_ref = str(row.get("artifact_ref", "")).strip()
+        promotion_ref = str(row.get("promotion_ref", "")).strip()
+        approval_ref = str(row.get("approval_ref", "")).strip()
+        source_summary = statement or title
+        influences.append(
+            {
+                "artifact_ref": artifact_ref,
+                "artifact_type": candidate_type,
+                "title": title or None,
+                "promotion_ref": promotion_ref or None,
+                "approval_ref": approval_ref or None,
+                "eligibility_ref": str(row.get("eligibility_ref", "")).strip() or None,
+                "eligibility_status": str(row.get("eligibility_status", "")).strip() or None,
+                "scope_modules": scope_modules,
+                "autonomy_ceiling": autonomy_ceiling,
+                "selection_reason": selection_reason,
+                "match_score": overlap,
+                "source_summary": source_summary or None,
+            }
+        )
         if statement:
-            lines.append(f"- [{candidate_type}] {title}{match_tag}: {statement}")
+            lines.append(
+                f"- [{candidate_type}] {title}{match_tag} "
+                f"(artifact={artifact_ref or '-'}, scope={scope_summary}, autonomy={autonomy_ceiling}): {statement}"
+            )
         else:
-            lines.append(f"- [{candidate_type}] {title}{match_tag}")
-    return "\n".join(lines)
+            lines.append(
+                f"- [{candidate_type}] {title}{match_tag} "
+                f"(artifact={artifact_ref or '-'}, scope={scope_summary}, autonomy={autonomy_ceiling})"
+            )
+    return "\n".join(lines), influences
 
 
 def load_context_bundle(
@@ -280,6 +251,7 @@ def load_context_bundle(
     files = _ordered_unique(files + dynamic_refs)
     bundle: list[dict] = []
     budget = max_chars
+    runtime_influences: list[dict] = []
 
     for rel in files:
         path = repo_root / rel
@@ -294,16 +266,16 @@ def load_context_bundle(
             break
 
     if budget > 0:
-        promoted_text = _build_promoted_context(
+        runtime_text, runtime_influences = _build_runtime_context(
             repo_root,
             module,
             now=datetime.now(timezone.utc),
             intent_text=intent_text,
         )
-        if promoted_text:
-            if len(promoted_text) > budget:
-                promoted_text = promoted_text[: max(0, budget)]
-            if promoted_text:
-                bundle.append({"path": "orchestrator://promoted_candidates_ready", "content": promoted_text})
+        if runtime_text:
+            if len(runtime_text) > budget:
+                runtime_text = runtime_text[: max(0, budget)]
+            if runtime_text:
+                bundle.append({"path": RUNTIME_CONTEXT_PATH, "content": runtime_text})
 
-    return {"module": module, "files": bundle}
+    return {"module": module, "files": bundle, "runtime_influences": runtime_influences}

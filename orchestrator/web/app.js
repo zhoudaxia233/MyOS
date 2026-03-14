@@ -279,6 +279,8 @@ const I18N = {
     suggestion_detail_replacement: "替代判断",
     suggestion_detail_reason: "不像我的原因",
     suggestion_detail_target: "目标层",
+    suggestion_detail_influences: "运行影响源",
+    suggestion_detail_influences_none: "本次没有注入任何已获资格的已晋升 artifact。",
     suggestion_detail_next: "下一步",
     judgment_detail_kicker: "当前判断",
     judgment_detail_desc: "这里显示你当前选中的判断对象；支持上下文和机器轨迹放在下方。",
@@ -398,7 +400,8 @@ const I18N = {
     trace_cognition_signals: "认知信号（7天）",
     trace_owner_todos: "待办",
     trace_learning_lifecycle: "学习生命周期",
-    trace_learning_lifecycle_note: "任何内容都不会直接进入运行时上下文。必须先复核，再晋升；晋升后仍需成熟期。",
+    trace_learning_lifecycle_note:
+      "运行资格独立于晋升：任何内容都必须先复核、再晋升；晋升后仍需显式 runtime eligibility，eligible 后还需成熟期。",
     trace_learning_candidates: "学习候选与状态队列",
     trace_candidate_pipeline: "候选管道（30天 + 趋势）",
     trace_suggestion_reviews: "建议复核（30天 + 趋势）",
@@ -418,6 +421,7 @@ const I18N = {
     lifecycle_step_candidate: "候选中",
     lifecycle_step_reviewed: "已复核",
     lifecycle_step_promoted: "已晋升",
+    lifecycle_step_runtime_eligible: "运行可用",
     lifecycle_step_active_runtime: "运行中",
     lifecycle_stage_candidate: "候选中",
     lifecycle_stage_reviewed_accept: "已复核：接受",
@@ -443,14 +447,26 @@ const I18N = {
     candidate_detail_modified: "修改后陈述",
     candidate_detail_promotion_target: "晋升目标",
     candidate_detail_runtime: "运行时状态",
+    candidate_detail_runtime_eligibility: "运行资格",
+    candidate_detail_runtime_scope: "运行范围",
+    candidate_detail_runtime_autonomy: "自治上限",
     candidate_detail_none: "暂无更细证据。",
     candidate_detail_runtime_pending: "尚未进入运行时上下文。",
+    candidate_detail_runtime_unassigned: "尚未写入 runtime eligibility 记录。",
+    candidate_detail_runtime_holding: "已晋升，但当前处于 runtime hold，不会注入运行时。",
+    candidate_detail_runtime_revoked: "runtime eligibility 已撤销，不会注入运行时。",
     candidate_detail_runtime_cooling: "仍在成熟期，约剩余 {hours} 小时。",
     candidate_detail_runtime_active: "已进入运行时上下文。",
+    candidate_runtime_eligibility_eligible: "已授权",
+    candidate_runtime_eligibility_holding: "保留",
+    candidate_runtime_eligibility_revoked: "已撤销",
+    candidate_runtime_eligibility_unassigned: "未分配",
     candidate_next_review: "下一步：执行复核（接受 / 修改 / 拒绝）。",
     candidate_next_promote: "下一步：可晋升进入治理成熟期。",
     candidate_next_rework: "下一步：修改后会生成新的候选条目等待复核。",
     candidate_next_reject: "已拒绝：不会进入判断核心。",
+    candidate_next_holding: "已晋升，但运行资格仍处于 hold，后续应显式决定是否放行。",
+    candidate_next_revoked: "运行资格已撤销；如需恢复，必须重新显式授权。",
     candidate_next_cooling: "已晋升，成熟期剩余约 {hours} 小时，之后才可进入运行时上下文。",
     candidate_next_runtime: "已进入运行时上下文（成熟完成）。",
     learning_review_modal_title_accept: "接受候选",
@@ -674,6 +690,8 @@ const I18N = {
     suggestion_detail_replacement: "Replacement Judgment",
     suggestion_detail_reason: "Unlike-Me Reason",
     suggestion_detail_target: "Target Layer",
+    suggestion_detail_influences: "Runtime Influences",
+    suggestion_detail_influences_none: "No eligible promoted artifacts were injected for this suggestion.",
     suggestion_detail_next: "Next Action",
     judgment_detail_kicker: "Current Judgment",
     judgment_detail_desc: "This shows the judgment object you selected. Support context and machine trace stay below.",
@@ -793,7 +811,8 @@ const I18N = {
     trace_cognition_signals: "Cognition Signals (7D)",
     trace_owner_todos: "Owner Todos",
     trace_learning_lifecycle: "Learning Lifecycle",
-    trace_learning_lifecycle_note: "Nothing enters runtime context until reviewed and promoted; promoted items still require maturity time.",
+    trace_learning_lifecycle_note:
+      "Runtime eligibility is distinct from promotion: items must still be reviewed, promoted, explicitly marked runtime-eligible, and then pass maturity before active runtime.",
     trace_learning_candidates: "Learning Candidate Lifecycle Queue",
     trace_candidate_pipeline: "Candidate Pipeline (30D + Trend)",
     trace_suggestion_reviews: "Suggestion Reviews (30D + Trend)",
@@ -813,6 +832,7 @@ const I18N = {
     lifecycle_step_candidate: "Candidate",
     lifecycle_step_reviewed: "Reviewed",
     lifecycle_step_promoted: "Promoted",
+    lifecycle_step_runtime_eligible: "Runtime Eligible",
     lifecycle_step_active_runtime: "Active Runtime",
     lifecycle_stage_candidate: "Candidate",
     lifecycle_stage_reviewed_accept: "Reviewed: Accept",
@@ -838,14 +858,26 @@ const I18N = {
     candidate_detail_modified: "Modified Statement",
     candidate_detail_promotion_target: "Promotion Target",
     candidate_detail_runtime: "Runtime Status",
+    candidate_detail_runtime_eligibility: "Runtime Eligibility",
+    candidate_detail_runtime_scope: "Runtime Scope",
+    candidate_detail_runtime_autonomy: "Autonomy Ceiling",
     candidate_detail_none: "No deeper evidence available.",
     candidate_detail_runtime_pending: "Not in runtime context yet.",
+    candidate_detail_runtime_unassigned: "No runtime eligibility record has been written yet.",
+    candidate_detail_runtime_holding: "Promoted, but currently held out of runtime injection.",
+    candidate_detail_runtime_revoked: "Runtime eligibility has been revoked and will not be injected.",
     candidate_detail_runtime_cooling: "Still cooling, about {hours} hours remaining.",
     candidate_detail_runtime_active: "Already active in runtime context.",
+    candidate_runtime_eligibility_eligible: "eligible",
+    candidate_runtime_eligibility_holding: "holding",
+    candidate_runtime_eligibility_revoked: "revoked",
+    candidate_runtime_eligibility_unassigned: "unassigned",
     candidate_next_review: "Next: review this candidate (Accept / Modify / Reject).",
     candidate_next_promote: "Next: promote this accepted candidate.",
     candidate_next_rework: "Next: modified statement creates a new review candidate.",
     candidate_next_reject: "Rejected: does not enter judgment core.",
+    candidate_next_holding: "Promoted, but runtime eligibility is still on hold and needs an explicit release decision.",
+    candidate_next_revoked: "Runtime eligibility is revoked; explicit re-authorization is required before reuse.",
     candidate_next_cooling: "Promoted and cooling. About {hours}h remaining before runtime context.",
     candidate_next_runtime: "Active in runtime context (maturity complete).",
     learning_review_modal_title_accept: "Accept Candidate",
@@ -1151,7 +1183,7 @@ function hasLifecycleSignals(summary) {
     return false;
   }
   const lifecycle = summary.lifecycle && typeof summary.lifecycle === "object" ? summary.lifecycle : {};
-  const keys = ["imported", "candidate", "reviewed", "promoted", "active_runtime"];
+  const keys = ["imported", "candidate", "reviewed", "promoted", "runtime_eligible", "active_runtime"];
   return keys.some((key) => Number(lifecycle[key] || 0) > 0);
 }
 
@@ -1850,8 +1882,19 @@ function candidateRuntimeDetail(item) {
   if (!item || typeof item !== "object") {
     return t("candidate_detail_runtime_pending");
   }
+  const runtimeState = String(item.runtime_state || "").trim().toLowerCase();
+  const eligibilityStatus = String(item.runtime_eligibility_status || "").trim().toLowerCase();
   if (item.lifecycle_stage === "active_runtime" || item.runtime_active) {
     return t("candidate_detail_runtime_active");
+  }
+  if (runtimeState === "holding" || eligibilityStatus === "holding") {
+    return t("candidate_detail_runtime_holding");
+  }
+  if (runtimeState === "revoked" || eligibilityStatus === "revoked") {
+    return t("candidate_detail_runtime_revoked");
+  }
+  if (item.lifecycle_stage === "promoted" && !eligibilityStatus) {
+    return t("candidate_detail_runtime_unassigned");
   }
   if (item.lifecycle_stage === "promoted") {
     return t("candidate_detail_runtime_cooling", {
@@ -1859,6 +1902,25 @@ function candidateRuntimeDetail(item) {
     });
   }
   return t("candidate_detail_runtime_pending");
+}
+
+function candidateRuntimeEligibilityLabel(item) {
+  const status = String((item && item.runtime_eligibility_status) || "").trim().toLowerCase();
+  if (status === "eligible") {
+    return t("candidate_runtime_eligibility_eligible");
+  }
+  if (status === "holding") {
+    return t("candidate_runtime_eligibility_holding");
+  }
+  if (status === "revoked") {
+    return t("candidate_runtime_eligibility_revoked");
+  }
+  return t("candidate_runtime_eligibility_unassigned");
+}
+
+function candidateRuntimeScopeText(item) {
+  const scope = Array.isArray(item && item.runtime_scope_modules) ? item.runtime_scope_modules.filter(Boolean) : [];
+  return scope.length > 0 ? scope.join(", ") : "-";
 }
 
 function renderReviewInboxSummary() {
@@ -2309,6 +2371,12 @@ function lifecycleNextAction(item) {
     return t("candidate_next_reject");
   }
   if (stage === "promoted") {
+    if (String(item.runtime_state || "").trim().toLowerCase() === "holding") {
+      return t("candidate_next_holding");
+    }
+    if (String(item.runtime_state || "").trim().toLowerCase() === "revoked") {
+      return t("candidate_next_revoked");
+    }
     return t("candidate_next_cooling", { hours: Number(item.runtime_hours_remaining || 0) });
   }
   return t("candidate_next_runtime");
@@ -2324,6 +2392,7 @@ function renderLearningLifecycle(summary) {
     { key: "candidate", label: t("lifecycle_step_candidate") },
     { key: "reviewed", label: t("lifecycle_step_reviewed") },
     { key: "promoted", label: t("lifecycle_step_promoted") },
+    { key: "runtime_eligible", label: t("lifecycle_step_runtime_eligible") },
     { key: "active_runtime", label: t("lifecycle_step_active_runtime") },
   ];
   learningLifecycle.innerHTML = "";
@@ -2387,6 +2456,9 @@ function buildCandidateContext(item) {
     [t("candidate_detail_owner_note"), (item && item.owner_note) || "-"],
     [t("candidate_detail_modified"), (item && item.modified_statement) || "-"],
     [t("candidate_detail_promotion_target"), (item && (item.promotion_target || item.proposal_target)) || "-"],
+    [t("candidate_detail_runtime_eligibility"), candidateRuntimeEligibilityLabel(item)],
+    [t("candidate_detail_runtime_scope"), candidateRuntimeScopeText(item)],
+    [t("candidate_detail_runtime_autonomy"), (item && item.runtime_autonomy_ceiling) || "-"],
     [t("candidate_detail_runtime"), candidateRuntimeDetail(item)],
   ];
 
@@ -2540,7 +2612,7 @@ function renderCandidatePipelineSummary(summary, trend = null) {
   const lifecycle = summary.lifecycle || {};
   const lines = [
     `window_days: ${summary.window_days || 30}`,
-    `lifecycle: imported=${Number(lifecycle.imported || 0)} candidate=${Number(lifecycle.candidate || 0)} reviewed=${Number(lifecycle.reviewed || 0)} promoted=${Number(lifecycle.promoted || 0)} active_runtime=${Number(lifecycle.active_runtime || 0)}`,
+    `lifecycle: imported=${Number(lifecycle.imported || 0)} candidate=${Number(lifecycle.candidate || 0)} reviewed=${Number(lifecycle.reviewed || 0)} promoted=${Number(lifecycle.promoted || 0)} runtime_eligible=${Number(lifecycle.runtime_eligible || 0)} active_runtime=${Number(lifecycle.active_runtime || 0)}`,
     `pending_total: ${summary.pending_total || 0}`,
     `reviewed_total: ${summary.reviewed_total || 0}`,
     `verdicts: accept=${verdicts.accept || 0} modify=${verdicts.modify || 0} reject=${verdicts.reject || 0}`,
@@ -2553,6 +2625,16 @@ function renderCandidatePipelineSummary(summary, trend = null) {
       `promotion_readiness: ready=${Number(readiness.ready_total || 0)} ` +
         `cooling=${Number(readiness.cooling_total || 0)} ` +
         `maturity_hours=${Number(readiness.maturity_hours || 0)}`
+    );
+  }
+  const runtimeEligibility = summary.runtime_eligibility || {};
+  if (runtimeEligibility && typeof runtimeEligibility === "object") {
+    lines.push(
+      `runtime_eligibility: eligible=${Number(runtimeEligibility.eligible_total || 0)} ` +
+        `holding=${Number(runtimeEligibility.holding_total || 0)} ` +
+        `revoked=${Number(runtimeEligibility.revoked_total || 0)} ` +
+        `active=${Number(runtimeEligibility.active_total || 0)} ` +
+        `cooling=${Number(runtimeEligibility.cooling_total || 0)}`
     );
   }
   const pendingByType = summary.pending_by_type || {};
@@ -3000,6 +3082,32 @@ function buildSnapshotSummaryText(payload) {
   return lines.join("\n");
 }
 
+function formatRuntimeInfluence(item) {
+  if (!item || typeof item !== "object") {
+    return "-";
+  }
+  const type = String(item.artifact_type || "artifact").trim() || "artifact";
+  const title = String(item.title || item.artifact_ref || "artifact").trim() || "artifact";
+  const sourceSummary = String(item.source_summary || "").trim();
+  const scope = Array.isArray(item.scope_modules) ? item.scope_modules.filter(Boolean).join(", ") : "";
+  const meta = [
+    item.artifact_ref ? `artifact=${item.artifact_ref}` : "",
+    item.promotion_ref ? `promotion=${item.promotion_ref}` : "",
+    item.selection_reason ? `via=${item.selection_reason}` : "",
+    scope ? `scope=${scope}` : "",
+    item.autonomy_ceiling ? `autonomy=${item.autonomy_ceiling}` : "",
+  ].filter(Boolean);
+
+  const lines = [`[${type}] ${title}`];
+  if (sourceSummary && sourceSummary !== title) {
+    lines.push(sourceSummary);
+  }
+  if (meta.length > 0) {
+    lines.push(meta.join(" | "));
+  }
+  return lines.join("\n");
+}
+
 function renderLearningSupportDetail(item, options = {}) {
   if (!item || typeof item !== "object") {
     renderSuggestionDetailEmpty();
@@ -3091,6 +3199,21 @@ function renderLearningSupportDetail(item, options = {}) {
       "candidate_detail_promotion_target",
       item.promotion_target || item.proposal_target || "-"
     );
+    appendSuggestionDetailSection(
+      suggestionDetailCard,
+      "candidate_detail_runtime_eligibility",
+      candidateRuntimeEligibilityLabel(item)
+    );
+    appendSuggestionDetailSection(
+      suggestionDetailCard,
+      "candidate_detail_runtime_scope",
+      candidateRuntimeScopeText(item)
+    );
+    appendSuggestionDetailSection(
+      suggestionDetailCard,
+      "candidate_detail_runtime_autonomy",
+      item.runtime_autonomy_ceiling || "-"
+    );
     appendSuggestionDetailSection(suggestionDetailCard, "candidate_detail_runtime", candidateRuntimeDetail(item));
     appendSuggestionDetailSection(suggestionDetailCard, "detail_snapshot_summary", buildSnapshotSummaryText(item));
     appendSuggestionDetailSection(suggestionDetailCard, "judgment_detail_next", lifecycleNextAction(item));
@@ -3168,6 +3291,25 @@ function renderSuggestionDetail(data) {
         maxChars: 170,
         fullJoin: "\n",
       })
+    );
+
+    const runtimeInfluenceItems = Array.isArray(suggestion.runtime_influences)
+      ? suggestion.runtime_influences
+      : Array.isArray((data.run || {}).runtime_influences)
+        ? data.run.runtime_influences
+        : [];
+    appendSuggestionDetailNodeSection(
+      suggestionDetailCard,
+      "suggestion_detail_influences",
+      buildCompactListBody(
+        runtimeInfluenceItems.map((item) => formatRuntimeInfluence(item)),
+        t("suggestion_detail_influences_none"),
+        {
+          maxVisible: 3,
+          maxChars: 220,
+          fullJoin: "\n\n",
+        }
+      )
     );
 
     if (verdictRow && String(verdictRow.owner_note || "").trim()) {
