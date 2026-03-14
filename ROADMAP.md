@@ -73,13 +73,18 @@ Keep rollout evolutionary: preserve existing extraction/distillation pipelines a
     - owners can append explicit `holding / eligible / revoked` runtime eligibility transitions for promoted candidates
     - runtime eligibility changes remain append-only and latest-record-wins, instead of mutating promotion history
     - Audit candidate cards expose minimal runtime governance controls without introducing a generalized policy UI
+  - recent runtime influence replay slice now exists:
+    - recent run history now summarizes which eligible artifacts were actually active across the latest runs
+    - latest run now compares against the nearest prior run (prefer same-module) to surface `added / dropped / stable` runtime influences
+    - both Workspace and Audit expose this as a lightweight owner-visible drift panel, without turning it into a policy engine or alerting subsystem
 - Kept intentionally minimal:
   - no generalized policy engine
   - runtime eligibility control is status-only; no broad per-type rule editor or policy matrix
+  - influence drift is replay-only; no anomaly scoring, threshold alerts, or auto-remediation
   - no broad autonomy feature expansion
   - no changes to `candidate -> review -> promote` safeguards
 - Next continuation slice:
-  - add lightweight influence replay / drift views across recent runs
+  - add owner-report integration or module-scoped drilldown for runtime influence drift when the replay panel proves useful
   - deepen stricter workflows for `principle / profile / cognition` without flattening them into generic runtime rules
 - Do not overbuild yet:
   - no policy DSL

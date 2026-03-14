@@ -52,6 +52,7 @@ def test_api_status_lists_modules() -> None:
         assert isinstance(data["learning_candidates"], list)
         assert isinstance(data["candidate_pipeline_summary"], dict)
         assert isinstance(data["candidate_pipeline_trend"], dict)
+        assert isinstance(data["recent_runtime_influence_drift"], dict)
         assert isinstance(data["suggestion_review_queue"], dict)
         assert isinstance(data["suggestion_review_summary"], dict)
         assert isinstance(data["suggestion_review_trend"], dict)
@@ -186,6 +187,7 @@ def test_api_inspect_and_run_writes_output() -> None:
         assert isinstance(inspect_result["debug_prompts"], list)
         assert isinstance(inspect_result["debug_sections"], list)
         assert isinstance(inspect_result["runtime_influences"], list)
+        assert isinstance(inspect_result["recent_runtime_influence_drift"], dict)
 
         run_result = api_run(root, inspect_payload)
         assert run_result["ok"] is True
@@ -197,6 +199,7 @@ def test_api_inspect_and_run_writes_output() -> None:
         assert isinstance(run_result["debug_prompts"], list)
         assert isinstance(run_result["debug_sections"], list)
         assert isinstance(run_result["runtime_influences"], list)
+        assert isinstance(run_result["recent_runtime_influence_drift"], dict)
         assert (root / run_result["output_path"]).exists()
 
         output_payload = api_output(root, run_result["output_path"])
@@ -219,6 +222,26 @@ def test_api_inspect_and_run_writes_output() -> None:
         assert run_record["proposal_target"] is None
         assert isinstance(run_record["runtime_influences"], list)
 
+
+def test_api_suggestion_includes_recent_runtime_influence_drift() -> None:
+    with TemporaryDirectory() as td:
+        root = _copy_repo_subset(Path(td))
+        run_result = api_run(
+            root,
+            {
+                "task": "run weekly decision review",
+                "provider": "dry-run",
+                "with_retrieval": False,
+            },
+        )
+
+        suggestion_payload = api_suggestion(root, run_result["suggestion_id"])
+        assert suggestion_payload["ok"] is True
+        assert isinstance(suggestion_payload["recent_runtime_influence_drift"], dict)
+
+        runs_path = root / "orchestrator/logs/runs.jsonl"
+        run_lines = runs_path.read_text(encoding="utf-8").splitlines()
+        run_record = json.loads(run_lines[-1])
         suggestions_path = root / "orchestrator/logs/suggestions.jsonl"
         suggestion_lines = suggestions_path.read_text(encoding="utf-8").splitlines()
         suggestion_record = json.loads(suggestion_lines[-1])

@@ -49,6 +49,7 @@ from retrieval import build_index, load_retrieval_config, search_index
 from route_selector import select_route
 from runner import run_with_provider
 from runtime_eligibility import set_runtime_eligibility
+from runtime_influence import summarize_recent_runtime_influence_drift
 from schedulers.manual import get_cycle
 from scheduling import task_from_routine
 from settings import (
@@ -426,6 +427,7 @@ def api_suggestion(root: Path, suggestion_id: str) -> dict:
         "suggestion": suggestion,
         "run": run_record,
         "owner_review": _suggestion_owner_review(root, sid),
+        "recent_runtime_influence_drift": summarize_recent_runtime_influence_drift(root),
         "output_path": output_path,
         "output_preview": output_preview,
     }
@@ -463,6 +465,7 @@ def _inspect_task(
         "retrieval_hits": len(hits),
         "loaded_files": [f["path"] for f in bundle["files"]],
         "runtime_influences": list(bundle.get("runtime_influences", [])),
+        "recent_runtime_influence_drift": summarize_recent_runtime_influence_drift(root),
         "debug_prompts": schema_debugger_questions(module, task),
         "debug_sections": schema_debugger_output_sections(module, task),
     }
@@ -569,6 +572,7 @@ def _execute_task(
         "retrieval_hits": len(hits),
         "loaded_files": [f["path"] for f in bundle["files"]],
         "runtime_influences": list(bundle.get("runtime_influences", [])),
+        "recent_runtime_influence_drift": summarize_recent_runtime_influence_drift(root),
         "debug_prompts": debug_prompts,
         "debug_sections": debug_sections,
     }
@@ -846,6 +850,7 @@ def api_status(root: Path) -> dict:
         "learning_candidates": list_recent_learning_candidates(root, limit=12, include_resolved=True),
         "candidate_pipeline_summary": summarize_learning_pipeline(root, window_days=30),
         "candidate_pipeline_trend": summarize_learning_pipeline_trend(root),
+        "recent_runtime_influence_drift": summarize_recent_runtime_influence_drift(root),
         "suggestion_review_queue": list_suggestion_review_queue(root, window_days=30, limit=8),
         "suggestion_review_summary": summarize_suggestion_reviews(root, window_days=30, limit=12),
         "suggestion_review_trend": summarize_suggestion_review_trend(root),

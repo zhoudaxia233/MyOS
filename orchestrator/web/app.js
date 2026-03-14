@@ -77,6 +77,7 @@ const ownerTodos = document.getElementById("ownerTodos");
 const learningLifecycle = document.getElementById("learningLifecycle");
 const candidatePipeline = document.getElementById("candidatePipeline");
 const suggestionReviewSummary = document.getElementById("suggestionReviewSummary");
+const runtimeInfluenceDrift = document.getElementById("runtimeInfluenceDrift");
 const auditSupportSubject = document.getElementById("auditSupportSubject");
 const auditJudgmentDetailBlock = document.getElementById("auditJudgmentDetailBlock");
 const suggestionDetailCard = document.getElementById("suggestionDetailCard");
@@ -141,6 +142,7 @@ let auditUiSnapshot = {
   owner_todos: [],
   learning_candidates: [],
   candidate_pipeline_summary: {},
+  recent_runtime_influence_drift: {},
   suggestion_review_queue: {
     pending_total: 0,
     reviewed_total: 0,
@@ -404,6 +406,7 @@ const I18N = {
       "运行资格独立于晋升：任何内容都必须先复核、再晋升；晋升后仍需显式 runtime eligibility，eligible 后还需成熟期。",
     trace_learning_candidates: "学习候选与状态队列",
     trace_candidate_pipeline: "候选管道（30天 + 趋势）",
+    trace_recent_influence_drift: "近期运行影响漂移",
     trace_suggestion_reviews: "建议复核（30天 + 趋势）",
     trace_route: "路由",
     trace_plan: "计划",
@@ -576,6 +579,7 @@ const I18N = {
     msg_candidate_promote_failed: "候选晋升失败：{error}",
     msg_runtime_eligibility_done: "运行资格已更新：{id} -> {status}",
     msg_runtime_eligibility_failed: "运行资格更新失败：{error}",
+    msg_no_runtime_influence_history: "暂无可展示的 runtime influence 历史。",
     msg_learning_text_required: "请先粘贴学习文本。",
     msg_learning_source_required: "学习 Handoff 需要先填写来源链接 / 引用。",
     msg_learning_packet_generating: "正在生成学习 Handoff 包...",
@@ -824,6 +828,7 @@ const I18N = {
       "Runtime eligibility is distinct from promotion: items must still be reviewed, promoted, explicitly marked runtime-eligible, and then pass maturity before active runtime.",
     trace_learning_candidates: "Learning Candidate Lifecycle Queue",
     trace_candidate_pipeline: "Candidate Pipeline (30D + Trend)",
+    trace_recent_influence_drift: "Recent Influence Drift",
     trace_suggestion_reviews: "Suggestion Reviews (30D + Trend)",
     trace_route: "Route",
     trace_plan: "Plan",
@@ -994,6 +999,7 @@ const I18N = {
     msg_candidate_promote_failed: "Candidate promotion failed: {error}",
     msg_runtime_eligibility_done: "Runtime eligibility updated: {id} -> {status}",
     msg_runtime_eligibility_failed: "Runtime eligibility update failed: {error}",
+    msg_no_runtime_influence_history: "No recent runtime influence history is available yet.",
     msg_learning_text_required: "Learning text is required. Paste transcript/article/notes first.",
     msg_learning_source_required: "Source URL/reference is required for learning handoff packet.",
     msg_learning_packet_generating: "Generating learning handoff packet...",
@@ -1097,9 +1103,13 @@ function refreshAuditUiSnapshot(data) {
   if (data.candidate_pipeline_summary && typeof data.candidate_pipeline_summary === "object") {
     auditUiSnapshot.candidate_pipeline_summary = data.candidate_pipeline_summary;
   }
+  if (data.recent_runtime_influence_drift && typeof data.recent_runtime_influence_drift === "object") {
+    auditUiSnapshot.recent_runtime_influence_drift = data.recent_runtime_influence_drift;
+  }
   if (data.suggestion_review_queue && typeof data.suggestion_review_queue === "object") {
     auditUiSnapshot.suggestion_review_queue = data.suggestion_review_queue;
   }
+  renderRuntimeInfluenceDrift(auditUiSnapshot.recent_runtime_influence_drift);
   refreshReviewTypeOptions();
   renderSuggestionReviewQueue(auditUiSnapshot.suggestion_review_queue);
   renderAuditTimeline();
@@ -2196,6 +2206,16 @@ function renderLoadedFiles(files) {
   }
 }
 
+function formatInfluenceShort(item) {
+  if (!item || typeof item !== "object") {
+    return "-";
+  }
+  const ref = String(item.artifact_ref || "").trim();
+  const type = String(item.artifact_type || "artifact").trim() || "artifact";
+  const title = String(item.title || item.source_summary || ref || "artifact").trim() || "artifact";
+  return `${ref || "-"} [${type}] ${title}`;
+}
+
 function localizeCognitionMetricLabel(item) {
   const keyRaw = String(item && item.key ? item.key : "").trim().toLowerCase();
   const labelRaw = String(item && item.label ? item.label : "").trim().toLowerCase();
@@ -2734,6 +2754,66 @@ function renderCandidatePipelineSummary(summary, trend = null) {
     }
   }
   candidatePipeline.textContent = lines.join("\n");
+}
+
+function renderRuntimeInfluenceDrift(summary) {
+  if (!runtimeInfluenceDrift) {
+    return;
+  }
+  const payload = summary && typeof summary === "object" ? summary : null;
+  const recentRuns = Array.isArray(payload && payload.recent_runs) ? payload.recent_runs : [];
+  if (recentRuns.length === 0) {
+    runtimeInfluenceDrift.textContent = t("msg_no_runtime_influence_history");
+    return;
+  }
+
+  const lines = [
+    `runs_considered: ${Number(payload.runs_considered || 0)}/${Number(payload.window_runs || recentRuns.length)}`,
+  ];
+  const latestDelta = payload.latest_delta && typeof payload.latest_delta === "object" ? payload.latest_delta : null;
+  if (latestDelta && latestDelta.latest_run_ref) {
+    lines.push(
+      `latest_delta: ${latestDelta.latest_run_ref} <- ${latestDelta.previous_run_ref || "-"} (${latestDelta.comparison_basis || "none"})`
+    );
+    lines.push(
+      `  totals: latest=${Number(latestDelta.latest_influence_total || 0)} previous=${Number(latestDelta.previous_influence_total || 0)} stable=${Number(latestDelta.stable_total || 0)}`
+    );
+    const added = Array.isArray(latestDelta.added) ? latestDelta.added : [];
+    const dropped = Array.isArray(latestDelta.dropped) ? latestDelta.dropped : [];
+    if (added.length > 0) {
+      lines.push("  added:");
+      for (const item of added.slice(0, 3)) {
+        lines.push(`    - ${formatInfluenceShort(item)}`);
+      }
+    }
+    if (dropped.length > 0) {
+      lines.push("  dropped:");
+      for (const item of dropped.slice(0, 3)) {
+        lines.push(`    - ${formatInfluenceShort(item)}`);
+      }
+    }
+  }
+
+  const topArtifacts = Array.isArray(payload.top_artifacts) ? payload.top_artifacts : [];
+  if (topArtifacts.length > 0) {
+    lines.push("top_recent:");
+    for (const item of topArtifacts.slice(0, 4)) {
+      lines.push(`  - ${formatInfluenceShort(item)} x${Number(item.run_count || 0)}`);
+    }
+  }
+
+  lines.push("recent_runs:");
+  for (const run of recentRuns.slice(0, 4)) {
+    lines.push(
+      `  ${run.run_ref || "-"} | ${run.module || "-"} | influences=${Number(run.influence_count || 0)} | task=${run.task_preview || "-"}`
+    );
+    const influences = Array.isArray(run.influences) ? run.influences : [];
+    for (const item of influences.slice(0, 3)) {
+      lines.push(`    - ${formatInfluenceShort(item)}`);
+    }
+  }
+
+  runtimeInfluenceDrift.textContent = lines.join("\n");
 }
 
 function renderSuggestionReviewSummary(summary, trend = null) {
@@ -3622,6 +3702,9 @@ function renderActionResult(data) {
   }
   if (data.suggestion_review_summary && typeof data.suggestion_review_summary === "object") {
     renderSuggestionReviewSummary(data.suggestion_review_summary, data.suggestion_review_trend || null);
+  }
+  if (data.recent_runtime_influence_drift && typeof data.recent_runtime_influence_drift === "object") {
+    renderRuntimeInfluenceDrift(data.recent_runtime_influence_drift);
   }
 
   if (data.output_preview) {

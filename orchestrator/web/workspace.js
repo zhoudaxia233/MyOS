@@ -31,6 +31,7 @@ const routeTrace = document.getElementById("routeTrace");
 const planTrace = document.getElementById("planTrace");
 const loadedFiles = document.getElementById("loadedFiles");
 const runtimeInfluences = document.getElementById("runtimeInfluences");
+const runtimeInfluenceDrift = document.getElementById("runtimeInfluenceDrift");
 const resultTrace = document.getElementById("resultTrace");
 const suggestionTrace = document.getElementById("suggestionTrace");
 const outputPreview = document.getElementById("outputPreview");
@@ -209,6 +210,7 @@ const I18N = {
     trace_plan: "计划",
     trace_loaded_files: "已加载文件",
     trace_active_influences: "运行影响源",
+    trace_recent_influence_drift: "近期运行影响漂移",
     trace_result: "结果元信息",
     trace_suggestion_detail: "系统建议",
     settings_title: "连接与偏好设置",
@@ -256,6 +258,7 @@ const I18N = {
     msg_followup_prepared: "回填任务模板已放入任务框。请粘贴外部模型结果后执行。",
     msg_followup_truncated: "外部结果太长，已自动截断到可编辑范围。",
     msg_no_runtime_influences: "本次没有注入任何已获资格的已晋升 artifact。",
+    msg_no_runtime_influence_history: "暂无可展示的 runtime influence 历史。",
     followup_template_intro:
       "请基于下面的外部模型输出，整理成最终版复盘。要求：1) 先给3条优先行动；2) 给每条行动的风险提示；3) 最后给本周执行清单。",
     msg_no_output_yet: "暂无可复制输出，请先执行任务。",
@@ -438,6 +441,7 @@ const I18N = {
     trace_plan: "Plan",
     trace_loaded_files: "Loaded Files",
     trace_active_influences: "Active Influences",
+    trace_recent_influence_drift: "Recent Influence Drift",
     trace_result: "Result Metadata",
     trace_suggestion_detail: "System Suggestion",
     settings_title: "Connection & Preferences",
@@ -485,6 +489,7 @@ const I18N = {
     msg_followup_prepared: "Follow-up template is ready in the task box. Paste external result and run.",
     msg_followup_truncated: "External content was too long and has been truncated for editing.",
     msg_no_runtime_influences: "No eligible promoted artifacts were injected for this context.",
+    msg_no_runtime_influence_history: "No recent runtime influence history is available yet.",
     followup_template_intro:
       "Based on the external model output below, produce a final review: 1) top 3 prioritized actions, 2) risk note for each action, 3) this-week execution checklist.",
     msg_no_output_yet: "No output yet. Run a task first.",
@@ -953,6 +958,76 @@ function renderRuntimeInfluences(items) {
   }
 }
 
+function formatInfluenceShort(item) {
+  if (!item || typeof item !== "object") {
+    return "-";
+  }
+  const ref = String(item.artifact_ref || "").trim();
+  const type = String(item.artifact_type || "artifact").trim() || "artifact";
+  const title = String(item.title || item.source_summary || ref || "artifact").trim() || "artifact";
+  return `${ref || "-"} [${type}] ${title}`;
+}
+
+function renderRuntimeInfluenceDrift(summary) {
+  if (!runtimeInfluenceDrift) {
+    return;
+  }
+  const payload = summary && typeof summary === "object" ? summary : null;
+  const recentRuns = Array.isArray(payload && payload.recent_runs) ? payload.recent_runs : [];
+  if (recentRuns.length === 0) {
+    runtimeInfluenceDrift.textContent = t("msg_no_runtime_influence_history");
+    return;
+  }
+
+  const lines = [
+    `runs_considered: ${Number(payload.runs_considered || 0)}/${Number(payload.window_runs || recentRuns.length)}`,
+  ];
+  const latestDelta = payload.latest_delta && typeof payload.latest_delta === "object" ? payload.latest_delta : null;
+  if (latestDelta && latestDelta.latest_run_ref) {
+    lines.push(
+      `latest_delta: ${latestDelta.latest_run_ref} <- ${latestDelta.previous_run_ref || "-"} (${latestDelta.comparison_basis || "none"})`
+    );
+    lines.push(
+      `  totals: latest=${Number(latestDelta.latest_influence_total || 0)} previous=${Number(latestDelta.previous_influence_total || 0)} stable=${Number(latestDelta.stable_total || 0)}`
+    );
+    const added = Array.isArray(latestDelta.added) ? latestDelta.added : [];
+    const dropped = Array.isArray(latestDelta.dropped) ? latestDelta.dropped : [];
+    if (added.length > 0) {
+      lines.push("  added:");
+      for (const item of added.slice(0, 3)) {
+        lines.push(`    - ${formatInfluenceShort(item)}`);
+      }
+    }
+    if (dropped.length > 0) {
+      lines.push("  dropped:");
+      for (const item of dropped.slice(0, 3)) {
+        lines.push(`    - ${formatInfluenceShort(item)}`);
+      }
+    }
+  }
+
+  const topArtifacts = Array.isArray(payload.top_artifacts) ? payload.top_artifacts : [];
+  if (topArtifacts.length > 0) {
+    lines.push("top_recent:");
+    for (const item of topArtifacts.slice(0, 4)) {
+      lines.push(`  - ${formatInfluenceShort(item)} x${Number(item.run_count || 0)}`);
+    }
+  }
+
+  lines.push("recent_runs:");
+  for (const run of recentRuns.slice(0, 4)) {
+    lines.push(
+      `  ${run.run_ref || "-"} | ${run.module || "-"} | influences=${Number(run.influence_count || 0)} | task=${run.task_preview || "-"}`
+    );
+    const influences = Array.isArray(run.influences) ? run.influences : [];
+    for (const item of influences.slice(0, 3)) {
+      lines.push(`    - ${formatInfluenceShort(item)}`);
+    }
+  }
+
+  runtimeInfluenceDrift.textContent = lines.join("\n");
+}
+
 function formatRouteScoring(route) {
   if (!route || typeof route !== "object") {
     return [];
@@ -1008,6 +1083,7 @@ function renderInspectResult(data) {
 
   renderLoadedFiles(data.loaded_files || []);
   renderRuntimeInfluences(data.runtime_influences || []);
+  renderRuntimeInfluenceDrift(data.recent_runtime_influence_drift || (statusCache && statusCache.recent_runtime_influence_drift) || null);
   latestSuggestionId = null;
   suggestionTrace.textContent = "-";
 }
@@ -1106,6 +1182,7 @@ function renderSuggestionDetail(data) {
   if (!data || typeof data !== "object" || !data.suggestion || typeof data.suggestion !== "object") {
     suggestionTrace.textContent = "-";
     renderRuntimeInfluences([]);
+    renderRuntimeInfluenceDrift((statusCache && statusCache.recent_runtime_influence_drift) || null);
     return;
   }
   const payload = {
@@ -1119,6 +1196,7 @@ function renderSuggestionDetail(data) {
   renderRuntimeInfluences(
     (data.suggestion && data.suggestion.runtime_influences) || (data.run && data.run.runtime_influences) || []
   );
+  renderRuntimeInfluenceDrift(data.recent_runtime_influence_drift || (statusCache && statusCache.recent_runtime_influence_drift) || null);
 }
 
 async function loadSuggestionDetail(suggestionId) {
@@ -1126,6 +1204,7 @@ async function loadSuggestionDetail(suggestionId) {
   if (!sid) {
     suggestionTrace.textContent = "-";
     renderRuntimeInfluences([]);
+    renderRuntimeInfluenceDrift((statusCache && statusCache.recent_runtime_influence_drift) || null);
     addBubble("system", t("msg_no_suggestion"));
     return;
   }
@@ -1135,6 +1214,7 @@ async function loadSuggestionDetail(suggestionId) {
   } catch (err) {
     suggestionTrace.textContent = `load_failed: ${err.message}`;
     renderRuntimeInfluences([]);
+    renderRuntimeInfluenceDrift((statusCache && statusCache.recent_runtime_influence_drift) || null);
   }
 }
 
@@ -1463,6 +1543,7 @@ async function loadStatus() {
     updateProviderHelp();
     syncExecutionModeSelection();
     updateRetrievalHelp();
+    renderRuntimeInfluenceDrift(data.recent_runtime_influence_drift || null);
     renderModeGuide();
     setStatus(t("status_connected"), "ok", "status_connected");
   } catch (err) {
