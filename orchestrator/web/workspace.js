@@ -154,10 +154,13 @@ const I18N = {
     starter_hint: "点击任一项会把模板填进下方任务简报，你可以再改。",
     review_definition: "复盘 = 回顾本周关键决策、结果原因、改进动作，并给下周执行清单。",
     starter_weekly_review: "本周总结+下周3件事",
+    starter_content_direction: "内容方向提案",
     starter_extract_patterns: "目标拆解行动清单",
     starter_write_story: "风险检查+应对动作",
     task_template_weekly_review:
       "任务目标：\n- 复盘本周关键决策与结果，并给出下周优先动作。\n\n希望输出：\n1. 本周关键事件与决策\n2. 做对了什么、做错了什么及原因\n3. 下周最重要的 3 个行动\n4. 每个行动的风险提醒与触发条件\n\n已知背景：\n- 如信息不足，请先指出缺口，再基于现有材料给出建议。\n\n约束与边界：\n- 结论要直接可执行，避免空泛复述。",
+    task_template_content_direction:
+      "任务目标：\n- 为这个主题提出一个可复核的内容方向提案，而不是直接写成稿件。\n\n主题：\n- [在这里写主题，例如：BTC market regime]\n\n希望输出：\n1. 2-4 个可选内容方向\n2. 为什么选择其中一个方向\n3. 这个方向最该强调的对比、证据或切口\n4. 需要避免的反模式或误导 framing\n5. 结尾用 `## Content Direction Proposal` 给出 1-3 条 distilled proposal bullets\n\n已知背景：\n- 如有目标受众、平台或已有观点，请一并考虑。\n\n约束与边界：\n- 这是方向提案，不是 after-meal story 或 thread 成稿。\n- 如果上下文不足，请先指出缺口，不要硬编 proposal。",
     task_template_goal_breakdown:
       "任务目标：\n- 把当前目标拆成今天 / 本周 / 延后处理的可执行清单。\n\n希望输出：\n1. 今天必须推进的动作\n2. 本周应完成的动作\n3. 可以延期的事项与原因\n4. 每项的优先级与依赖关系\n\n已知背景：\n- 如果目标之间冲突，请直接指出并给排序建议。\n\n约束与边界：\n- 优先给行动，而不是长篇解释。",
     task_template_risk_check:
@@ -384,10 +387,13 @@ const I18N = {
     starter_hint: "Clicking a template fills the task brief below. Edit it before you run.",
     review_definition: "Review means: what happened, why it happened, what to improve, and next-week checklist.",
     starter_weekly_review: "Weekly Summary + Top 3 Next Actions",
+    starter_content_direction: "Content Direction Proposal",
     starter_extract_patterns: "Break Goals Into Action List",
     starter_write_story: "Risk Check + Response Actions",
     task_template_weekly_review:
       "Task goal:\n- Review this week's key decisions and outcomes, then define next week's priorities.\n\nDesired output:\n1. Key events and decisions this week\n2. What worked, what failed, and why\n3. Top 3 actions for next week\n4. Risk note and trigger for each action\n\nKnown context:\n- If information is missing, call it out first and still produce the best possible recommendation.\n\nConstraints and boundaries:\n- Keep conclusions actionable instead of generic.",
+    task_template_content_direction:
+      "Task goal:\n- Propose a reviewable content direction for this topic instead of drafting the final piece.\n\nTopic:\n- [Write the topic here, for example: BTC market regime]\n\nDesired output:\n1. 2-4 plausible content directions\n2. Why one direction is stronger than the others\n3. What contrast, evidence, or framing should lead the piece\n4. Which anti-patterns or misleading framings to avoid\n5. End with `## Content Direction Proposal` and give 1-3 distilled proposal bullets\n\nKnown context:\n- If audience, platform, or prior angle exists, factor it in.\n\nConstraints and boundaries:\n- This is a direction proposal, not a finished after-meal story or thread draft.\n- If context is too thin, state the gap instead of fabricating a proposal.",
     task_template_goal_breakdown:
       "Task goal:\n- Break the current goal into an executable today / this week / later plan.\n\nDesired output:\n1. Actions that must move today\n2. Actions that should be completed this week\n3. Items that can be delayed and why\n4. Priority and dependency notes for each item\n\nKnown context:\n- If goals conflict, say so explicitly and recommend an order.\n\nConstraints and boundaries:\n- Prefer action lists over long explanation.",
     task_template_risk_check:
@@ -669,24 +675,30 @@ function selectExecutionMode(mode) {
   applyProviderSelection(preferredDirectProvider());
 }
 
-function taskTemplateText(templateKey) {
+function taskTemplateConfig(templateKey) {
   const key = String(templateKey || "").trim().toLowerCase();
   const map = {
-    weekly_review: "task_template_weekly_review",
-    goal_breakdown: "task_template_goal_breakdown",
-    risk_check: "task_template_risk_check",
+    weekly_review: { i18nKey: "task_template_weekly_review", module: "decision" },
+    content_direction: { i18nKey: "task_template_content_direction", module: "content" },
+    goal_breakdown: { i18nKey: "task_template_goal_breakdown", module: null },
+    risk_check: { i18nKey: "task_template_risk_check", module: null },
   };
-  const i18nKey = map[key];
-  return i18nKey ? t(i18nKey) : "";
+  return map[key] || null;
 }
 
 function applyTaskTemplate(templateKey) {
-  const text = taskTemplateText(templateKey);
-  if (!text) {
+  const config = taskTemplateConfig(templateKey);
+  if (!config || !config.i18nKey) {
     return;
   }
+  const text = t(config.i18nKey);
   switchWorkspaceTab("task");
   taskInput.value = text;
+  if (config.module && moduleSelect.querySelector(`option[value="${config.module}"]`)) {
+    moduleSelect.value = config.module;
+  } else {
+    moduleSelect.value = "";
+  }
   taskInput.focus();
   taskInput.setSelectionRange(taskInput.value.length, taskInput.value.length);
 }

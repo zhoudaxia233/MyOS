@@ -98,6 +98,22 @@ Keep rollout evolutionary: preserve existing extraction/distillation pipelines a
   - add a workspace starter for content direction proposals
   - then let draft-generation tasks optionally consume accepted direction proposals as context
 
+#### Workspace Content Direction Starter Slice (2026-03-14)
+
+- Why this slice:
+  - the content-direction proposal skill existed, but the main Workspace still had no direct entrypoint for it
+  - that left the object model cleaner in theory than in actual operator flow
+- Shipped in this iteration:
+  - added a dedicated Workspace starter chip for `Content Direction Proposal`
+  - clicking it now fills a proposal-producing task brief instead of a generic draft brief
+  - the starter also preselects `content` as the module when available, reducing route ambiguity
+- Kept intentionally minimal:
+  - no new shell redesign
+  - no result-card redesign
+  - no automatic jump from accepted proposal to draft generation yet
+- Next continuation slice:
+  - let drafting tasks optionally consume an accepted content-direction proposal as context
+
 #### Runtime Eligibility + Influence Visibility Slice (2026-03-14)
 
 - Why this slice:
