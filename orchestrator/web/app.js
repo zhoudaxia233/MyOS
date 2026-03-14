@@ -1689,6 +1689,26 @@ function findCognitionSchemaOption(schemaVersionId) {
   return listCognitionSchemaOptions().find((item) => String(item.id || "").trim() === target) || null;
 }
 
+function cognitionSchemaLineageRelationText(option) {
+  const relation = String((option && option.lineage_relation) || "").trim();
+  if (relation) {
+    return relation;
+  }
+  const parentSchemaVersionId = String((option && option.parent_schema_version_id) || "").trim();
+  if (!parentSchemaVersionId) {
+    return uiLanguage === "zh" ? "root" : "root";
+  }
+  const revisionType = String((option && option.revision_type) || "").trim();
+  const parentEffect = String((option && option.parent_effect) || "").trim();
+  if (revisionType && parentEffect) {
+    return `${revisionType}->${parentEffect}`;
+  }
+  if (revisionType) {
+    return revisionType;
+  }
+  return uiLanguage === "zh" ? "revision" : "revision";
+}
+
 function formatCognitionSchemaOptionLabel(option) {
   const id = String((option && option.id) || "-").trim() || "-";
   const title = String((option && (option.schema_name || option.topic || option.id)) || "-").trim() || "-";
@@ -1702,7 +1722,16 @@ function formatCognitionSchemaOptionLabel(option) {
     : uiLanguage === "zh"
       ? "root"
       : "root";
-  return [id, title, versionText, lineageText].filter(Boolean).join(" | ");
+  const relationText = cognitionSchemaLineageRelationText(option);
+  return [id, title, versionText, lineageText, relationText].filter(Boolean).join(" | ");
+}
+
+function formatCognitionSchemaReference(schemaVersionId) {
+  const option = findCognitionSchemaOption(schemaVersionId);
+  if (!option) {
+    return String(schemaVersionId || "").trim() || "-";
+  }
+  return formatCognitionSchemaOptionLabel(option);
 }
 
 function cognitionGuidanceHtml(verdict) {
@@ -1886,6 +1915,7 @@ function renderLearningReviewParentPreview(schemaVersionId) {
     formatCognitionSchemaOptionLabel(option),
     `${uiLanguage === "zh" ? "创建时间" : "Created"}: ${formatCandidateCreatedAt({ created_at: option.created_at || "" })}`,
     `${uiLanguage === "zh" ? "摘要" : "Summary"}: ${String(option.summary || "-")}`,
+    `${uiLanguage === "zh" ? "当前对 parent 的关系" : "Current relation to parent"}: ${cognitionSchemaLineageRelationText(option)}`,
     `${uiLanguage === "zh" ? "上级 lineage" : "Upstream lineage"}: ${parentText || (uiLanguage === "zh" ? "root" : "root")}`,
   ];
   learningReviewParentPreview.hidden = false;
@@ -3083,12 +3113,12 @@ function buildCandidateContext(item) {
     [t("candidate_detail_canonical_ref"), (item && item.canonicalization_ref) || "-"],
     [t("candidate_detail_canonical_clause"), (item && item.canonical_clause_id) || "-"],
     [t("candidate_detail_canonical_trait"), (item && item.canonical_profile_trait_id) || "-"],
-    [t("candidate_detail_canonical_schema"), (item && item.canonical_schema_version_id) || "-"],
+    [t("candidate_detail_canonical_schema"), formatCognitionSchemaReference(item && item.canonical_schema_version_id)],
     [t("candidate_detail_canonical_mode"), (item && item.canonicalization_mode) || "-"],
     [t("candidate_detail_revision_type"), (item && item.canonical_revision_type) || "-"],
     [t("candidate_detail_lineage_justification"), (item && item.canonical_lineage_justification) || "-"],
     [t("candidate_detail_parent_effect"), (item && item.canonical_parent_effect) || "-"],
-    [t("candidate_detail_parent_schema"), (item && item.canonical_parent_schema_version_id) || "-"],
+    [t("candidate_detail_parent_schema"), formatCognitionSchemaReference(item && item.canonical_parent_schema_version_id)],
     [t("candidate_detail_runtime_eligibility"), candidateRuntimeEligibilityLabel(item)],
     [t("candidate_detail_runtime_scope"), candidateRuntimeScopeText(item)],
     [t("candidate_detail_runtime_autonomy"), (item && item.runtime_autonomy_ceiling) || "-"],
@@ -3977,7 +4007,7 @@ function renderLearningSupportDetail(item, options = {}) {
     appendSuggestionDetailSection(
       suggestionDetailCard,
       "candidate_detail_canonical_schema",
-      item.canonical_schema_version_id || "-"
+      formatCognitionSchemaReference(item.canonical_schema_version_id)
     );
     appendSuggestionDetailSection(
       suggestionDetailCard,
@@ -4002,7 +4032,7 @@ function renderLearningSupportDetail(item, options = {}) {
     appendSuggestionDetailSection(
       suggestionDetailCard,
       "candidate_detail_parent_schema",
-      item.canonical_parent_schema_version_id || "-"
+      formatCognitionSchemaReference(item.canonical_parent_schema_version_id)
     );
     appendSuggestionDetailSection(
       suggestionDetailCard,

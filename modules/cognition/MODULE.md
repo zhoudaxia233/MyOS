@@ -69,6 +69,7 @@ It tracks how mental models (schemas) are used, where they fail, how they are re
      - if revision type is `replace`, the owner must explicitly state whether the new schema `supersede`s the parent or should `keep-alongside`
      - if revision type is `weaken`, the owner must explicitly state whether the parent is `narrow`ed or should `keep-alongside`
      - `refine`, `split`, and `merge` must not carry parent-effect semantics
+     - lineage viewing should surface this relation back as readable schema context, not only as a buried audit string
 5. Log equilibration
    - Record whether revision improves explanatory and predictive coherence.
 6. Weekly synthesis

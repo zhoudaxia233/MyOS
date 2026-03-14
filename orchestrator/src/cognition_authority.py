@@ -212,17 +212,50 @@ def list_cognition_schema_options(repo_root: Path) -> list[dict[str, Any]]:
         return created_at, row_id
 
     rows = sorted(_active_schema_versions(repo_root), key=sort_key, reverse=True)
+    revision_rows = _active_accommodation_revisions(repo_root)
+    revision_meta_by_schema_version_id: dict[str, dict[str, Any]] = {}
+    for row in revision_rows:
+        schema_version_id = _optional_text(row.get("new_schema_version_id"))
+        if not schema_version_id:
+            continue
+        revision_type = _optional_text(row.get("revision_type"))
+        parent_effect = _extract_parent_effect(row.get("revision_summary"))
+        if revision_type and parent_effect:
+            lineage_relation = f"{revision_type}->{parent_effect}"
+        elif revision_type:
+            lineage_relation = revision_type
+        else:
+            lineage_relation = "revision"
+        revision_meta_by_schema_version_id[schema_version_id] = {
+            "canonicalization_mode": "revision",
+            "revision_type": revision_type,
+            "parent_effect": parent_effect,
+            "lineage_justification": _extract_lineage_justification(row.get("revision_summary")),
+            "lineage_relation": lineage_relation,
+            "accommodation_revision_id": _optional_text(row.get("id")),
+        }
+
     options: list[dict[str, Any]] = []
     for row in rows:
         option_id = _optional_text(row.get("id"))
         if not option_id:
             continue
         parent_schema_version_id = _optional_text(row.get("parent_schema_version_id"))
+        revision_meta = revision_meta_by_schema_version_id.get(option_id, {})
         version_raw = row.get("version")
         try:
             version = int(version_raw)
         except (TypeError, ValueError):
             version = None
+        if revision_meta:
+            canonicalization_mode = "revision"
+            lineage_relation = str(revision_meta.get("lineage_relation", "")).strip() or "revision"
+        elif parent_schema_version_id is None:
+            canonicalization_mode = "seed"
+            lineage_relation = "root"
+        else:
+            canonicalization_mode = "revision"
+            lineage_relation = "revision"
         options.append(
             {
                 "id": option_id,
@@ -233,6 +266,12 @@ def list_cognition_schema_options(repo_root: Path) -> list[dict[str, Any]]:
                 "version": version,
                 "parent_schema_version_id": parent_schema_version_id,
                 "lineage_role": "root" if parent_schema_version_id is None else "revision",
+                "canonicalization_mode": canonicalization_mode,
+                "revision_type": _optional_text(revision_meta.get("revision_type")),
+                "parent_effect": _optional_text(revision_meta.get("parent_effect")),
+                "lineage_justification": _optional_text(revision_meta.get("lineage_justification")),
+                "lineage_relation": lineage_relation,
+                "accommodation_revision_id": _optional_text(revision_meta.get("accommodation_revision_id")),
             }
         )
     return options

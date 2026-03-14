@@ -1074,6 +1074,15 @@ def test_api_action_ratifies_promoted_cognition_revision_into_explicit_revision(
             item.get("id") == ratify_result["canonical_schema_version_id"]
             for item in ratify_result["cognition_schema_options"]
         )
+        schema_option = next(
+            item
+            for item in ratify_result["cognition_schema_options"]
+            if item.get("id") == ratify_result["canonical_schema_version_id"]
+        )
+        assert schema_option["canonicalization_mode"] == "revision"
+        assert schema_option["revision_type"] == "replace"
+        assert schema_option["parent_effect"] == "supersede"
+        assert schema_option["lineage_relation"] == "replace->supersede"
 
         matched = next(item for item in ratify_result["learning_candidates"] if item["id"] == candidate_id)
         assert matched["lifecycle_stage"] == "canonicalized"

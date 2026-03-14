@@ -433,6 +433,10 @@ The repo now has a third explicit Class C ratification path for `cognition_revis
     - `replace` must say whether the new schema `supersede`s the parent or should `keep-alongside`
     - `weaken` must say whether the parent is `narrow`ed or should `keep-alongside`
     - `refine`, `split`, and `merge` must not carry parent-effect semantics
+  - the cognition lineage view now surfaces that relation back to the owner:
+    - canonical schema options now expose current lineage relation metadata
+    - canonical schema / parent schema displays no longer rely on raw IDs alone
+    - the owner can read `replace->supersede`, `weaken->narrow`, or `keep-alongside` directly in the UI
   - the UI guides the owner toward the right choice, but still does not infer `seed` vs `revision`
 - what remains deferred:
   - candidate-taxonomy split between schema-seed vs schema-revision artifacts

@@ -171,6 +171,7 @@ Keep rollout evolutionary: preserve existing extraction/distillation pipelines a
     - `replace` -> `supersede` or `keep-alongside`
     - `weaken` -> `narrow` or `keep-alongside`
     - `refine` / `split` / `merge` must not write parent-effect semantics
+  - cognition lineage viewing now surfaces current relation-to-parent metadata, so canonical schema and parent schema are shown as readable lineage relations instead of raw IDs alone
   - after canonicalization, `cognition_revision` may now be explicitly marked runtime-eligible through the existing runtime release path
 - Kept intentionally minimal:
   - only `cognition_revision`

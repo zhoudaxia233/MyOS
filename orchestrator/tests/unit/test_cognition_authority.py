@@ -18,7 +18,11 @@ def _write_jsonl(path: Path, schema_name: str, fields: list[str], rows: list[dic
             handle.write(json.dumps(row) + "\n")
 
 
-def _prepare_cognition_logs(root: Path, schema_rows: list[dict] | None = None) -> None:
+def _prepare_cognition_logs(
+    root: Path,
+    schema_rows: list[dict] | None = None,
+    accommodation_rows: list[dict] | None = None,
+) -> None:
     _write_jsonl(
         root / "modules/cognition/logs/schema_versions.jsonl",
         "schema_versions",
@@ -61,7 +65,7 @@ def _prepare_cognition_logs(root: Path, schema_rows: list[dict] | None = None) -
             "object_type",
             "proposal_target",
         ],
-        [],
+        accommodation_rows or [],
     )
 
 
@@ -690,12 +694,39 @@ def test_list_cognition_schema_options_exposes_parent_context() -> None:
                     "proposal_target": "cognition",
                 },
             ],
+            accommodation_rows=[
+                {
+                    "id": "ar_20260314_001",
+                    "created_at": "2026-03-14T10:00:00Z",
+                    "status": "active",
+                    "topic": "Root schema revised",
+                    "previous_schema_version_id": "sv_20260314_001",
+                    "new_schema_version_id": "sv_20260314_002",
+                    "revision_type": "replace",
+                    "failed_assumptions": ["baseline"],
+                    "revision_summary": (
+                        "Lineage justification: This revision overtakes the old overload explanation. "
+                        "Parent effect: supersede Ratification note: Approved."
+                    ),
+                    "new_schema_hypothesis": "A revised schema overtakes the old line.",
+                    "source_refs": ["lc_20260314_001"],
+                    "tags": ["canonicalized_learning_candidate"],
+                    "object_type": "cognition",
+                    "proposal_target": "cognition",
+                }
+            ],
         )
 
         options = list_cognition_schema_options(root)
 
         assert [item["id"] for item in options] == ["sv_20260314_002", "sv_20260314_001"]
         assert options[0]["lineage_role"] == "revision"
+        assert options[0]["canonicalization_mode"] == "revision"
+        assert options[0]["revision_type"] == "replace"
+        assert options[0]["parent_effect"] == "supersede"
+        assert options[0]["lineage_relation"] == "replace->supersede"
         assert options[0]["parent_schema_version_id"] == "sv_20260314_001"
         assert options[1]["lineage_role"] == "root"
+        assert options[1]["canonicalization_mode"] == "seed"
+        assert options[1]["lineage_relation"] == "root"
         assert options[1]["parent_schema_version_id"] is None
