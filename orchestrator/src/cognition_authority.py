@@ -213,7 +213,9 @@ def list_cognition_schema_options(repo_root: Path) -> list[dict[str, Any]]:
 
     rows = sorted(_active_schema_versions(repo_root), key=sort_key, reverse=True)
     revision_rows = _active_accommodation_revisions(repo_root)
+    effect_priority = {"supersede": 3, "narrow": 2, "keep-alongside": 1}
     revision_meta_by_schema_version_id: dict[str, dict[str, Any]] = {}
+    authority_meta_by_schema_version_id: dict[str, dict[str, Any]] = {}
     for row in revision_rows:
         schema_version_id = _optional_text(row.get("new_schema_version_id"))
         if not schema_version_id:
@@ -234,6 +236,28 @@ def list_cognition_schema_options(repo_root: Path) -> list[dict[str, Any]]:
             "lineage_relation": lineage_relation,
             "accommodation_revision_id": _optional_text(row.get("id")),
         }
+        parent_schema_version_id = _optional_text(row.get("previous_schema_version_id"))
+        if not parent_schema_version_id or not parent_effect:
+            continue
+        authority_state = {
+            "supersede": "superseded",
+            "narrow": "narrowed",
+            "keep-alongside": "alongside",
+        }.get(parent_effect)
+        if not authority_state:
+            continue
+        candidate_priority = effect_priority.get(parent_effect, 0)
+        existing = authority_meta_by_schema_version_id.get(parent_schema_version_id)
+        if existing and int(existing.get("_priority", 0)) >= candidate_priority:
+            continue
+        authority_meta_by_schema_version_id[parent_schema_version_id] = {
+            "current_authority_state": authority_state,
+            "authority_state_target_schema_version_id": schema_version_id,
+            "authority_state_relation": lineage_relation,
+            "authority_state_revision_type": revision_type,
+            "authority_state_parent_effect": parent_effect,
+            "_priority": candidate_priority,
+        }
 
     options: list[dict[str, Any]] = []
     for row in rows:
@@ -242,6 +266,7 @@ def list_cognition_schema_options(repo_root: Path) -> list[dict[str, Any]]:
             continue
         parent_schema_version_id = _optional_text(row.get("parent_schema_version_id"))
         revision_meta = revision_meta_by_schema_version_id.get(option_id, {})
+        authority_meta = authority_meta_by_schema_version_id.get(option_id, {})
         version_raw = row.get("version")
         try:
             version = int(version_raw)
@@ -272,6 +297,13 @@ def list_cognition_schema_options(repo_root: Path) -> list[dict[str, Any]]:
                 "lineage_justification": _optional_text(revision_meta.get("lineage_justification")),
                 "lineage_relation": lineage_relation,
                 "accommodation_revision_id": _optional_text(revision_meta.get("accommodation_revision_id")),
+                "current_authority_state": _optional_text(authority_meta.get("current_authority_state")) or "current",
+                "authority_state_target_schema_version_id": _optional_text(
+                    authority_meta.get("authority_state_target_schema_version_id")
+                ),
+                "authority_state_relation": _optional_text(authority_meta.get("authority_state_relation")),
+                "authority_state_revision_type": _optional_text(authority_meta.get("authority_state_revision_type")),
+                "authority_state_parent_effect": _optional_text(authority_meta.get("authority_state_parent_effect")),
             }
         )
     return options

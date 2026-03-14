@@ -437,7 +437,12 @@ The repo now has a third explicit Class C ratification path for `cognition_revis
     - canonical schema options now expose current lineage relation metadata
     - canonical schema / parent schema displays no longer rely on raw IDs alone
     - the owner can read `replace->supersede`, `weaken->narrow`, or `keep-alongside` directly in the UI
-  - the UI guides the owner toward the right choice, but still does not infer `seed` vs `revision`
+    - parent schemas now also derive a current governance state from active child revisions:
+      - `superseded`
+      - `narrowed`
+      - `alongside`
+      - otherwise `current`
+- the UI guides the owner toward the right choice, but still does not infer `seed` vs `revision`
 - what remains deferred:
   - candidate-taxonomy split between schema-seed vs schema-revision artifacts
   - broader lineage browser / graph exploration beyond the current parent selector

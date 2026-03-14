@@ -70,6 +70,7 @@ It tracks how mental models (schemas) are used, where they fail, how they are re
      - if revision type is `weaken`, the owner must explicitly state whether the parent is `narrow`ed or should `keep-alongside`
      - `refine`, `split`, and `merge` must not carry parent-effect semantics
      - lineage viewing should surface this relation back as readable schema context, not only as a buried audit string
+     - lineage viewing may also derive current governance state for existing schemas from active child revisions (`current`, `superseded`, `narrowed`, `alongside`)
 5. Log equilibration
    - Record whether revision improves explanatory and predictive coherence.
 6. Weekly synthesis

@@ -725,8 +725,94 @@ def test_list_cognition_schema_options_exposes_parent_context() -> None:
         assert options[0]["revision_type"] == "replace"
         assert options[0]["parent_effect"] == "supersede"
         assert options[0]["lineage_relation"] == "replace->supersede"
+        assert options[0]["current_authority_state"] == "current"
         assert options[0]["parent_schema_version_id"] == "sv_20260314_001"
         assert options[1]["lineage_role"] == "root"
         assert options[1]["canonicalization_mode"] == "seed"
         assert options[1]["lineage_relation"] == "root"
+        assert options[1]["current_authority_state"] == "superseded"
+        assert options[1]["authority_state_target_schema_version_id"] == "sv_20260314_002"
+        assert options[1]["authority_state_relation"] == "replace->supersede"
         assert options[1]["parent_schema_version_id"] is None
+
+
+@pytest.mark.parametrize(
+    ("parent_effect", "expected_state"),
+    [
+        ("supersede", "superseded"),
+        ("narrow", "narrowed"),
+        ("keep-alongside", "alongside"),
+    ],
+)
+def test_list_cognition_schema_options_derives_current_authority_state_from_child_effect(
+    parent_effect: str,
+    expected_state: str,
+) -> None:
+    with TemporaryDirectory() as td:
+        root = Path(td)
+        _prepare_cognition_logs(
+            root,
+            schema_rows=[
+                {
+                    "id": "sv_parent",
+                    "created_at": "2026-03-14T09:00:00Z",
+                    "status": "active",
+                    "schema_id": "sm_root",
+                    "version": 1,
+                    "topic": "Root schema",
+                    "schema_name": "Root schema",
+                    "summary": "Baseline cognition root.",
+                    "assumptions": ["baseline"],
+                    "predictions": ["predict"],
+                    "boundaries": ["bound"],
+                    "parent_schema_version_id": None,
+                    "source_refs": [],
+                    "tags": ["baseline"],
+                    "object_type": "cognition",
+                    "proposal_target": "cognition",
+                },
+                {
+                    "id": "sv_child",
+                    "created_at": "2026-03-14T10:00:00Z",
+                    "status": "active",
+                    "schema_id": "sm_root",
+                    "version": 2,
+                    "topic": "Child schema",
+                    "schema_name": "Child schema",
+                    "summary": "Child schema.",
+                    "assumptions": ["refined"],
+                    "predictions": ["predict better"],
+                    "boundaries": ["bound"],
+                    "parent_schema_version_id": "sv_parent",
+                    "source_refs": [],
+                    "tags": ["revision"],
+                    "object_type": "cognition",
+                    "proposal_target": "cognition",
+                },
+            ],
+            accommodation_rows=[
+                {
+                    "id": "ar_child",
+                    "created_at": "2026-03-14T10:00:00Z",
+                    "status": "active",
+                    "topic": "Child schema",
+                    "previous_schema_version_id": "sv_parent",
+                    "new_schema_version_id": "sv_child",
+                    "revision_type": "replace" if parent_effect == "supersede" else "weaken",
+                    "failed_assumptions": ["baseline"],
+                    "revision_summary": (
+                        f"Lineage justification: Child relation. Parent effect: {parent_effect} Ratification note: Approved."
+                    ),
+                    "new_schema_hypothesis": "Child schema becomes canonical.",
+                    "source_refs": ["lc_child"],
+                    "tags": ["canonicalized_learning_candidate"],
+                    "object_type": "cognition",
+                    "proposal_target": "cognition",
+                }
+            ],
+        )
+
+        options = list_cognition_schema_options(root)
+        parent_option = next(item for item in options if item["id"] == "sv_parent")
+        assert parent_option["current_authority_state"] == expected_state
+        assert parent_option["authority_state_target_schema_version_id"] == "sv_child"

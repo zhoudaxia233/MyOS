@@ -1709,6 +1709,26 @@ function cognitionSchemaLineageRelationText(option) {
   return uiLanguage === "zh" ? "revision" : "revision";
 }
 
+function cognitionSchemaAuthorityStateText(option) {
+  const state = String((option && option.current_authority_state) || "").trim().toLowerCase();
+  const targetSchemaVersionId = String((option && option.authority_state_target_schema_version_id) || "").trim();
+  const relation = String((option && option.authority_state_relation) || "").trim();
+  if (!state || state === "current") {
+    return uiLanguage === "zh" ? "current" : "current";
+  }
+  if (uiLanguage === "zh") {
+    const labelMap = {
+      superseded: "superseded",
+      narrowed: "narrowed",
+      alongside: "alongside",
+    };
+    return `${labelMap[state] || state}${targetSchemaVersionId ? ` by ${targetSchemaVersionId}` : ""}${
+      relation ? ` via ${relation}` : ""
+    }`;
+  }
+  return `${state}${targetSchemaVersionId ? ` by ${targetSchemaVersionId}` : ""}${relation ? ` via ${relation}` : ""}`;
+}
+
 function formatCognitionSchemaOptionLabel(option) {
   const id = String((option && option.id) || "-").trim() || "-";
   const title = String((option && (option.schema_name || option.topic || option.id)) || "-").trim() || "-";
@@ -1723,7 +1743,9 @@ function formatCognitionSchemaOptionLabel(option) {
       ? "root"
       : "root";
   const relationText = cognitionSchemaLineageRelationText(option);
-  return [id, title, versionText, lineageText, relationText].filter(Boolean).join(" | ");
+  const authorityState = cognitionSchemaAuthorityStateText(option);
+  const authorityText = authorityState && authorityState !== "current" ? `status=${authorityState}` : "";
+  return [id, title, versionText, lineageText, relationText, authorityText].filter(Boolean).join(" | ");
 }
 
 function formatCognitionSchemaReference(schemaVersionId) {
@@ -1916,6 +1938,7 @@ function renderLearningReviewParentPreview(schemaVersionId) {
     `${uiLanguage === "zh" ? "创建时间" : "Created"}: ${formatCandidateCreatedAt({ created_at: option.created_at || "" })}`,
     `${uiLanguage === "zh" ? "摘要" : "Summary"}: ${String(option.summary || "-")}`,
     `${uiLanguage === "zh" ? "当前对 parent 的关系" : "Current relation to parent"}: ${cognitionSchemaLineageRelationText(option)}`,
+    `${uiLanguage === "zh" ? "当前治理状态" : "Current governance state"}: ${cognitionSchemaAuthorityStateText(option)}`,
     `${uiLanguage === "zh" ? "上级 lineage" : "Upstream lineage"}: ${parentText || (uiLanguage === "zh" ? "root" : "root")}`,
   ];
   learningReviewParentPreview.hidden = false;
