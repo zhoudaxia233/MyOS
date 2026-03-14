@@ -402,6 +402,26 @@
       </div>
 
       <div class="trace-block">
+        <div class="review-queue-head">
+          <div>
+            <h3 data-i18n="trace_cognition_lineage_review">认知 lineage 治理状态</h3>
+            <p class="helper-note" data-i18n="trace_cognition_lineage_review_desc">
+              这里只显示当前已不再是 current 的 canonical schemas（superseded / narrowed / alongside）。
+            </p>
+          </div>
+          <span id="cognitionLineageReviewCount" class="queue-count-badge">0</span>
+        </div>
+        <div id="cognitionLineageReview" class="todo-list">
+          <div class="todo-item">
+            <div class="todo-head">
+              <span class="todo-metric">Loading...</span>
+            </div>
+            <div class="todo-action">-</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="trace-block">
         <h3 data-i18n="trace_learning_lifecycle">学习生命周期</h3>
         <div id="learningLifecycle" class="learning-stage-grid">
           <div class="learning-stage-card">

@@ -47,6 +47,8 @@ const suggestionAcceptBtn = document.getElementById("suggestionAcceptBtn");
 const suggestionModifyBtn = document.getElementById("suggestionModifyBtn");
 const suggestionRejectBtn = document.getElementById("suggestionRejectBtn");
 const cognitionCards = document.getElementById("cognitionCards");
+const cognitionLineageReview = document.getElementById("cognitionLineageReview");
+const cognitionLineageReviewCount = document.getElementById("cognitionLineageReviewCount");
 const reviewInboxLead = document.getElementById("reviewInboxLead");
 const reviewCountSuggestion = document.getElementById("reviewCountSuggestion");
 const reviewCountReview = document.getElementById("reviewCountReview");
@@ -328,6 +330,7 @@ const I18N = {
     queue_empty_promote: "当前没有可晋升候选。",
     queue_empty_reviewed: "当前没有近期已处理或冷却中的候选。",
     queue_empty_todo: "当前没有 Owner 待办。",
+    queue_empty_cognition_lineage_review: "当前没有需要额外关注的 cognition lineage 状态。",
     audit_support_kicker: "支持上下文",
     audit_support_title: "支持上下文",
     audit_support_desc: "当你需要额外线索时，再使用 quick audit、生命周期、报告和机器轨迹。",
@@ -417,6 +420,9 @@ const I18N = {
     btn_expand_messages: "展开历史",
     btn_collapse_messages: "收起历史",
     trace_cognition_signals: "认知信号（7天）",
+    trace_cognition_lineage_review: "认知 lineage 治理状态",
+    trace_cognition_lineage_review_desc:
+      "这里只显示当前已不再是 current 的 canonical schemas（superseded / narrowed / alongside）。",
     trace_owner_todos: "待办",
     trace_learning_lifecycle: "学习生命周期",
     trace_learning_lifecycle_note:
@@ -811,6 +817,7 @@ const I18N = {
     queue_empty_promote: "No candidates are ready to promote right now.",
     queue_empty_reviewed: "No recently reviewed or cooling candidates yet.",
     queue_empty_todo: "No owner todos right now.",
+    queue_empty_cognition_lineage_review: "No cognition lineage states currently need extra governance review.",
     audit_support_kicker: "Support Context",
     audit_support_title: "Support Context",
     audit_support_desc: "Use quick audit, lifecycle, reports, and machine trace only when they help the current judgment.",
@@ -900,6 +907,9 @@ const I18N = {
     btn_expand_messages: "Show History",
     btn_collapse_messages: "Hide History",
     trace_cognition_signals: "Cognition Signals (7D)",
+    trace_cognition_lineage_review: "Cognition Lineage Review",
+    trace_cognition_lineage_review_desc:
+      "Only canonical schemas whose derived governance state is no longer current appear here.",
     trace_owner_todos: "Owner Todos",
     trace_learning_lifecycle: "Learning Lifecycle",
     trace_learning_lifecycle_note:
@@ -1255,6 +1265,7 @@ function refreshAuditUiSnapshot(data) {
     auditUiSnapshot.suggestion_review_queue = data.suggestion_review_queue;
   }
   renderRuntimeInfluenceDrift(auditUiSnapshot.recent_runtime_influence_drift);
+  renderCognitionLineageReview(auditUiSnapshot.cognition_schema_options);
   refreshReviewTypeOptions();
   renderSuggestionReviewQueue(auditUiSnapshot.suggestion_review_queue);
   renderAuditTimeline();
@@ -1727,6 +1738,20 @@ function cognitionSchemaAuthorityStateText(option) {
     }`;
   }
   return `${state}${targetSchemaVersionId ? ` by ${targetSchemaVersionId}` : ""}${relation ? ` via ${relation}` : ""}`;
+}
+
+function cognitionSchemaAuthorityStateLabel(option) {
+  const state = String((option && option.current_authority_state) || "").trim().toLowerCase() || "current";
+  if (uiLanguage !== "zh") {
+    return state;
+  }
+  const map = {
+    current: "current",
+    superseded: "superseded",
+    narrowed: "narrowed",
+    alongside: "alongside",
+  };
+  return map[state] || state;
 }
 
 function formatCognitionSchemaOptionLabel(option) {
@@ -2908,6 +2933,75 @@ function renderCognitionCards(cards) {
     card.appendChild(value);
     card.appendChild(meta);
     cognitionCards.appendChild(card);
+  }
+}
+
+function renderCognitionLineageReview(options) {
+  if (!cognitionLineageReview) {
+    return;
+  }
+  cognitionLineageReview.innerHTML = "";
+  const rows = Array.isArray(options)
+    ? options
+        .filter((item) => item && typeof item === "object")
+        .filter((item) => String(item.current_authority_state || "current").trim().toLowerCase() !== "current")
+        .sort((a, b) => {
+          const rank = { superseded: 0, narrowed: 1, alongside: 2 };
+          const left = rank[String(a.current_authority_state || "").toLowerCase()] ?? 9;
+          const right = rank[String(b.current_authority_state || "").toLowerCase()] ?? 9;
+          if (left !== right) {
+            return left - right;
+          }
+          return String(b.created_at || "").localeCompare(String(a.created_at || ""));
+        })
+    : [];
+
+  if (cognitionLineageReviewCount) {
+    cognitionLineageReviewCount.textContent = String(rows.length);
+  }
+  if (rows.length === 0) {
+    renderQueueEmpty(cognitionLineageReview, t("queue_empty_cognition_lineage_review"));
+    return;
+  }
+
+  for (const item of rows) {
+    const wrap = document.createElement("div");
+    wrap.className = "todo-item learning-candidate-card";
+
+    const head = document.createElement("div");
+    head.className = "todo-head";
+    const metric = document.createElement("span");
+    metric.className = "todo-metric";
+    metric.textContent = cognitionSchemaAuthorityStateLabel(item);
+    const reason = document.createElement("span");
+    reason.className = "todo-reason";
+    reason.textContent = cognitionSchemaAuthorityStateText(item);
+    head.appendChild(metric);
+    head.appendChild(reason);
+
+    const action = document.createElement("div");
+    action.className = "todo-action";
+    action.textContent = String(item.schema_name || item.topic || item.id || "-");
+
+    const meta = document.createElement("div");
+    meta.className = "candidate-meta";
+    const affectedBy = formatCognitionSchemaReference(item.authority_state_target_schema_version_id);
+    const lines = [
+      `${uiLanguage === "zh" ? "schema" : "schema"}: ${formatCognitionSchemaOptionLabel(item)}`,
+      `${uiLanguage === "zh" ? "作用来源" : "Affected by"}: ${affectedBy}`,
+      `${uiLanguage === "zh" ? "关系" : "Relation"}: ${String(item.authority_state_relation || "-")}`,
+      `${uiLanguage === "zh" ? "摘要" : "Summary"}: ${String(item.summary || "-")}`,
+    ];
+    for (const text of lines) {
+      const line = document.createElement("div");
+      line.textContent = text;
+      meta.appendChild(line);
+    }
+
+    wrap.appendChild(head);
+    wrap.appendChild(action);
+    wrap.appendChild(meta);
+    cognitionLineageReview.appendChild(wrap);
   }
 }
 

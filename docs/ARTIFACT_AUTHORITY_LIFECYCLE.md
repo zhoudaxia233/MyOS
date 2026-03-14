@@ -442,6 +442,7 @@ The repo now has a third explicit Class C ratification path for `cognition_revis
       - `narrowed`
       - `alongside`
       - otherwise `current`
+    - Audit now exposes a small cognition-lineage review list for non-`current` schemas, so these derived states are visible without opening candidate detail or parent selection first
 - the UI guides the owner toward the right choice, but still does not infer `seed` vs `revision`
 - what remains deferred:
   - candidate-taxonomy split between schema-seed vs schema-revision artifacts

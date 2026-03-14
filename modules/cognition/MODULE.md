@@ -71,6 +71,7 @@ It tracks how mental models (schemas) are used, where they fail, how they are re
      - `refine`, `split`, and `merge` must not carry parent-effect semantics
      - lineage viewing should surface this relation back as readable schema context, not only as a buried audit string
      - lineage viewing may also derive current governance state for existing schemas from active child revisions (`current`, `superseded`, `narrowed`, `alongside`)
+     - Audit may expose a small non-`current` lineage review list so owner can scan affected schemas directly
 5. Log equilibration
    - Record whether revision improves explanatory and predictive coherence.
 6. Weekly synthesis
