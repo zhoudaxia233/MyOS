@@ -403,7 +403,7 @@ const I18N = {
     trace_owner_todos: "待办",
     trace_learning_lifecycle: "学习生命周期",
     trace_learning_lifecycle_note:
-      "运行资格独立于晋升：任何内容都必须先复核、再晋升；晋升后仍需显式 runtime eligibility，eligible 后还需成熟期。",
+      "运行资格独立于晋升；晋升也不等于正式 SSOT。任何内容都必须先复核、再晋升入账；如要进入 runtime，还需显式 runtime eligibility，并在 eligible 后通过成熟期。",
     trace_learning_candidates: "学习候选与状态队列",
     trace_candidate_pipeline: "候选管道（30天 + 趋势）",
     trace_recent_influence_drift: "近期运行影响漂移",
@@ -426,14 +426,14 @@ const I18N = {
     lifecycle_step_imported: "已导入",
     lifecycle_step_candidate: "候选中",
     lifecycle_step_reviewed: "已复核",
-    lifecycle_step_promoted: "已晋升",
+    lifecycle_step_promoted: "晋升入账",
     lifecycle_step_runtime_eligible: "运行可用",
     lifecycle_step_active_runtime: "运行中",
     lifecycle_stage_candidate: "候选中",
     lifecycle_stage_reviewed_accept: "已复核：接受",
     lifecycle_stage_reviewed_modify: "已复核：修改",
     lifecycle_stage_reviewed_reject: "已复核：拒绝",
-    lifecycle_stage_promoted: "已晋升（冷却中）",
+    lifecycle_stage_promoted: "晋升入账（未激活）",
     lifecycle_stage_active_runtime: "运行中",
     candidate_label_statement: "陈述",
     candidate_label_type: "类型",
@@ -460,7 +460,9 @@ const I18N = {
     candidate_detail_none: "暂无更细证据。",
     candidate_detail_runtime_pending: "尚未进入运行时上下文。",
     candidate_detail_runtime_unassigned: "尚未写入 runtime eligibility 记录。",
-    candidate_detail_runtime_holding: "已晋升，但当前处于 runtime hold，不会注入运行时。",
+    candidate_detail_runtime_holding: "已晋升入账，但当前处于 runtime hold，不会注入运行时。",
+    candidate_detail_runtime_holding_ratification:
+      "已晋升入账，但该类型必须先完成 ratification/canonicalization，当前会保持 runtime hold。",
     candidate_detail_runtime_revoked: "runtime eligibility 已撤销，不会注入运行时。",
     candidate_detail_runtime_cooling: "仍在成熟期，约剩余 {hours} 小时。",
     candidate_detail_runtime_active: "已进入运行时上下文。",
@@ -469,12 +471,14 @@ const I18N = {
     candidate_runtime_eligibility_revoked: "已撤销",
     candidate_runtime_eligibility_unassigned: "未分配",
     candidate_next_review: "下一步：执行复核（接受 / 修改 / 拒绝）。",
-    candidate_next_promote: "下一步：可晋升进入治理成熟期。",
+    candidate_next_promote: "下一步：把这条已接受候选晋升到 owner 认可账本层。",
     candidate_next_rework: "下一步：修改后会生成新的候选条目等待复核。",
     candidate_next_reject: "已拒绝：不会进入判断核心。",
-    candidate_next_holding: "已晋升，但运行资格仍处于 hold，后续应显式决定是否放行。",
+    candidate_next_holding: "已晋升入账，但运行资格仍处于 hold，后续应显式决定是否放行。",
+    candidate_next_holding_ratification:
+      "已晋升入账，但该类型被治理规则强制保留；必须先经过显式 ratification/canonicalization 路径。",
     candidate_next_revoked: "运行资格已撤销；如需恢复，必须重新显式授权。",
-    candidate_next_cooling: "已晋升，成熟期剩余约 {hours} 小时，之后才可进入运行时上下文。",
+    candidate_next_cooling: "已晋升入账，成熟期剩余约 {hours} 小时，之后才可进入运行时上下文。",
     candidate_next_runtime: "已进入运行时上下文（成熟完成）。",
     learning_review_modal_title_accept: "接受候选",
     learning_review_modal_title_modify: "修改候选",
@@ -575,7 +579,7 @@ const I18N = {
     msg_candidate_review_done: "候选已复核：{id} -> {verdict}",
     msg_candidate_review_failed: "候选复核失败：{error}",
     msg_promotion_note_required: "晋升需要填写审批备注。",
-    msg_candidate_promoted_done: "候选已晋升：{id} -> {target}",
+    msg_candidate_promoted_done: "候选已晋升入账：{id} -> {target}",
     msg_candidate_promote_failed: "候选晋升失败：{error}",
     msg_runtime_eligibility_done: "运行资格已更新：{id} -> {status}",
     msg_runtime_eligibility_failed: "运行资格更新失败：{error}",
@@ -825,7 +829,7 @@ const I18N = {
     trace_owner_todos: "Owner Todos",
     trace_learning_lifecycle: "Learning Lifecycle",
     trace_learning_lifecycle_note:
-      "Runtime eligibility is distinct from promotion: items must still be reviewed, promoted, explicitly marked runtime-eligible, and then pass maturity before active runtime.",
+      "Runtime eligibility is distinct from promotion, and promotion is distinct from canonical SSOT. Items must still be reviewed, promoted into ledger, explicitly marked runtime-eligible, and then pass maturity before active runtime.",
     trace_learning_candidates: "Learning Candidate Lifecycle Queue",
     trace_candidate_pipeline: "Candidate Pipeline (30D + Trend)",
     trace_recent_influence_drift: "Recent Influence Drift",
@@ -848,14 +852,14 @@ const I18N = {
     lifecycle_step_imported: "Imported",
     lifecycle_step_candidate: "Candidate",
     lifecycle_step_reviewed: "Reviewed",
-    lifecycle_step_promoted: "Promoted",
+    lifecycle_step_promoted: "Promoted Ledger",
     lifecycle_step_runtime_eligible: "Runtime Eligible",
     lifecycle_step_active_runtime: "Active Runtime",
     lifecycle_stage_candidate: "Candidate",
     lifecycle_stage_reviewed_accept: "Reviewed: Accept",
     lifecycle_stage_reviewed_modify: "Reviewed: Modify",
     lifecycle_stage_reviewed_reject: "Reviewed: Reject",
-    lifecycle_stage_promoted: "Promoted (Cooling)",
+    lifecycle_stage_promoted: "Promoted Ledger",
     lifecycle_stage_active_runtime: "Active Runtime",
     candidate_label_statement: "Statement",
     candidate_label_type: "Type",
@@ -882,7 +886,9 @@ const I18N = {
     candidate_detail_none: "No deeper evidence available.",
     candidate_detail_runtime_pending: "Not in runtime context yet.",
     candidate_detail_runtime_unassigned: "No runtime eligibility record has been written yet.",
-    candidate_detail_runtime_holding: "Promoted, but currently held out of runtime injection.",
+    candidate_detail_runtime_holding: "Promoted into the ledger, but currently held out of runtime injection.",
+    candidate_detail_runtime_holding_ratification:
+      "Promoted into the ledger, but this artifact type is intentionally held until ratification/canonicalization exists.",
     candidate_detail_runtime_revoked: "Runtime eligibility has been revoked and will not be injected.",
     candidate_detail_runtime_cooling: "Still cooling, about {hours} hours remaining.",
     candidate_detail_runtime_active: "Already active in runtime context.",
@@ -891,12 +897,14 @@ const I18N = {
     candidate_runtime_eligibility_revoked: "revoked",
     candidate_runtime_eligibility_unassigned: "unassigned",
     candidate_next_review: "Next: review this candidate (Accept / Modify / Reject).",
-    candidate_next_promote: "Next: promote this accepted candidate.",
+    candidate_next_promote: "Next: promote this accepted candidate into the owner-endorsed ledger.",
     candidate_next_rework: "Next: modified statement creates a new review candidate.",
     candidate_next_reject: "Rejected: does not enter judgment core.",
-    candidate_next_holding: "Promoted, but runtime eligibility is still on hold and needs an explicit release decision.",
+    candidate_next_holding: "Promoted into the ledger, but runtime eligibility is still on hold and needs an explicit release decision.",
+    candidate_next_holding_ratification:
+      "Promoted into the ledger, but governance keeps this type on hold until an explicit ratification/canonicalization path exists.",
     candidate_next_revoked: "Runtime eligibility is revoked; explicit re-authorization is required before reuse.",
-    candidate_next_cooling: "Promoted and cooling. About {hours}h remaining before runtime context.",
+    candidate_next_cooling: "Promoted into the ledger and cooling. About {hours}h remaining before runtime context.",
     candidate_next_runtime: "Active in runtime context (maturity complete).",
     learning_review_modal_title_accept: "Accept Candidate",
     learning_review_modal_title_modify: "Modify Candidate",
@@ -995,7 +1003,7 @@ const I18N = {
     msg_candidate_review_done: "Candidate reviewed: {id} -> {verdict}",
     msg_candidate_review_failed: "Candidate review failed: {error}",
     msg_promotion_note_required: "Approval note is required for promotion.",
-    msg_candidate_promoted_done: "Candidate promoted: {id} -> {target}",
+    msg_candidate_promoted_done: "Candidate promoted into ledger: {id} -> {target}",
     msg_candidate_promote_failed: "Candidate promotion failed: {error}",
     msg_runtime_eligibility_done: "Runtime eligibility updated: {id} -> {status}",
     msg_runtime_eligibility_failed: "Runtime eligibility update failed: {error}",
@@ -1906,6 +1914,13 @@ function renderSuggestionReviewQueue(queue) {
   }
 }
 
+const RUNTIME_RATIFICATION_REQUIRED_TYPES = new Set(["profile_trait", "principle", "cognition_revision"]);
+
+function candidateRequiresRuntimeRatification(item) {
+  const type = String(((item && item.candidate_type) || (item && item.artifact_type) || "")).trim().toLowerCase();
+  return RUNTIME_RATIFICATION_REQUIRED_TYPES.has(type);
+}
+
 function candidateRuntimeDetail(item) {
   if (!item || typeof item !== "object") {
     return t("candidate_detail_runtime_pending");
@@ -1916,6 +1931,9 @@ function candidateRuntimeDetail(item) {
     return t("candidate_detail_runtime_active");
   }
   if (runtimeState === "holding" || eligibilityStatus === "holding") {
+    if (candidateRequiresRuntimeRatification(item)) {
+      return t("candidate_detail_runtime_holding_ratification");
+    }
     return t("candidate_detail_runtime_holding");
   }
   if (runtimeState === "revoked" || eligibilityStatus === "revoked") {
@@ -2410,6 +2428,9 @@ function lifecycleNextAction(item) {
   }
   if (stage === "promoted") {
     if (String(item.runtime_state || "").trim().toLowerCase() === "holding") {
+      if (candidateRequiresRuntimeRatification(item)) {
+        return t("candidate_next_holding_ratification");
+      }
       return t("candidate_next_holding");
     }
     if (String(item.runtime_state || "").trim().toLowerCase() === "revoked") {
@@ -2613,8 +2634,9 @@ function renderCandidateCards(container, items, emptyKey) {
       actions.appendChild(promoteBtn);
     } else if (item.lifecycle_stage === "promoted" || item.lifecycle_stage === "active_runtime") {
       const eligibilityStatus = String(item.runtime_eligibility_status || "").trim().toLowerCase();
+      const runtimeReleaseBlocked = candidateRequiresRuntimeRatification(item);
 
-      if (eligibilityStatus !== "eligible") {
+      if (eligibilityStatus !== "eligible" && !runtimeReleaseBlocked) {
         const enableBtn = document.createElement("button");
         enableBtn.className = "todo-resolve-btn";
         enableBtn.type = "button";

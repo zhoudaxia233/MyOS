@@ -547,7 +547,77 @@ def test_api_action_suggestion_review_summary_filters() -> None:
         assert summary["verdicts"]["reject"] == 0
 
 
-def test_api_action_set_runtime_eligibility_updates_learning_candidate_state() -> None:
+def test_api_action_set_runtime_eligibility_updates_lightweight_learning_candidate_state() -> None:
+    with TemporaryDirectory() as td:
+        root = _copy_repo_subset(Path(td))
+        import_result = api_action(
+            root,
+            {
+                "action": "learning_handoff_import",
+                "response_text": json.dumps(
+                    {
+                        "source": {"title": "P", "url": "u", "source_type": "video"},
+                        "summary": "s",
+                        "key_points": ["p"],
+                        "candidate_artifacts": {"insights": [{"statement": "keep runtime hints lightweight"}]},
+                    }
+                ),
+            },
+        )
+        candidate_id = import_result["candidate_record_ids"][0]
+        api_action(
+            root,
+            {
+                "action": "review_learning_candidate",
+                "candidate_id": candidate_id,
+                "verdict": "accept",
+                "owner_note": "accept first",
+            },
+        )
+        promote_result = api_action(
+            root,
+            {
+                "action": "promote_learning_candidate",
+                "candidate_id": candidate_id,
+                "approval_note": "approved for promotion",
+            },
+        )
+        assert promote_result["runtime_eligibility_status"] == "eligible"
+
+        hold_result = api_action(
+            root,
+            {
+                "action": "set_runtime_eligibility",
+                "candidate_id": candidate_id,
+                "eligibility_status": "holding",
+                "change_note": "pause lightweight runtime influence",
+            },
+        )
+        assert hold_result["ok"] is True
+        assert hold_result["runtime_eligibility"]["runtime_eligibility_status"] == "holding"
+        candidates = hold_result["learning_candidates"]
+        matched = next(item for item in candidates if item["id"] == candidate_id)
+        assert matched["runtime_eligibility_status"] == "holding"
+        assert matched["runtime_change_note"] == "pause lightweight runtime influence"
+
+        eligibility_result = api_action(
+            root,
+            {
+                "action": "set_runtime_eligibility",
+                "candidate_id": candidate_id,
+                "eligibility_status": "eligible",
+                "change_note": "allow insight to influence runtime explicitly",
+            },
+        )
+        assert eligibility_result["ok"] is True
+        assert eligibility_result["runtime_eligibility"]["runtime_eligibility_status"] == "eligible"
+        candidates = eligibility_result["learning_candidates"]
+        matched = next(item for item in candidates if item["id"] == candidate_id)
+        assert matched["runtime_eligibility_status"] == "eligible"
+        assert matched["runtime_change_note"] == "allow insight to influence runtime explicitly"
+
+
+def test_api_action_blocks_generic_runtime_release_for_principle_candidate() -> None:
     with TemporaryDirectory() as td:
         root = _copy_repo_subset(Path(td))
         import_result = api_action(
@@ -583,22 +653,23 @@ def test_api_action_set_runtime_eligibility_updates_learning_candidate_state() -
             },
         )
         assert promote_result["runtime_eligibility_status"] == "holding"
+        matched = next(item for item in promote_result["learning_candidates"] if item["id"] == candidate_id)
+        assert matched["runtime_eligibility_status"] == "holding"
+        assert "ratification" in str(matched.get("runtime_change_note") or "")
 
-        eligibility_result = api_action(
-            root,
-            {
-                "action": "set_runtime_eligibility",
-                "candidate_id": candidate_id,
-                "eligibility_status": "eligible",
-                "change_note": "allow principle to influence runtime explicitly",
-            },
-        )
-        assert eligibility_result["ok"] is True
-        assert eligibility_result["runtime_eligibility"]["runtime_eligibility_status"] == "eligible"
-        candidates = eligibility_result["learning_candidates"]
-        matched = next(item for item in candidates if item["id"] == candidate_id)
-        assert matched["runtime_eligibility_status"] == "eligible"
-        assert matched["runtime_change_note"] == "allow principle to influence runtime explicitly"
+        with pytest.raises(ValueError) as excinfo:
+            api_action(
+                root,
+                {
+                    "action": "set_runtime_eligibility",
+                    "candidate_id": candidate_id,
+                    "eligibility_status": "eligible",
+                    "change_note": "attempt generic principle release",
+                },
+            )
+        message = str(excinfo.value)
+        assert "principle" in message
+        assert "ratification" in message or "canonicalization" in message
 
 
 def test_api_action_validate_metrics_and_schedule() -> None:

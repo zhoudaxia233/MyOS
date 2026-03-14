@@ -444,7 +444,7 @@ def test_summarize_learning_pipeline_trend_compares_7d_vs_30d() -> None:
         assert comparisons["backlog_pressure"]["trend"] == "improving"
 
 
-def test_set_runtime_eligibility_appends_new_runtime_state() -> None:
+def test_set_runtime_eligibility_still_allows_lightweight_artifacts() -> None:
     with TemporaryDirectory() as td:
         root = Path(td)
         _prepare_memory_logs(root)
@@ -455,7 +455,7 @@ def test_set_runtime_eligibility_appends_new_runtime_state() -> None:
                     "source": {"title": "P", "url": "u4", "source_type": "video"},
                     "summary": "s4",
                     "key_points": ["p4"],
-                    "candidate_artifacts": {"principles": [{"statement": "protect downside first"}]},
+                    "candidate_artifacts": {"insights": [{"statement": "keep runtime heuristics lightweight"}]},
                 }
             ),
         )
@@ -471,24 +471,89 @@ def test_set_runtime_eligibility_appends_new_runtime_state() -> None:
             candidate_id=candidate_id,
             approval_note="approved for promotion",
         )
-        assert promotion["runtime_eligibility_status"] == "holding"
+        assert promotion["runtime_eligibility_status"] == "eligible"
+
+        held = set_runtime_eligibility(
+            root,
+            candidate_ref=candidate_id,
+            eligibility_status="holding",
+            change_note="pause lightweight runtime influence",
+        )
+        assert held["runtime_eligibility_status"] == "holding"
+        assert held["runtime_change_note"] == "pause lightweight runtime influence"
 
         updated = set_runtime_eligibility(
             root,
             candidate_ref=candidate_id,
             eligibility_status="eligible",
-            change_note="owner explicitly allows runtime influence now",
+            change_note="owner explicitly allows lightweight runtime influence now",
         )
         assert updated["runtime_eligibility_status"] == "eligible"
         assert updated["runtime_state"] in {"cooling", "active"}
-        assert updated["runtime_change_note"] == "owner explicitly allows runtime influence now"
+        assert updated["runtime_change_note"] == "owner explicitly allows lightweight runtime influence now"
 
         eligibility_lines = (root / "modules/decision/logs/runtime_eligibility.jsonl").read_text(encoding="utf-8").splitlines()
-        assert len(eligibility_lines) >= 3
+        assert len(eligibility_lines) >= 4
         latest = json.loads(eligibility_lines[-1])
         assert latest["candidate_ref"] == candidate_id
         assert latest["eligibility_status"] == "eligible"
         assert latest["replaces_eligibility_ref"]
+
+
+def test_class_c_artifacts_remain_held_pending_ratification() -> None:
+    cases = [
+        ("profile_traits", "profile_trait", "Prefer slower commitment under stress."),
+        ("principles", "principle", "Protect downside first across domains."),
+        ("cognition_revisions", "cognition_revision", "Treat repeated overload as schema failure, not motive failure."),
+    ]
+
+    for section_key, candidate_type, statement in cases:
+        with TemporaryDirectory() as td:
+            root = Path(td)
+            _prepare_memory_logs(root)
+            result = ingest_learning_handoff_response(
+                root,
+                json.dumps(
+                    {
+                        "source": {"title": "P", "url": f"u-{candidate_type}", "source_type": "video"},
+                        "summary": "serious artifact candidate",
+                        "key_points": ["typed seriousness"],
+                        "candidate_artifacts": {section_key: [{"statement": statement}]},
+                    }
+                ),
+            )
+            candidate_id = result["candidate_record_ids"][0]
+            apply_learning_candidate_verdict(
+                root,
+                candidate_id=candidate_id,
+                verdict="accept",
+                owner_note="accepted for ledger only",
+            )
+            promotion = promote_learning_candidate(
+                root,
+                candidate_id=candidate_id,
+                approval_note="approved for ledger promotion",
+            )
+            assert promotion["runtime_eligibility_status"] == "holding"
+
+            recent = list_recent_learning_candidates(root, include_resolved=True)
+            matched = next(item for item in recent if item["id"] == candidate_id)
+            assert matched["candidate_type"] == candidate_type
+            assert matched["runtime_eligibility_status"] == "holding"
+            assert "ratification" in str(matched.get("runtime_change_note") or "")
+
+            try:
+                set_runtime_eligibility(
+                    root,
+                    candidate_ref=candidate_id,
+                    eligibility_status="eligible",
+                    change_note="attempt generic release",
+                )
+                assert False, f"{candidate_type} should not become runtime-eligible through the generic path"
+            except ValueError as exc:
+                message = str(exc)
+                assert candidate_type in message
+                assert "ratification" in message or "canonicalization" in message
 
 
 def test_summarize_learning_pipeline_includes_promotion_readiness() -> None:

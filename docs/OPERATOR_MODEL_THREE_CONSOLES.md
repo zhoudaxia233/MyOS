@@ -313,8 +313,9 @@ Candidate queue log:
 
 Candidate record state:
 
-- `pending_review` (this iteration)
-- future: `accepted`, `modified`, `rejected`, `promoted`
+- base row currently remains `pending_review`
+- reviewed / promoted / runtime stages are currently derived from append-only verdict, promotion, and runtime eligibility logs
+- authority contract is defined in `docs/ARTIFACT_AUTHORITY_LIFECYCLE.md`
 
 ## 5.3 Access policy
 
@@ -325,7 +326,9 @@ Without explicit promotion:
 
 With explicit promotion:
 
-- Future iteration will write promoted candidates into module-specific candidate/promotion logs with `approval_ref`.
+- Current repo writes approval/promotion history plus module-specific promotion sinks with `approval_ref`.
+- Promotion still does not, by itself, mean canonical SSOT update or runtime-active authority.
+- See `docs/ARTIFACT_AUTHORITY_LIFECYCLE.md` for the authoritative contract.
 
 ## 6) Minimal Frontend Evolution Pattern (Phase 4)
 

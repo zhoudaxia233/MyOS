@@ -27,6 +27,7 @@ MyOS is a thin, model-agnostic cyber-self layer, not a monolithic generic AI pla
 Canonical charter:
 
 - `docs/MYOS_POSITIONING_CHARTER.md`
+- `docs/ARTIFACT_AUTHORITY_LIFECYCLE.md`
 
 ## Enduring Principles
 
@@ -50,6 +51,7 @@ Actionable stage-by-stage plan:
 - `ROADMAP.md` (includes staged evolution path toward a transparent cyber-self suggestion mirror)
 - `docs/OPERATOR_MODEL_THREE_CONSOLES.md` (three-entrypoint operator model and learning handoff flow)
 - `docs/MYOS_POSITIONING_CHARTER.md` (long-term positioning and architecture red lines)
+- `docs/ARTIFACT_AUTHORITY_LIFECYCLE.md` (promotion vs canonical truth vs runtime authority contract)
 
 ## Core Architecture
 

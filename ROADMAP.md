@@ -91,6 +91,25 @@ Keep rollout evolutionary: preserve existing extraction/distillation pipelines a
   - no delegated action/autonomy system
   - no auto-amend of principle/profile from runtime behavior
 
+#### Typed Runtime Guard Slice (2026-03-14)
+
+- Why this slice:
+  - the authority contract was still vulnerable at one high-risk seam: Class C artifacts could be promoted into ledger and then manually released through the same generic runtime path as lighter artifacts
+  - that left `profile_trait / principle / cognition_revision` too close to runtime authority before any ratification path existed
+- Shipped in this iteration:
+  - generic promotion now keeps `profile_trait`, `principle`, and `cognition_revision` explicitly in `holding`
+  - the generic `set_runtime_eligibility` path now refuses to mark those three types `eligible`
+  - audit UI wording now explains that these serious artifact types are intentionally held pending ratification/canonicalization
+  - the generic Audit action surface no longer offers `Mark Eligible` for those held Class C artifacts
+- Kept intentionally minimal:
+  - no canonicalization engine
+  - no ratification UX
+  - no schema migration of historical artifacts
+  - no loader/runtime redesign
+- Next continuation slice:
+  - add the first explicit canonicalization / ratification record path for Class C artifacts
+  - then allow runtime authority only from that typed path, not from generic promotion history
+
 #### Immediate Priority - Perceivable MVP Flow (2026-03-09)
 
 - Principle:

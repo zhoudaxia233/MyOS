@@ -50,6 +50,14 @@ DEFAULT_STATUS_BY_ARTIFACT_TYPE = {
     "principle": "holding",
 }
 
+RUNTIME_RATIFICATION_REQUIRED_ARTIFACT_TYPES = frozenset(
+    {
+        "profile_trait",
+        "principle",
+        "cognition_revision",
+    }
+)
+
 RUNTIME_ELIGIBILITY_SCHEMA = {
     "_schema": {
         "name": "runtime_eligibility",
@@ -142,6 +150,28 @@ def _normalize_eligibility_status(artifact_type: str, eligibility_status: str | 
     if text in {"holding", "eligible", "revoked"}:
         return text
     return DEFAULT_STATUS_BY_ARTIFACT_TYPE.get(str(artifact_type or "").strip(), "holding")
+
+
+def requires_runtime_ratification(artifact_type: str) -> bool:
+    return str(artifact_type or "").strip().lower() in RUNTIME_RATIFICATION_REQUIRED_ARTIFACT_TYPES
+
+
+def _guarded_runtime_hold_note(artifact_type: str, *, seeded: bool = False) -> str | None:
+    if not requires_runtime_ratification(artifact_type):
+        return "seeded_from_promotion" if seeded else None
+    prefix = "seeded_promotion_guard" if seeded else "promotion_guard"
+    return (
+        f"{prefix}: held pending ratification; {artifact_type} cannot gain runtime authority "
+        "through generic promotion or generic runtime release"
+    )
+
+
+def _generic_runtime_release_block_message(artifact_type: str) -> str:
+    normalized = str(artifact_type or "").strip() or "artifact"
+    return (
+        f"{normalized} cannot be marked runtime-eligible through the generic runtime path; "
+        "explicit ratification/canonicalization is required first"
+    )
 
 
 def _artifact_rows(repo_root: Path) -> dict[str, dict[str, Any]]:
@@ -255,6 +285,8 @@ def create_promotion_runtime_eligibility(
         approval_ref=approval_ref,
         promotion_ref=promotion_ref,
         proposal_target=proposal_target,
+        eligibility_status="holding" if requires_runtime_ratification(artifact_type) else None,
+        change_note=_guarded_runtime_hold_note(artifact_type),
         source_refs=[candidate_ref or "", promotion_ref, approval_ref or ""],
     )
     return _append_runtime_eligibility_record(repo_root, record)
@@ -272,15 +304,17 @@ def seed_missing_runtime_eligibility(repo_root: Path) -> list[dict[str, Any]]:
         promotion_ref = str(artifact.get("promotion_ref", "")).strip()
         if not promotion_ref or promotion_ref not in promotions_by_id:
             continue
+        artifact_type = str(artifact.get("candidate_type", "")).strip() or "unknown"
         record = _build_runtime_eligibility_record(
             repo_root,
             artifact_ref=artifact_ref,
-            artifact_type=str(artifact.get("candidate_type", "")).strip() or "unknown",
+            artifact_type=artifact_type,
             candidate_ref=str(artifact.get("candidate_ref", "")).strip() or None,
             approval_ref=str(artifact.get("approval_ref", "")).strip() or None,
             promotion_ref=promotion_ref,
             proposal_target=str(artifact.get("proposal_target", "")).strip() or None,
-            change_note="seeded_from_promotion",
+            eligibility_status="holding" if requires_runtime_ratification(artifact_type) else None,
+            change_note=_guarded_runtime_hold_note(artifact_type, seeded=True),
             source_refs=[
                 str(artifact.get("candidate_ref", "")).strip(),
                 promotion_ref,
@@ -463,11 +497,15 @@ def set_runtime_eligibility(
     current = candidate_runtime_eligibility_map(repo_root).get(target_candidate_ref)
     if current is None:
         raise ValueError("runtime eligibility not found for candidate; promote it first")
+    artifact_type = str(current.get("artifact_type", "")).strip() or "unknown"
+    if normalized_status == "eligible" and requires_runtime_ratification(artifact_type):
+        # Class C artifacts stay non-runtime-authoritative until a typed ratification path exists.
+        raise ValueError(_generic_runtime_release_block_message(artifact_type))
 
     record = _build_runtime_eligibility_record(
         repo_root,
         artifact_ref=str(current.get("artifact_ref", "")).strip(),
-        artifact_type=str(current.get("artifact_type", "")).strip() or "unknown",
+        artifact_type=artifact_type,
         candidate_ref=target_candidate_ref,
         approval_ref=str(current.get("approval_ref", "")).strip() or None,
         promotion_ref=str(current.get("promotion_ref", "")).strip(),
