@@ -110,6 +110,25 @@ Keep rollout evolutionary: preserve existing extraction/distillation pipelines a
   - add the first explicit canonicalization / ratification record path for Class C artifacts
   - then allow runtime authority only from that typed path, not from generic promotion history
 
+#### Principle Canonicalization Slice (2026-03-14)
+
+- Why this slice:
+  - `principle` already had the strongest SSOT substrate (`constitution.yaml`, amendment policy, amendment log), so it was the narrowest safe place to implement the first real Class C ratification path
+- Shipped in this iteration:
+  - promoted `principle` candidates can now be explicitly ratified through a dedicated action
+  - ratification appends one amendment record to `modules/principles/logs/principle_amendments.jsonl`
+  - ratification also appends one new clause into `modules/principles/data/constitution.yaml`
+  - Audit now shows a distinct `Canonicalized` state and a dedicated `Ratify Principle` action for promoted principle candidates
+- Kept intentionally minimal:
+  - only `principle`
+  - only new-clause (`add_clause`) canonicalization
+  - no general canonicalization engine
+  - no profile/cognition ratification yet
+  - no runtime eligibility expansion for Class C artifacts
+- Next continuation slice:
+  - decide whether `principle` ratification should support amendment of existing clauses or stay add-only for another iteration
+  - then implement the next typed path for either `profile_trait` or `cognition_revision`, but not both at once
+
 #### Immediate Priority - Perceivable MVP Flow (2026-03-09)
 
 - Principle:

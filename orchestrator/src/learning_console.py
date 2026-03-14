@@ -11,6 +11,7 @@ from typing import Any
 
 from idgen import next_id_for_rel_path
 from learning_ingest import ingest_learning_text
+from principles_authority import principle_ratification_map
 from runtime_eligibility import (
     RUNTIME_MATURITY_HOURS,
     candidate_runtime_eligibility_map,
@@ -1285,6 +1286,7 @@ def list_recent_learning_candidates(
     rows = _read_jsonl(path)
     verdict_map = _active_verdict_map(repo_root)
     promotion_map = _active_promotion_map(repo_root)
+    principle_ratifications = principle_ratification_map(repo_root)
     now = datetime.now(timezone.utc)
     runtime_map = candidate_runtime_eligibility_map(repo_root, now=now)
     maturity_hours = max(0, int(PROMOTION_MATURITY_HOURS))
@@ -1293,7 +1295,8 @@ def list_recent_learning_candidates(
         "candidate": 1,
         "reviewed": 2,
         "promoted": 3,
-        "active_runtime": 4,
+        "canonicalized": 4,
+        "active_runtime": 5,
     }
 
     staged_rows: list[tuple[int, str, dict[str, Any]]] = []
@@ -1308,6 +1311,7 @@ def list_recent_learning_candidates(
             continue
         verdict_row = verdict_map.get(candidate_id)
         promotion_row = promotion_map.get(candidate_id)
+        principle_ratification = principle_ratifications.get(candidate_id)
         runtime_row = runtime_map.get(candidate_id)
 
         lifecycle_stage = "candidate"
@@ -1325,6 +1329,8 @@ def list_recent_learning_candidates(
             can_promote = False
             promoted_at = str(promotion_row.get("created_at", "")).strip() or None
             lifecycle_stage = "promoted"
+            if principle_ratification is not None:
+                lifecycle_stage = "canonicalized"
             if runtime_row is not None:
                 runtime_hours_remaining = runtime_row.get("runtime_hours_remaining")
                 if runtime_row.get("runtime_active") is True:
@@ -1372,6 +1378,14 @@ def list_recent_learning_candidates(
             "promoted_at": promoted_at,
             "runtime_hours_remaining": runtime_hours_remaining,
             "promotion_target": str(promotion_row.get("promotion_target", "")).strip() if promotion_row else None,
+            "can_ratify": bool(
+                str(row.get("candidate_type", "")).strip() == "principle"
+                and promotion_row is not None
+                and principle_ratification is None
+            ),
+            "canonicalization_ref": str((principle_ratification or {}).get("id", "")).strip() or None,
+            "canonicalized_at": str((principle_ratification or {}).get("created_at", "")).strip() or None,
+            "canonical_clause_id": str((principle_ratification or {}).get("principle_id", "")).strip() or None,
             "runtime_active": lifecycle_stage == "active_runtime",
             "runtime_eligible": bool(runtime_row and str(runtime_row.get("eligibility_status", "")).strip() == "eligible"),
             "runtime_eligibility_ref": str((runtime_row or {}).get("eligibility_ref", "")).strip() or None,

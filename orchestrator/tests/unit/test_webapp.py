@@ -672,6 +672,79 @@ def test_api_action_blocks_generic_runtime_release_for_principle_candidate() -> 
         assert "ratification" in message or "canonicalization" in message
 
 
+def test_api_action_ratifies_promoted_principle_candidate_into_constitution() -> None:
+    with TemporaryDirectory() as td:
+        root = _copy_repo_subset(Path(td))
+        import_result = api_action(
+            root,
+            {
+                "action": "learning_handoff_import",
+                "response_text": json.dumps(
+                    {
+                        "source": {"title": "P", "url": "u", "source_type": "video"},
+                        "summary": "s",
+                        "key_points": ["p"],
+                        "candidate_artifacts": {"principles": [{"statement": "Protect downside first across domains."}]},
+                    }
+                ),
+            },
+        )
+        candidate_id = import_result["candidate_record_ids"][0]
+        api_action(
+            root,
+            {
+                "action": "review_learning_candidate",
+                "candidate_id": candidate_id,
+                "verdict": "accept",
+                "owner_note": "accept first",
+            },
+        )
+        api_action(
+            root,
+            {
+                "action": "promote_learning_candidate",
+                "candidate_id": candidate_id,
+                "approval_note": "approved for promotion",
+            },
+        )
+
+        ratify_result = api_action(
+            root,
+            {
+                "action": "ratify_principle_candidate",
+                "candidate_id": candidate_id,
+                "ratification_note": "Approved as constitutional guidance.",
+            },
+        )
+        assert ratify_result["ok"] is True
+        assert ratify_result["action"] == "ratify_principle_candidate"
+        assert ratify_result["candidate_ref"] == candidate_id
+        assert ratify_result["amendment_record_id"].startswith("pam_")
+        assert ratify_result["ratification_approval_ref"].startswith("ap_")
+        assert ratify_result["canonical_clause_id"].startswith("pr_")
+        assert ratify_result["constitution_updated"] is True
+
+        matched = next(item for item in ratify_result["learning_candidates"] if item["id"] == candidate_id)
+        assert matched["lifecycle_stage"] == "canonicalized"
+        assert matched["canonicalization_ref"] == ratify_result["amendment_record_id"]
+        assert matched["canonical_clause_id"] == ratify_result["canonical_clause_id"]
+        assert matched["can_ratify"] is False
+
+        constitution_text = (root / "modules/principles/data/constitution.yaml").read_text(encoding="utf-8")
+        assert ratify_result["canonical_clause_id"] in constitution_text
+        assert "Protect downside first across domains." in constitution_text
+
+        with pytest.raises(ValueError):
+            api_action(
+                root,
+                {
+                    "action": "ratify_principle_candidate",
+                    "candidate_id": candidate_id,
+                    "ratification_note": "second ratification should fail",
+                },
+            )
+
+
 def test_api_action_validate_metrics_and_schedule() -> None:
     with TemporaryDirectory() as td:
         root = _copy_repo_subset(Path(td))

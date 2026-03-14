@@ -243,6 +243,7 @@ const I18N = {
     audit_timeline_time_decided: "判断于 {created}",
     audit_timeline_time_reviewed: "复核于 {created}",
     audit_timeline_time_promoted: "晋升于 {created}",
+    audit_timeline_time_canonicalized: "入宪于 {created}",
     audit_timeline_time_created: "进入队列 {created}",
     audit_timeline_open_detail: "打开支撑详情",
     audit_timeline_filter_kind: "对象",
@@ -419,6 +420,7 @@ const I18N = {
     btn_modify: "修改",
     btn_reject: "拒绝",
     btn_promote: "晋升",
+    btn_ratify_principle: "宪制确认",
     btn_runtime_eligible: "设为可用",
     btn_runtime_hold: "运行保留",
     btn_runtime_revoke: "撤销运行",
@@ -434,6 +436,7 @@ const I18N = {
     lifecycle_stage_reviewed_modify: "已复核：修改",
     lifecycle_stage_reviewed_reject: "已复核：拒绝",
     lifecycle_stage_promoted: "晋升入账（未激活）",
+    lifecycle_stage_canonicalized: "已入宪",
     lifecycle_stage_active_runtime: "运行中",
     candidate_label_statement: "陈述",
     candidate_label_type: "类型",
@@ -452,6 +455,8 @@ const I18N = {
     candidate_detail_owner_note: "Owner 备注",
     candidate_detail_modified: "修改后陈述",
     candidate_detail_promotion_target: "晋升目标",
+    candidate_detail_canonical_ref: "Canonical 记录",
+    candidate_detail_canonical_clause: "Canonical clause",
     candidate_detail_runtime: "运行时状态",
     candidate_detail_runtime_eligibility: "运行资格",
     candidate_detail_runtime_scope: "运行范围",
@@ -477,6 +482,10 @@ const I18N = {
     candidate_next_holding: "已晋升入账，但运行资格仍处于 hold，后续应显式决定是否放行。",
     candidate_next_holding_ratification:
       "已晋升入账，但该类型被治理规则强制保留；必须先经过显式 ratification/canonicalization 路径。",
+    candidate_next_ratify_principle:
+      "下一步：把这条 principle 候选写入 amendment log，并显式更新 constitution.yaml，完成 canonicalization。",
+    candidate_next_canonicalized:
+      "已写入 amendment log 并进入 constitution SSOT。后续若要改动，应走 amendment / exception 路径，而不是回到 generic promotion。",
     candidate_next_revoked: "运行资格已撤销；如需恢复，必须重新显式授权。",
     candidate_next_cooling: "已晋升入账，成熟期剩余约 {hours} 小时，之后才可进入运行时上下文。",
     candidate_next_runtime: "已进入运行时上下文（成熟完成）。",
@@ -484,6 +493,7 @@ const I18N = {
     learning_review_modal_title_modify: "修改候选",
     learning_review_modal_title_reject: "拒绝候选",
     learning_review_modal_title_promote: "晋升候选",
+    learning_review_modal_title_ratify_principle: "确认 principle 入宪",
     learning_review_modal_title_runtime_eligible: "授权运行资格",
     learning_review_modal_title_runtime_hold: "保留运行资格",
     learning_review_modal_title_runtime_revoke: "撤销运行资格",
@@ -581,6 +591,8 @@ const I18N = {
     msg_promotion_note_required: "晋升需要填写审批备注。",
     msg_candidate_promoted_done: "候选已晋升入账：{id} -> {target}",
     msg_candidate_promote_failed: "候选晋升失败：{error}",
+    msg_principle_ratified_done: "Principle 已完成 canonicalization：{id} -> {clause}",
+    msg_principle_ratify_failed: "Principle canonicalization 失败：{error}",
     msg_runtime_eligibility_done: "运行资格已更新：{id} -> {status}",
     msg_runtime_eligibility_failed: "运行资格更新失败：{error}",
     msg_no_runtime_influence_history: "暂无可展示的 runtime influence 历史。",
@@ -669,6 +681,7 @@ const I18N = {
     audit_timeline_time_decided: "Decided {created}",
     audit_timeline_time_reviewed: "Reviewed {created}",
     audit_timeline_time_promoted: "Promoted {created}",
+    audit_timeline_time_canonicalized: "Canonicalized {created}",
     audit_timeline_time_created: "Queued {created}",
     audit_timeline_open_detail: "Open Support Detail",
     audit_timeline_filter_kind: "Object",
@@ -845,6 +858,7 @@ const I18N = {
     btn_modify: "Modify",
     btn_reject: "Reject",
     btn_promote: "Promote",
+    btn_ratify_principle: "Ratify Principle",
     btn_runtime_eligible: "Mark Eligible",
     btn_runtime_hold: "Hold Runtime",
     btn_runtime_revoke: "Revoke Runtime",
@@ -860,6 +874,7 @@ const I18N = {
     lifecycle_stage_reviewed_modify: "Reviewed: Modify",
     lifecycle_stage_reviewed_reject: "Reviewed: Reject",
     lifecycle_stage_promoted: "Promoted Ledger",
+    lifecycle_stage_canonicalized: "Canonicalized",
     lifecycle_stage_active_runtime: "Active Runtime",
     candidate_label_statement: "Statement",
     candidate_label_type: "Type",
@@ -878,6 +893,8 @@ const I18N = {
     candidate_detail_owner_note: "Owner Note",
     candidate_detail_modified: "Modified Statement",
     candidate_detail_promotion_target: "Promotion Target",
+    candidate_detail_canonical_ref: "Canonical Record",
+    candidate_detail_canonical_clause: "Canonical Clause",
     candidate_detail_runtime: "Runtime Status",
     candidate_detail_runtime_eligibility: "Runtime Eligibility",
     candidate_detail_runtime_scope: "Runtime Scope",
@@ -903,6 +920,10 @@ const I18N = {
     candidate_next_holding: "Promoted into the ledger, but runtime eligibility is still on hold and needs an explicit release decision.",
     candidate_next_holding_ratification:
       "Promoted into the ledger, but governance keeps this type on hold until an explicit ratification/canonicalization path exists.",
+    candidate_next_ratify_principle:
+      "Next: write this principle candidate into the amendment log and constitution SSOT through an explicit canonicalization step.",
+    candidate_next_canonicalized:
+      "Canonicalized into amendment log + constitution SSOT. Further changes should go through amendment / exception flow, not generic promotion.",
     candidate_next_revoked: "Runtime eligibility is revoked; explicit re-authorization is required before reuse.",
     candidate_next_cooling: "Promoted into the ledger and cooling. About {hours}h remaining before runtime context.",
     candidate_next_runtime: "Active in runtime context (maturity complete).",
@@ -910,6 +931,7 @@ const I18N = {
     learning_review_modal_title_modify: "Modify Candidate",
     learning_review_modal_title_reject: "Reject Candidate",
     learning_review_modal_title_promote: "Promote Candidate",
+    learning_review_modal_title_ratify_principle: "Ratify Principle",
     learning_review_modal_title_runtime_eligible: "Authorize Runtime Eligibility",
     learning_review_modal_title_runtime_hold: "Hold Runtime Eligibility",
     learning_review_modal_title_runtime_revoke: "Revoke Runtime Eligibility",
@@ -1005,6 +1027,8 @@ const I18N = {
     msg_promotion_note_required: "Approval note is required for promotion.",
     msg_candidate_promoted_done: "Candidate promoted into ledger: {id} -> {target}",
     msg_candidate_promote_failed: "Candidate promotion failed: {error}",
+    msg_principle_ratified_done: "Principle canonicalized: {id} -> {clause}",
+    msg_principle_ratify_failed: "Principle canonicalization failed: {error}",
     msg_runtime_eligibility_done: "Runtime eligibility updated: {id} -> {status}",
     msg_runtime_eligibility_failed: "Runtime eligibility update failed: {error}",
     msg_no_runtime_influence_history: "No recent runtime influence history is available yet.",
@@ -1587,11 +1611,14 @@ function timelineDateValue(raw) {
 }
 
 function learningTimelineTimestamp(item) {
-  return String((item && (item.promoted_at || item.reviewed_at || item.created_at)) || "").trim();
+  return String((item && (item.canonicalized_at || item.promoted_at || item.reviewed_at || item.created_at)) || "").trim();
 }
 
 function learningTimelineTimeKey(item) {
   const stage = String((item && item.lifecycle_stage) || "").trim();
+  if (stage === "canonicalized" && String((item && item.canonicalized_at) || "").trim()) {
+    return "audit_timeline_time_canonicalized";
+  }
   if ((stage === "promoted" || stage === "active_runtime") && String((item && item.promoted_at) || "").trim()) {
     return "audit_timeline_time_promoted";
   }
@@ -1606,6 +1633,9 @@ function learningTimelineStageClass(item) {
   if (stage === "active_runtime") {
     return "stage-active_runtime";
   }
+  if (stage === "canonicalized") {
+    return "stage-promoted";
+  }
   if (stage === "promoted") {
     return "stage-promoted";
   }
@@ -1617,7 +1647,7 @@ function learningTimelineStageClass(item) {
 
 function learningTimelineJudgmentKey(item) {
   const stage = String((item && item.lifecycle_stage) || "").trim();
-  if (stage === "promoted" || stage === "active_runtime") {
+  if (stage === "promoted" || stage === "canonicalized" || stage === "active_runtime") {
     return "promote";
   }
   const verdict = String((item && item.verdict) || "").trim().toLowerCase();
@@ -1931,7 +1961,7 @@ function candidateRuntimeDetail(item) {
     return t("candidate_detail_runtime_active");
   }
   if (runtimeState === "holding" || eligibilityStatus === "holding") {
-    if (candidateRequiresRuntimeRatification(item)) {
+    if (candidateRequiresRuntimeRatification(item) && !item.canonicalized_at) {
       return t("candidate_detail_runtime_holding_ratification");
     }
     return t("candidate_detail_runtime_holding");
@@ -2408,6 +2438,9 @@ function lifecycleStageLabel(item) {
   if (stage === "promoted") {
     return t("lifecycle_stage_promoted");
   }
+  if (stage === "canonicalized") {
+    return t("lifecycle_stage_canonicalized");
+  }
   return t("lifecycle_stage_active_runtime");
 }
 
@@ -2427,6 +2460,9 @@ function lifecycleNextAction(item) {
     return t("candidate_next_reject");
   }
   if (stage === "promoted") {
+    if (item.can_ratify) {
+      return t("candidate_next_ratify_principle");
+    }
     if (String(item.runtime_state || "").trim().toLowerCase() === "holding") {
       if (candidateRequiresRuntimeRatification(item)) {
         return t("candidate_next_holding_ratification");
@@ -2437,6 +2473,9 @@ function lifecycleNextAction(item) {
       return t("candidate_next_revoked");
     }
     return t("candidate_next_cooling", { hours: Number(item.runtime_hours_remaining || 0) });
+  }
+  if (stage === "canonicalized") {
+    return t("candidate_next_canonicalized");
   }
   return t("candidate_next_runtime");
 }
@@ -2515,6 +2554,8 @@ function buildCandidateContext(item) {
     [t("candidate_detail_owner_note"), (item && item.owner_note) || "-"],
     [t("candidate_detail_modified"), (item && item.modified_statement) || "-"],
     [t("candidate_detail_promotion_target"), (item && (item.promotion_target || item.proposal_target)) || "-"],
+    [t("candidate_detail_canonical_ref"), (item && item.canonicalization_ref) || "-"],
+    [t("candidate_detail_canonical_clause"), (item && item.canonical_clause_id) || "-"],
     [t("candidate_detail_runtime_eligibility"), candidateRuntimeEligibilityLabel(item)],
     [t("candidate_detail_runtime_scope"), candidateRuntimeScopeText(item)],
     [t("candidate_detail_runtime_autonomy"), (item && item.runtime_autonomy_ceiling) || "-"],
@@ -2635,6 +2676,17 @@ function renderCandidateCards(container, items, emptyKey) {
     } else if (item.lifecycle_stage === "promoted" || item.lifecycle_stage === "active_runtime") {
       const eligibilityStatus = String(item.runtime_eligibility_status || "").trim().toLowerCase();
       const runtimeReleaseBlocked = candidateRequiresRuntimeRatification(item);
+
+      if (item.can_ratify) {
+        const ratifyBtn = document.createElement("button");
+        ratifyBtn.className = "todo-resolve-btn";
+        ratifyBtn.type = "button";
+        ratifyBtn.textContent = t("btn_ratify_principle");
+        ratifyBtn.addEventListener("click", () => {
+          openLearningReviewModal(item, "ratify_principle");
+        });
+        actions.appendChild(ratifyBtn);
+      }
 
       if (eligibilityStatus !== "eligible" && !runtimeReleaseBlocked) {
         const enableBtn = document.createElement("button");
@@ -3350,6 +3402,16 @@ function renderLearningSupportDetail(item, options = {}) {
     );
     appendSuggestionDetailSection(
       suggestionDetailCard,
+      "candidate_detail_canonical_ref",
+      item.canonicalization_ref || "-"
+    );
+    appendSuggestionDetailSection(
+      suggestionDetailCard,
+      "candidate_detail_canonical_clause",
+      item.canonical_clause_id || "-"
+    );
+    appendSuggestionDetailSection(
+      suggestionDetailCard,
       "candidate_detail_runtime_eligibility",
       candidateRuntimeEligibilityLabel(item)
     );
@@ -3674,6 +3736,18 @@ function renderActionResult(data) {
   if (data.promotion_record_id) {
     out.push(`promotion_record_id: ${data.promotion_record_id}`);
   }
+  if (data.amendment_record_id) {
+    out.push(`amendment_record_id: ${data.amendment_record_id}`);
+  }
+  if (data.ratification_approval_ref) {
+    out.push(`ratification_approval_ref: ${data.ratification_approval_ref}`);
+  }
+  if (data.canonical_clause_id) {
+    out.push(`canonical_clause_id: ${data.canonical_clause_id}`);
+  }
+  if (data.canonicalized_at) {
+    out.push(`canonicalized_at: ${data.canonicalized_at}`);
+  }
   if (data.promotion_target) {
     out.push(`promotion_target: ${data.promotion_target}`);
   }
@@ -3931,7 +4005,11 @@ function openLearningReviewModal(item, mode) {
     return;
   }
   const verdict = String(mode || "").trim().toLowerCase();
-  if (!["accept", "modify", "reject", "promote", "runtime_eligible", "runtime_hold", "runtime_revoke"].includes(verdict)) {
+  if (
+    !["accept", "modify", "reject", "promote", "ratify_principle", "runtime_eligible", "runtime_hold", "runtime_revoke"].includes(
+      verdict
+    )
+  ) {
     return;
   }
   learningReviewDraft = {
@@ -3947,6 +4025,7 @@ function openLearningReviewModal(item, mode) {
     modify: "learning_review_modal_title_modify",
     reject: "learning_review_modal_title_reject",
     promote: "learning_review_modal_title_promote",
+    ratify_principle: "learning_review_modal_title_ratify_principle",
     runtime_eligible: "learning_review_modal_title_runtime_eligible",
     runtime_hold: "learning_review_modal_title_runtime_hold",
     runtime_revoke: "learning_review_modal_title_runtime_revoke",
@@ -3960,6 +4039,10 @@ function openLearningReviewModal(item, mode) {
     modify: uiLanguage === "zh" ? "方向可用，但表达需收紧。" : "Useful direction but wording needs tightening.",
     reject: uiLanguage === "zh" ? "与当前判断核心不一致，拒绝晋升。" : "Not aligned with current judgment core.",
     promote: uiLanguage === "zh" ? "已完成复核，批准 Promote。" : "Reviewed and approved for promotion.",
+    ratify_principle:
+      uiLanguage === "zh"
+        ? "批准把该 principle 写入 amendment log，并更新 constitution.yaml。"
+        : "Approve writing this principle into the amendment log and constitution.yaml.",
     runtime_eligible:
       uiLanguage === "zh" ? "批准该条目进入 runtime eligibility，并接受当前边界。" : "Authorize runtime eligibility under current boundaries.",
     runtime_hold:
@@ -4007,6 +4090,11 @@ async function submitLearningReviewModal() {
 
   if (verdict === "promote") {
     await promoteLearningCandidate(id, ownerNote);
+    closeLearningReviewModal();
+    return;
+  }
+  if (verdict === "ratify_principle") {
+    await ratifyPrincipleCandidate(id, ownerNote);
     closeLearningReviewModal();
     return;
   }
@@ -4080,6 +4168,30 @@ async function promoteLearningCandidate(candidateId, approvalNote) {
     addBubble("system", t("msg_candidate_promoted_done", { id, target: data.promotion_target || "-" }));
   } catch (err) {
     addBubble("system", t("msg_candidate_promote_failed", { error: err.message }));
+  }
+}
+
+async function ratifyPrincipleCandidate(candidateId, ratificationNote) {
+  const id = String(candidateId || "").trim();
+  if (!id) {
+    return;
+  }
+  const note = String(ratificationNote || "").trim();
+  if (!note) {
+    addBubble("system", t("msg_review_note_required"));
+    return;
+  }
+
+  try {
+    const data = await postJson("/api/action", {
+      action: "ratify_principle_candidate",
+      candidate_id: id,
+      ratification_note: note,
+    });
+    renderActionResult(data);
+    addBubble("system", t("msg_principle_ratified_done", { id, clause: data.canonical_clause_id || "-" }));
+  } catch (err) {
+    addBubble("system", t("msg_principle_ratify_failed", { error: err.message }));
   }
 }
 

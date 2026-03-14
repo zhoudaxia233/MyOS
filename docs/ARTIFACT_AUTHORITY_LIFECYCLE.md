@@ -356,6 +356,24 @@ What remains deferred:
 - typed owner UX for ratifying `profile_trait`, `principle`, and `cognition_revision`
 - canonical-source-backed runtime release for those artifact types
 
+## Implementation Note: First Principle Canonicalization Path (2026-03-14)
+
+The repo now has a first explicit Class C ratification path, but only for `principle`:
+
+- scope is intentionally narrow:
+  - only promoted `principle` candidates
+  - only `add_clause` style canonicalization
+- the path writes:
+  - one append-only amendment record in `modules/principles/logs/principle_amendments.jsonl`
+  - one targeted clause append into `modules/principles/data/constitution.yaml`
+- this means:
+  - `principle` can now move from `promoted_ledger` to `canonicalized` through an explicit owner action
+  - constitutional authority comes from `constitution.yaml` + amendment trail, not from runtime eligibility on the promoted candidate sink
+- what remains deferred:
+  - amendment of existing clauses
+  - exception-driven canonicalization flows from promoted candidates
+  - equivalent ratification paths for `profile_trait` and `cognition_revision`
+
 ## Near-Term Guardrails
 
 Until a dedicated canonicalization layer exists:
