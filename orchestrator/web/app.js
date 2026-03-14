@@ -62,6 +62,7 @@ const reviewStageFilter = document.getElementById("reviewStageFilter");
 const reviewTypeFilter = document.getElementById("reviewTypeFilter");
 const reviewSourceFilter = document.getElementById("reviewSourceFilter");
 const reviewAgeFilter = document.getElementById("reviewAgeFilter");
+const reviewRuntimePostureFilter = document.getElementById("reviewRuntimePostureFilter");
 const reviewFilterResetBtn = document.getElementById("reviewFilterResetBtn");
 const reviewFilterMeta = document.getElementById("reviewFilterMeta");
 const reviewPresetButtons = Array.from(document.querySelectorAll("[data-review-preset]"));
@@ -173,6 +174,7 @@ let reviewFilterState = {
   type: "all",
   source: "",
   age: "all",
+  posture: "all",
 };
 let auditTimelineFilterState = {
   kind: "all",
@@ -182,10 +184,10 @@ let auditTimelineFilterState = {
 const LEARNING_SOURCE_DEFAULT = "notes";
 const REVIEW_PRESET_STORAGE_KEY = "pcos_audit_review_preset_v1";
 const REVIEW_FILTER_PRESETS = Object.freeze({
-  all: { stage: "all", type: "all", source: "", age: "all" },
-  review: { stage: "review", type: "all", source: "", age: "all" },
-  promote: { stage: "promote", type: "all", source: "", age: "all" },
-  recent: { stage: "all", type: "all", source: "", age: "7d" },
+  all: { stage: "all", type: "all", source: "", age: "all", posture: "all" },
+  review: { stage: "review", type: "all", source: "", age: "all", posture: "all" },
+  promote: { stage: "promote", type: "all", source: "", age: "all", posture: "all" },
+  recent: { stage: "all", type: "all", source: "", age: "7d", posture: "all" },
 });
 
 const I18N = {
@@ -240,6 +242,12 @@ const I18N = {
     review_filter_age_24h: "近 24 小时",
     review_filter_age_7d: "近 7 天",
     review_filter_age_30d: "近 30 天",
+    review_filter_cognition_runtime: "Cognition Runtime",
+    review_filter_cognition_runtime_all: "全部 posture",
+    review_filter_cognition_runtime_hold: "hold",
+    review_filter_cognition_runtime_review_scope: "review_scope",
+    review_filter_cognition_runtime_review_coexistence: "review_coexistence",
+    review_filter_cognition_runtime_clear: "clear",
     btn_reset_filters: "清空筛选",
     review_filter_meta_idle: "当前显示全部候选。",
     review_filter_meta_active: "当前显示 {shown} / {total} 条候选。",
@@ -734,6 +742,12 @@ const I18N = {
     review_filter_age_24h: "Last 24h",
     review_filter_age_7d: "Last 7d",
     review_filter_age_30d: "Last 30d",
+    review_filter_cognition_runtime: "Cognition Runtime",
+    review_filter_cognition_runtime_all: "All Postures",
+    review_filter_cognition_runtime_hold: "hold",
+    review_filter_cognition_runtime_review_scope: "review_scope",
+    review_filter_cognition_runtime_review_coexistence: "review_coexistence",
+    review_filter_cognition_runtime_clear: "clear",
     btn_reset_filters: "Reset Filters",
     review_filter_meta_idle: "Showing all candidates.",
     review_filter_meta_active: "Showing {shown} / {total} candidates.",
@@ -1470,11 +1484,13 @@ function candidateSourceText(item) {
 function normalizeReviewFilterState(nextState = {}) {
   const stage = String(nextState.stage || "all").trim();
   const age = String(nextState.age || "all").trim();
+  const posture = String(nextState.posture || "all").trim();
   return {
     stage: ["all", "review", "promote", "reviewed"].includes(stage) ? stage : "all",
     type: String(nextState.type || "all").trim() || "all",
     source: String(nextState.source || ""),
     age: ["all", "24h", "7d", "30d"].includes(age) ? age : "all",
+    posture: ["all", "hold", "review_scope", "review_coexistence", "clear"].includes(posture) ? posture : "all",
   };
 }
 
@@ -1485,7 +1501,8 @@ function sameReviewFilterState(left, right) {
     normalizedLeft.stage === normalizedRight.stage &&
     normalizedLeft.type === normalizedRight.type &&
     normalizedLeft.age === normalizedRight.age &&
-    normalizedLeft.source === normalizedRight.source
+    normalizedLeft.source === normalizedRight.source &&
+    normalizedLeft.posture === normalizedRight.posture
   );
 }
 
@@ -1531,6 +1548,9 @@ function syncReviewFilterControls() {
   if (reviewAgeFilter) {
     reviewAgeFilter.value = reviewFilterState.age;
   }
+  if (reviewRuntimePostureFilter) {
+    reviewRuntimePostureFilter.value = reviewFilterState.posture;
+  }
 }
 
 function applyReviewPreset(presetKey) {
@@ -1559,6 +1579,7 @@ function hasActiveReviewFilters() {
     reviewFilterState.stage !== "all" ||
     reviewFilterState.type !== "all" ||
     reviewFilterState.age !== "all" ||
+    reviewFilterState.posture !== "all" ||
     Boolean(String(reviewFilterState.source || "").trim())
   );
 }
@@ -1592,6 +1613,15 @@ function filterLearningCandidates(items) {
     }
     if (reviewFilterState.age === "30d" && (ageHours === null || ageHours > 24 * 30)) {
       return false;
+    }
+    if (reviewFilterState.posture !== "all") {
+      if (!candidateHasCognitionRuntimeReleaseContext(item)) {
+        return false;
+      }
+      const posture = candidateCognitionRuntimeReleasePostureKey(item);
+      if (posture !== reviewFilterState.posture) {
+        return false;
+      }
     }
     return true;
   });
@@ -1830,12 +1860,17 @@ function cognitionRuntimeReleaseOptionForCandidate(item) {
   return findCognitionSchemaOption(schemaVersionId);
 }
 
-function candidateCognitionRuntimeReleasePostureLabel(item) {
+function candidateCognitionRuntimeReleasePostureKey(item) {
   const option = cognitionRuntimeReleaseOptionForCandidate(item);
-  if (option) {
-    return cognitionSchemaRuntimeReleasePostureLabel(option);
-  }
-  const posture = String((item && item.canonical_runtime_release_posture) || "").trim().toLowerCase();
+  return String(
+    (option && option.runtime_release_posture) || (item && item.canonical_runtime_release_posture) || ""
+  )
+    .trim()
+    .toLowerCase();
+}
+
+function candidateCognitionRuntimeReleasePostureLabel(item) {
+  const posture = candidateCognitionRuntimeReleasePostureKey(item);
   if (!posture) {
     return "-";
   }
@@ -1877,11 +1912,7 @@ function runtimeEligibilityDefaultNote(item) {
       : "Authorize runtime eligibility under current boundaries.";
   }
   const option = cognitionRuntimeReleaseOptionForCandidate(item);
-  const posture = String(
-    (option && option.runtime_release_posture) || (item && item.canonical_runtime_release_posture) || ""
-  )
-    .trim()
-    .toLowerCase();
+  const posture = candidateCognitionRuntimeReleasePostureKey(item);
   if (uiLanguage === "zh") {
     if (posture === "hold") {
       return "已复核当前 superseded lineage posture，并明确重新论证并存后批准 runtime release。";
@@ -6396,6 +6427,13 @@ if (reviewSourceFilter) {
 if (reviewAgeFilter) {
   reviewAgeFilter.addEventListener("change", () => {
     reviewFilterState.age = reviewAgeFilter.value || "all";
+    rerenderReviewInbox();
+  });
+}
+
+if (reviewRuntimePostureFilter) {
+  reviewRuntimePostureFilter.addEventListener("change", () => {
+    reviewFilterState.posture = reviewRuntimePostureFilter.value || "all";
     rerenderReviewInbox();
   });
 }
