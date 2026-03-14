@@ -174,6 +174,7 @@ Keep rollout evolutionary: preserve existing extraction/distillation pipelines a
   - cognition lineage viewing now surfaces current relation-to-parent metadata, so canonical schema and parent schema are shown as readable lineage relations instead of raw IDs alone
   - cognition lineage viewing now also derives current governance state for existing schemas (`current`, `superseded`, `narrowed`, `alongside`) from active child revisions
   - Audit now exposes a focused cognition-lineage review list that shows only non-`current` schemas as an owner-facing governance queue
+  - those lineage-review rows now open support detail directly, so schema-level governance states are inspectable without going through candidate detail first
   - after canonicalization, `cognition_revision` may now be explicitly marked runtime-eligible through the existing runtime release path
 - Kept intentionally minimal:
   - only `cognition_revision`

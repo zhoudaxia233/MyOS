@@ -423,6 +423,7 @@ const I18N = {
     trace_cognition_lineage_review: "认知 lineage 治理状态",
     trace_cognition_lineage_review_desc:
       "这里只显示当前已不再是 current 的 canonical schemas（superseded / narrowed / alongside）。",
+    judgment_detail_subject_cognition_lineage: "认知 lineage 详情",
     trace_owner_todos: "待办",
     trace_learning_lifecycle: "学习生命周期",
     trace_learning_lifecycle_note:
@@ -489,6 +490,10 @@ const I18N = {
     candidate_detail_lineage_justification: "Lineage 理由",
     candidate_detail_parent_effect: "Parent 效力",
     candidate_detail_parent_schema: "父 schema",
+    candidate_detail_governance_state: "治理状态",
+    candidate_detail_affected_by: "作用来源",
+    candidate_detail_lineage_relation: "Lineage 关系",
+    candidate_detail_schema_summary: "Schema 摘要",
     candidate_detail_runtime: "运行时状态",
     candidate_detail_runtime_eligibility: "运行资格",
     candidate_detail_runtime_scope: "运行范围",
@@ -910,6 +915,7 @@ const I18N = {
     trace_cognition_lineage_review: "Cognition Lineage Review",
     trace_cognition_lineage_review_desc:
       "Only canonical schemas whose derived governance state is no longer current appear here.",
+    judgment_detail_subject_cognition_lineage: "Cognition Lineage Detail",
     trace_owner_todos: "Owner Todos",
     trace_learning_lifecycle: "Learning Lifecycle",
     trace_learning_lifecycle_note:
@@ -976,6 +982,10 @@ const I18N = {
     candidate_detail_lineage_justification: "Lineage Justification",
     candidate_detail_parent_effect: "Parent Effect",
     candidate_detail_parent_schema: "Parent Schema",
+    candidate_detail_governance_state: "Governance State",
+    candidate_detail_affected_by: "Affected By",
+    candidate_detail_lineage_relation: "Lineage Relation",
+    candidate_detail_schema_summary: "Schema Summary",
     candidate_detail_runtime: "Runtime Status",
     candidate_detail_runtime_eligibility: "Runtime Eligibility",
     candidate_detail_runtime_scope: "Runtime Scope",
@@ -1274,6 +1284,18 @@ function refreshAuditUiSnapshot(data) {
     const item = findLearningCandidateItem(auditSupportTarget.id);
     if (item) {
       renderLearningSupportDetail(item);
+    } else {
+      syncAuditSupportSelection(null, null);
+      renderSuggestionDetailEmpty();
+      latestOutputPath = null;
+      latestOutputProvider = null;
+      setPreview("-");
+      setOutputTokenMeta("-");
+    }
+  } else if (auditSupportTarget.kind === "cognition_schema" && auditSupportTarget.id) {
+    const option = findCognitionSchemaOption(auditSupportTarget.id);
+    if (option) {
+      renderCognitionSchemaSupportDetail(option);
     } else {
       syncAuditSupportSelection(null, null);
       renderSuggestionDetailEmpty();
@@ -2758,12 +2780,25 @@ function setLanguage(lang) {
   renderReviewInboxSummary();
   renderLearningCandidates(auditUiSnapshot.learning_candidates);
   renderOwnerTodos(auditUiSnapshot.owner_todos);
+  renderCognitionLineageReview(auditUiSnapshot.cognition_schema_options);
   if (auditSupportTarget.kind === "suggestion" && auditSupportTarget.id) {
     void loadSuggestionDetail(auditSupportTarget.id);
   } else if (auditSupportTarget.kind === "learning" && auditSupportTarget.id) {
     const item = findLearningCandidateItem(auditSupportTarget.id);
     if (item) {
       renderLearningSupportDetail(item);
+    } else {
+      syncAuditSupportSelection(null, null);
+      renderSuggestionDetailEmpty();
+      latestOutputPath = null;
+      latestOutputProvider = null;
+      setPreview("-");
+      setOutputTokenMeta("-");
+    }
+  } else if (auditSupportTarget.kind === "cognition_schema" && auditSupportTarget.id) {
+    const option = findCognitionSchemaOption(auditSupportTarget.id);
+    if (option) {
+      renderCognitionSchemaSupportDetail(option);
     } else {
       syncAuditSupportSelection(null, null);
       renderSuggestionDetailEmpty();
@@ -2967,6 +3002,10 @@ function renderCognitionLineageReview(options) {
   for (const item of rows) {
     const wrap = document.createElement("div");
     wrap.className = "todo-item learning-candidate-card";
+    const schemaId = String(item.id || "").trim();
+    if (auditSupportTarget.kind === "cognition_schema" && schemaId && schemaId === String(auditSupportTarget.id || "").trim()) {
+      wrap.dataset.selected = "true";
+    }
 
     const head = document.createElement("div");
     head.className = "todo-head";
@@ -3001,6 +3040,17 @@ function renderCognitionLineageReview(options) {
     wrap.appendChild(head);
     wrap.appendChild(action);
     wrap.appendChild(meta);
+    const actions = document.createElement("div");
+    actions.className = "todo-actions";
+    const btn = document.createElement("button");
+    btn.className = "todo-resolve-btn";
+    btn.type = "button";
+    btn.textContent = t("audit_timeline_open_detail");
+    btn.addEventListener("click", () => {
+      focusCognitionSchemaReview(schemaId);
+    });
+    actions.appendChild(btn);
+    wrap.appendChild(actions);
     cognitionLineageReview.appendChild(wrap);
   }
 }
@@ -3829,6 +3879,7 @@ function syncAuditSupportSelection(kind = null, id = null) {
     kind: kind ? String(kind).trim() : null,
     id: id ? String(id).trim() : null,
   };
+  renderCognitionLineageReview(auditUiSnapshot.cognition_schema_options);
   renderSuggestionReviewQueue(auditUiSnapshot.suggestion_review_queue);
   renderAuditTimeline();
 }
@@ -3864,6 +3915,26 @@ function appendSuggestionDetailSection(container, labelKey, value) {
   const label = document.createElement("div");
   label.className = "suggestion-detail-label";
   label.textContent = t(labelKey);
+
+  const body = document.createElement("div");
+  body.className = "suggestion-detail-value";
+  body.textContent = String(value);
+
+  section.appendChild(label);
+  section.appendChild(body);
+  container.appendChild(section);
+}
+
+function appendSuggestionDetailTextSection(container, labelText, value) {
+  if (!container || value === null || value === undefined || value === "") {
+    return;
+  }
+  const section = document.createElement("div");
+  section.className = "suggestion-detail-section";
+
+  const label = document.createElement("div");
+  label.className = "suggestion-detail-label";
+  label.textContent = String(labelText || "-");
 
   const body = document.createElement("div");
   body.className = "suggestion-detail-value";
@@ -4174,6 +4245,129 @@ function renderLearningSupportDetail(item, options = {}) {
     appendSuggestionDetailSection(suggestionDetailCard, "candidate_detail_runtime", candidateRuntimeDetail(item));
     appendSuggestionDetailSection(suggestionDetailCard, "detail_snapshot_summary", buildSnapshotSummaryText(item));
     appendSuggestionDetailSection(suggestionDetailCard, "judgment_detail_next", lifecycleNextAction(item));
+  }
+
+  latestOutputPath = null;
+  latestOutputProvider = null;
+  setPreview("-");
+  setOutputTokenMeta("-");
+  setSuggestionReviewEnabled(false);
+  if (options && options.openSupport) {
+    revealAuditJudgmentDetail();
+  }
+}
+
+function focusCognitionSchemaReview(schemaVersionId) {
+  const option = findCognitionSchemaOption(schemaVersionId);
+  if (!option) {
+    syncAuditSupportSelection(null, null);
+    renderSuggestionDetailEmpty();
+    latestOutputPath = null;
+    latestOutputProvider = null;
+    setPreview("-");
+    setOutputTokenMeta("-");
+    return;
+  }
+  renderCognitionSchemaSupportDetail(option, { openSupport: true });
+}
+
+function renderCognitionSchemaSupportDetail(option, options = {}) {
+  if (!option || typeof option !== "object") {
+    renderSuggestionDetailEmpty();
+    latestOutputPath = null;
+    latestOutputProvider = null;
+    setPreview("-");
+    setOutputTokenMeta("-");
+    return;
+  }
+
+  const schemaId = String(option.id || "").trim();
+  if (!schemaId) {
+    renderSuggestionDetailEmpty();
+    latestOutputPath = null;
+    latestOutputProvider = null;
+    setPreview("-");
+    setOutputTokenMeta("-");
+    return;
+  }
+
+  syncAuditSupportSelection("cognition_schema", schemaId);
+  setAuditSupportSubject(
+    "",
+    `${t("judgment_detail_subject_cognition_lineage")}: ${String(option.schema_name || option.topic || schemaId)}`
+  );
+  setAuditSupportRawVisible(true);
+  setAuditSupportActionsVisible(false);
+  suggestionTrace.textContent = JSON.stringify(option, null, 2);
+
+  if (suggestionDetailCard) {
+    suggestionDetailCard.innerHTML = "";
+
+    const meta = document.createElement("div");
+    meta.className = "suggestion-detail-meta";
+
+    const stateChip = document.createElement("span");
+    stateChip.className = "suggestion-detail-chip";
+    stateChip.textContent = `${uiLanguage === "zh" ? "治理状态" : "Governance State"}: ${cognitionSchemaAuthorityStateLabel(option)}`;
+    meta.appendChild(stateChip);
+
+    const relationChip = document.createElement("span");
+    relationChip.className = "suggestion-detail-chip";
+    relationChip.textContent = `${uiLanguage === "zh" ? "关系" : "Relation"}: ${cognitionSchemaLineageRelationText(option)}`;
+    meta.appendChild(relationChip);
+
+    suggestionDetailCard.appendChild(meta);
+    appendSuggestionDetailSection(
+      suggestionDetailCard,
+      "candidate_detail_canonical_schema",
+      formatCognitionSchemaReference(option.id)
+    );
+    appendSuggestionDetailSection(
+      suggestionDetailCard,
+      "candidate_detail_parent_schema",
+      formatCognitionSchemaReference(option.parent_schema_version_id)
+    );
+    appendSuggestionDetailSection(
+      suggestionDetailCard,
+      "candidate_detail_canonical_mode",
+      option.canonicalization_mode || "-"
+    );
+    appendSuggestionDetailSection(
+      suggestionDetailCard,
+      "candidate_detail_revision_type",
+      option.revision_type || "-"
+    );
+    appendSuggestionDetailSection(
+      suggestionDetailCard,
+      "candidate_detail_parent_effect",
+      option.parent_effect || "-"
+    );
+    appendSuggestionDetailSection(
+      suggestionDetailCard,
+      "candidate_detail_lineage_justification",
+      option.lineage_justification || "-"
+    );
+    appendSuggestionDetailSection(
+      suggestionDetailCard,
+      "candidate_detail_governance_state",
+      cognitionSchemaAuthorityStateText(option)
+    );
+    appendSuggestionDetailSection(
+      suggestionDetailCard,
+      "candidate_detail_schema_summary",
+      option.summary || option.topic || "-"
+    );
+    appendSuggestionDetailSection(
+      suggestionDetailCard,
+      "candidate_detail_affected_by",
+      formatCognitionSchemaReference(option.authority_state_target_schema_version_id)
+    );
+    appendSuggestionDetailSection(
+      suggestionDetailCard,
+      "candidate_detail_lineage_relation",
+      option.authority_state_relation || cognitionSchemaLineageRelationText(option)
+    );
+    appendSuggestionDetailSection(suggestionDetailCard, "detail_snapshot_summary", buildSnapshotSummaryText(option));
   }
 
   latestOutputPath = null;
