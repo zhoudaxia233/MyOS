@@ -854,6 +854,8 @@ def test_cognition_revision_can_be_runtime_eligible_after_canonicalization() -> 
         assert matched["canonical_lineage_justification"] is None
         assert matched["canonical_parent_effect"] is None
         assert matched["canonical_parent_schema_version_id"] is None
+        assert matched["canonical_runtime_release_posture"] == "clear"
+        assert matched["canonical_runtime_release_note"].startswith("Lineage state does not block runtime release")
 
 
 def test_summarize_learning_pipeline_includes_promotion_readiness() -> None:

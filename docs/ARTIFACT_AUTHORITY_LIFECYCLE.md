@@ -445,11 +445,14 @@ The repo now has a third explicit Class C ratification path for `cognition_revis
     - Audit now exposes a small cognition-lineage review list for non-`current` schemas, so these derived states are visible without opening candidate detail or parent selection first
     - each item in that lineage review list can now open support detail directly, so owner can inspect schema-level lineage state without routing through a learning candidate first
     - schema support detail and lineage review now also derive a runtime-release posture from that governance state:
-      - `superseded` -> `hold`
-      - `narrowed` -> `review_scope`
-      - `alongside` -> `review_coexistence`
-      - otherwise `clear`
+    - `superseded` -> `hold`
+    - `narrowed` -> `review_scope`
+    - `alongside` -> `review_coexistence`
+    - otherwise `clear`
     - this runtime-release posture is owner guidance only and does not auto-release or auto-revoke runtime authority
+    - owner runtime-release review now also surfaces that posture at the release decision point for canonicalized cognition candidates:
+      - the release modal shows posture + guidance before explicit authorization
+      - candidate detail also carries that posture so release judgment is not detached from lineage state
 - the UI guides the owner toward the right choice, but still does not infer `seed` vs `revision`
 - what remains deferred:
   - candidate-taxonomy split between schema-seed vs schema-revision artifacts

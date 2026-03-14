@@ -9,7 +9,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
-from cognition_authority import cognition_revision_ratification_map
+from cognition_authority import cognition_revision_ratification_map, list_cognition_schema_options
 from idgen import next_id_for_rel_path
 from learning_ingest import ingest_learning_text
 from profile_authority import profile_trait_ratification_map
@@ -1289,6 +1289,11 @@ def list_recent_learning_candidates(
     verdict_map = _active_verdict_map(repo_root)
     promotion_map = _active_promotion_map(repo_root)
     cognition_revision_ratifications = cognition_revision_ratification_map(repo_root)
+    cognition_schema_options = {
+        str(row.get("id", "")).strip(): row
+        for row in list_cognition_schema_options(repo_root)
+        if str(row.get("id", "")).strip()
+    }
     profile_trait_ratifications = profile_trait_ratification_map(repo_root)
     principle_ratifications = principle_ratification_map(repo_root)
     now = datetime.now(timezone.utc)
@@ -1317,6 +1322,9 @@ def list_recent_learning_candidates(
         verdict_row = verdict_map.get(candidate_id)
         promotion_row = promotion_map.get(candidate_id)
         cognition_revision_ratification = cognition_revision_ratifications.get(candidate_id)
+        cognition_schema_option = cognition_schema_options.get(
+            str((cognition_revision_ratification or {}).get("schema_version_id", "")).strip()
+        )
         profile_trait_ratification = profile_trait_ratifications.get(candidate_id)
         principle_ratification = principle_ratifications.get(candidate_id)
         canonicalization = principle_ratification or profile_trait_ratification or cognition_revision_ratification
@@ -1431,6 +1439,18 @@ def list_recent_learning_candidates(
             "canonical_parent_schema_version_id": (
                 str((cognition_revision_ratification or {}).get("parent_schema_version_id")).strip()
                 if (cognition_revision_ratification or {}).get("parent_schema_version_id") is not None
+                else ""
+            )
+            or None,
+            "canonical_runtime_release_posture": (
+                str((cognition_schema_option or {}).get("runtime_release_posture", "")).strip()
+                if cognition_schema_option
+                else ""
+            )
+            or None,
+            "canonical_runtime_release_note": (
+                str((cognition_schema_option or {}).get("runtime_release_note", "")).strip()
+                if cognition_schema_option
                 else ""
             )
             or None,

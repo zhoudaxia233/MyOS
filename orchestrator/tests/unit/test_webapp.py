@@ -1099,6 +1099,8 @@ def test_api_action_ratifies_promoted_cognition_revision_into_explicit_revision(
         assert matched["canonical_parent_effect"] == "supersede"
         assert matched["canonical_parent_schema_version_id"] == parent_schema_version_id
         assert matched["canonical_schema_version_id"] == ratify_result["canonical_schema_version_id"]
+        assert matched["canonical_runtime_release_posture"] == "clear"
+        assert matched["canonical_runtime_release_note"].startswith("Lineage state does not block runtime release")
 
 
 def test_api_action_rejects_cognition_revision_without_parent_in_revision_mode() -> None:

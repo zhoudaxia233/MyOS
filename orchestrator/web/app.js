@@ -1822,6 +1822,111 @@ function cognitionSchemaRuntimeReleaseGuidanceText(option) {
   return "Lineage state does not block runtime release, but explicit owner release is still required.";
 }
 
+function cognitionRuntimeReleaseOptionForCandidate(item) {
+  const schemaVersionId = String((item && item.canonical_schema_version_id) || "").trim();
+  if (!schemaVersionId) {
+    return null;
+  }
+  return findCognitionSchemaOption(schemaVersionId);
+}
+
+function candidateCognitionRuntimeReleasePostureLabel(item) {
+  const option = cognitionRuntimeReleaseOptionForCandidate(item);
+  if (option) {
+    return cognitionSchemaRuntimeReleasePostureLabel(option);
+  }
+  const posture = String((item && item.canonical_runtime_release_posture) || "").trim().toLowerCase();
+  if (!posture) {
+    return "-";
+  }
+  return cognitionSchemaRuntimeReleasePostureLabel({ runtime_release_posture: posture });
+}
+
+function candidateCognitionRuntimeReleaseGuidanceText(item) {
+  const option = cognitionRuntimeReleaseOptionForCandidate(item);
+  if (option) {
+    return cognitionSchemaRuntimeReleaseGuidanceText(option);
+  }
+  return String((item && item.canonical_runtime_release_note) || "").trim() || "-";
+}
+
+function runtimeEligibilityDefaultNote(item) {
+  const candidateType = String((item && item.candidate_type) || "").trim().toLowerCase();
+  if (candidateType !== "cognition_revision" || !String((item && item.canonical_schema_version_id) || "").trim()) {
+    return uiLanguage === "zh"
+      ? "批准该条目进入 runtime eligibility，并接受当前边界。"
+      : "Authorize runtime eligibility under current boundaries.";
+  }
+  const option = cognitionRuntimeReleaseOptionForCandidate(item);
+  const posture = String(
+    (option && option.runtime_release_posture) || (item && item.canonical_runtime_release_posture) || ""
+  )
+    .trim()
+    .toLowerCase();
+  if (uiLanguage === "zh") {
+    if (posture === "hold") {
+      return "已复核当前 superseded lineage posture，并明确重新论证并存后批准 runtime release。";
+    }
+    if (posture === "review_scope") {
+      return "已复核当前 narrowed lineage posture，并按明确边界批准 runtime release。";
+    }
+    if (posture === "review_coexistence") {
+      return "已复核当前 alongside lineage posture，并明确批准新旧 schema 并存进入 runtime。";
+    }
+    return "已复核当前 canonical schema 的 lineage posture 为 clear，批准进入 runtime eligibility。";
+  }
+  if (posture === "hold") {
+    return "Reviewed the superseded lineage posture and explicitly re-justified coexistence before runtime release.";
+  }
+  if (posture === "review_scope") {
+    return "Reviewed the narrowed lineage posture and authorized runtime release within explicit scope boundaries.";
+  }
+  if (posture === "review_coexistence") {
+    return "Reviewed the alongside lineage posture and explicitly authorized concurrent runtime release.";
+  }
+  return "Reviewed the canonical schema lineage posture as clear and authorized runtime eligibility.";
+}
+
+function renderRuntimeReleaseGuidanceBlock(item) {
+  if (!learningReviewGuidance) {
+    return;
+  }
+  learningReviewGuidance.innerHTML = "";
+  const option = cognitionRuntimeReleaseOptionForCandidate(item);
+  const candidateType = String((item && item.candidate_type) || "").trim().toLowerCase();
+  const schemaVersionId = String((item && item.canonical_schema_version_id) || "").trim();
+  if (candidateType !== "cognition_revision" || !schemaVersionId) {
+    return;
+  }
+  const title = document.createElement("strong");
+  title.textContent =
+    uiLanguage === "zh" ? "Cognition Runtime Release 审核提示" : "Cognition Runtime Release Review Guidance";
+  learningReviewGuidance.appendChild(title);
+
+  const facts = document.createElement("ul");
+  const rows = [
+    `${t("candidate_detail_canonical_schema")}: ${schemaVersionId}`,
+    `${t("candidate_detail_runtime_release_posture")}: ${candidateCognitionRuntimeReleasePostureLabel(item)}`,
+    option ? `${t("candidate_detail_governance_state")}: ${cognitionSchemaAuthorityStateText(option)}` : "",
+    option ? `${t("candidate_detail_lineage_relation")}: ${cognitionSchemaLineageRelationText(option)}` : "",
+    `${t("candidate_detail_runtime_release_guidance")}: ${candidateCognitionRuntimeReleaseGuidanceText(item)}`,
+  ].filter(Boolean);
+  for (const row of rows) {
+    const li = document.createElement("li");
+    li.textContent = row;
+    facts.appendChild(li);
+  }
+  learningReviewGuidance.appendChild(facts);
+
+  const footer = document.createElement("p");
+  footer.className = "helper-note";
+  footer.textContent =
+    uiLanguage === "zh"
+      ? "这层 posture 只提供授权判断提示，不会替你自动放行或撤销 runtime authority。"
+      : "This posture only guides the release judgment; it does not auto-release or auto-revoke runtime authority.";
+  learningReviewGuidance.appendChild(footer);
+}
+
 function formatCognitionSchemaOptionLabel(option) {
   const id = String((option && option.id) || "-").trim() || "-";
   const title = String((option && (option.schema_name || option.topic || option.id)) || "-").trim() || "-";
@@ -1960,18 +2065,26 @@ function updateLearningReviewRevisionSubmitState() {
   learningReviewSubmit.disabled = !(hasParent && hasRevisionType && (!requiresParentEffect || hasParentEffect));
 }
 
-function renderLearningReviewGuidance(verdict) {
+function renderLearningReviewGuidance(item, verdict) {
   if (!learningReviewGuidance) {
     return;
   }
   const isCognitionRatification =
     verdict === "ratify_cognition_seed" || verdict === "ratify_cognition_revision";
-  learningReviewGuidance.hidden = !isCognitionRatification;
-  if (!isCognitionRatification) {
+  const isCognitionRuntimeRelease =
+    verdict === "runtime_eligible" &&
+    String((item && item.candidate_type) || "").trim().toLowerCase() === "cognition_revision" &&
+    String((item && item.canonical_schema_version_id) || "").trim();
+  learningReviewGuidance.hidden = !(isCognitionRatification || isCognitionRuntimeRelease);
+  if (!isCognitionRatification && !isCognitionRuntimeRelease) {
     learningReviewGuidance.innerHTML = "";
     return;
   }
-  learningReviewGuidance.innerHTML = cognitionGuidanceHtml(verdict);
+  if (isCognitionRatification) {
+    learningReviewGuidance.innerHTML = cognitionGuidanceHtml(verdict);
+    return;
+  }
+  renderRuntimeReleaseGuidanceBlock(item);
 }
 
 function populateLearningReviewParentOptions(selectedId = "") {
@@ -2141,8 +2254,8 @@ function syncLearningReviewParentEffectControls(revisionType, selectedEffect = "
   );
 }
 
-function configureLearningReviewCognitionControls(verdict) {
-  renderLearningReviewGuidance(verdict);
+function configureLearningReviewCognitionControls(item, verdict) {
+  renderLearningReviewGuidance(item, verdict);
   if (!learningReviewParentWrap || !learningReviewSubmit) {
     return;
   }
@@ -3339,6 +3452,15 @@ function buildCandidateContext(item) {
     [t("candidate_detail_runtime_note"), (item && item.runtime_change_note) || "-"],
     [t("candidate_detail_runtime"), candidateRuntimeDetail(item)],
   ];
+  if (String((item && item.candidate_type) || "").trim().toLowerCase() === "cognition_revision" &&
+      String((item && item.canonical_schema_version_id) || "").trim()) {
+    sections.splice(
+      13,
+      0,
+      [t("candidate_detail_runtime_release_posture"), candidateCognitionRuntimeReleasePostureLabel(item)],
+      [t("candidate_detail_runtime_release_guidance"), candidateCognitionRuntimeReleaseGuidanceText(item)]
+    );
+  }
 
   for (const [labelText, valueText] of sections) {
     const value = document.createElement("div");
@@ -4269,6 +4391,21 @@ function renderLearningSupportDetail(item, options = {}) {
       "candidate_detail_parent_schema",
       formatCognitionSchemaReference(item.canonical_parent_schema_version_id)
     );
+    if (
+      String((item && item.candidate_type) || "").trim().toLowerCase() === "cognition_revision" &&
+      String((item && item.canonical_schema_version_id) || "").trim()
+    ) {
+      appendSuggestionDetailSection(
+        suggestionDetailCard,
+        "candidate_detail_runtime_release_posture",
+        candidateCognitionRuntimeReleasePostureLabel(item)
+      );
+      appendSuggestionDetailSection(
+        suggestionDetailCard,
+        "candidate_detail_runtime_release_guidance",
+        candidateCognitionRuntimeReleaseGuidanceText(item)
+      );
+    }
     appendSuggestionDetailSection(
       suggestionDetailCard,
       "candidate_detail_runtime_eligibility",
@@ -5098,8 +5235,7 @@ function openLearningReviewModal(item, mode) {
       uiLanguage === "zh"
         ? "批准把该 cognition 候选作为 revision 写入 schema lineage。revision 必须显式提供 parent、说明为什么它属于该 lineage，并显式选择 revision 类型；若类型是 replace / weaken，还必须说明它对 parent 的效力关系。系统不会自动降级为 seed。"
         : "Approve writing this cognition candidate as a revision into schema lineage. Revision requires an explicit parent, lineage justification, and explicit revision type; replace/weaken must also state the parent effect. It will not silently downgrade into seed.",
-    runtime_eligible:
-      uiLanguage === "zh" ? "批准该条目进入 runtime eligibility，并接受当前边界。" : "Authorize runtime eligibility under current boundaries.",
+    runtime_eligible: runtimeEligibilityDefaultNote(item),
     runtime_hold:
       uiLanguage === "zh" ? "暂不允许该条目影响 runtime，先保留观察。" : "Keep this artifact out of runtime influence for now.",
     runtime_revoke:
@@ -5109,7 +5245,7 @@ function openLearningReviewModal(item, mode) {
   const needsStatement = verdict === "modify";
   learningReviewStatementWrap.hidden = !needsStatement;
   learningReviewStatement.value = needsStatement ? learningReviewDraft.statement : "";
-  configureLearningReviewCognitionControls(verdict);
+  configureLearningReviewCognitionControls(item, verdict);
   learningReviewModal.classList.remove("hidden");
   learningReviewNote.focus();
 }
