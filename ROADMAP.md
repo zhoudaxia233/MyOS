@@ -175,6 +175,12 @@ Keep rollout evolutionary: preserve existing extraction/distillation pipelines a
   - cognition lineage viewing now also derives current governance state for existing schemas (`current`, `superseded`, `narrowed`, `alongside`) from active child revisions
   - Audit now exposes a focused cognition-lineage review list that shows only non-`current` schemas as an owner-facing governance queue
   - those lineage-review rows now open support detail directly, so schema-level governance states are inspectable without going through candidate detail first
+  - cognition lineage review and support detail now also derive an owner-facing runtime-release posture from governance state:
+    - `superseded` -> `hold`
+    - `narrowed` -> `review_scope`
+    - `alongside` -> `review_coexistence`
+    - `current` -> `clear`
+  - this is runtime guidance only; it does not change runtime policy or auto-release authority
   - after canonicalization, `cognition_revision` may now be explicitly marked runtime-eligible through the existing runtime release path
 - Kept intentionally minimal:
   - only `cognition_revision`
@@ -185,7 +191,7 @@ Keep rollout evolutionary: preserve existing extraction/distillation pipelines a
   - no broader cognition event ontology; `parent_effect` is still encoded inside the narrow existing revision audit path
   - no automatic runtime eligibility expansion for Class C artifacts
 - Next continuation slice:
-  - tighten typed edit/supersession paths for already-canonical cognition lineage
+  - make runtime-release posture more actionable inside owner release review without changing runtime policy semantics
   - then decide whether to introduce a separate upstream candidate taxonomy for schema seed vs schema revision
 
 #### Immediate Priority - Perceivable MVP Flow (2026-03-09)

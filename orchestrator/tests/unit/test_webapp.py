@@ -1084,12 +1084,14 @@ def test_api_action_ratifies_promoted_cognition_revision_into_explicit_revision(
         assert schema_option["parent_effect"] == "supersede"
         assert schema_option["lineage_relation"] == "replace->supersede"
         assert schema_option["current_authority_state"] == "current"
+        assert schema_option["runtime_release_posture"] == "clear"
         parent_option = next(
             item for item in ratify_result["cognition_schema_options"] if item.get("id") == parent_schema_version_id
         )
         assert parent_option["current_authority_state"] == "superseded"
         assert parent_option["authority_state_target_schema_version_id"] == ratify_result["canonical_schema_version_id"]
         assert parent_option["authority_state_relation"] == "replace->supersede"
+        assert parent_option["runtime_release_posture"] == "hold"
 
         matched = next(item for item in ratify_result["learning_candidates"] if item["id"] == candidate_id)
         assert matched["lifecycle_stage"] == "canonicalized"

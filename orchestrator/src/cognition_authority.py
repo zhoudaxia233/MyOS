@@ -205,6 +205,36 @@ def _schema_version_by_id(repo_root: Path, schema_version_id: str | None) -> dic
     return None
 
 
+def _derive_runtime_release_posture(
+    *,
+    current_authority_state: str | None,
+    authority_state_target_schema_version_id: str | None,
+    authority_state_relation: str | None,
+) -> dict[str, str]:
+    state = str(current_authority_state or "current").strip().lower() or "current"
+    target = _optional_text(authority_state_target_schema_version_id)
+    relation = _optional_text(authority_state_relation)
+    if state == "superseded":
+        note = "Superseded schemas should stay on hold for runtime release unless the owner explicitly re-justifies coexistence."
+        if target:
+            note = f"Superseded by {target}; keep runtime release on hold unless coexistence is re-justified."
+        return {"runtime_release_posture": "hold", "runtime_release_note": note}
+    if state == "narrowed":
+        note = "Narrowed schemas need scope review before runtime release."
+        if target and relation:
+            note = f"Narrowed by {target} via {relation}; review scope before runtime release."
+        return {"runtime_release_posture": "review_scope", "runtime_release_note": note}
+    if state == "alongside":
+        note = "Alongside schemas need coexistence review before runtime release."
+        if target and relation:
+            note = f"Alongside {target} via {relation}; release only if concurrent runtime authority is intended."
+        return {"runtime_release_posture": "review_coexistence", "runtime_release_note": note}
+    return {
+        "runtime_release_posture": "clear",
+        "runtime_release_note": "Lineage state does not block runtime release, but explicit owner release is still required.",
+    }
+
+
 def list_cognition_schema_options(repo_root: Path) -> list[dict[str, Any]]:
     def sort_key(row: dict[str, Any]) -> tuple[str, str]:
         created_at = _optional_text(row.get("created_at")) or ""
@@ -281,6 +311,13 @@ def list_cognition_schema_options(repo_root: Path) -> list[dict[str, Any]]:
         else:
             canonicalization_mode = "revision"
             lineage_relation = "revision"
+        runtime_release = _derive_runtime_release_posture(
+            current_authority_state=_optional_text(authority_meta.get("current_authority_state")) or "current",
+            authority_state_target_schema_version_id=_optional_text(
+                authority_meta.get("authority_state_target_schema_version_id")
+            ),
+            authority_state_relation=_optional_text(authority_meta.get("authority_state_relation")),
+        )
         options.append(
             {
                 "id": option_id,
@@ -304,6 +341,8 @@ def list_cognition_schema_options(repo_root: Path) -> list[dict[str, Any]]:
                 "authority_state_relation": _optional_text(authority_meta.get("authority_state_relation")),
                 "authority_state_revision_type": _optional_text(authority_meta.get("authority_state_revision_type")),
                 "authority_state_parent_effect": _optional_text(authority_meta.get("authority_state_parent_effect")),
+                "runtime_release_posture": str(runtime_release.get("runtime_release_posture", "")).strip() or "clear",
+                "runtime_release_note": str(runtime_release.get("runtime_release_note", "")).strip() or None,
             }
         )
     return options

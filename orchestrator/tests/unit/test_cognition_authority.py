@@ -726,6 +726,7 @@ def test_list_cognition_schema_options_exposes_parent_context() -> None:
         assert options[0]["parent_effect"] == "supersede"
         assert options[0]["lineage_relation"] == "replace->supersede"
         assert options[0]["current_authority_state"] == "current"
+        assert options[0]["runtime_release_posture"] == "clear"
         assert options[0]["parent_schema_version_id"] == "sv_20260314_001"
         assert options[1]["lineage_role"] == "root"
         assert options[1]["canonicalization_mode"] == "seed"
@@ -733,20 +734,22 @@ def test_list_cognition_schema_options_exposes_parent_context() -> None:
         assert options[1]["current_authority_state"] == "superseded"
         assert options[1]["authority_state_target_schema_version_id"] == "sv_20260314_002"
         assert options[1]["authority_state_relation"] == "replace->supersede"
+        assert options[1]["runtime_release_posture"] == "hold"
         assert options[1]["parent_schema_version_id"] is None
 
 
 @pytest.mark.parametrize(
-    ("parent_effect", "expected_state"),
+    ("parent_effect", "expected_state", "expected_posture"),
     [
-        ("supersede", "superseded"),
-        ("narrow", "narrowed"),
-        ("keep-alongside", "alongside"),
+        ("supersede", "superseded", "hold"),
+        ("narrow", "narrowed", "review_scope"),
+        ("keep-alongside", "alongside", "review_coexistence"),
     ],
 )
 def test_list_cognition_schema_options_derives_current_authority_state_from_child_effect(
     parent_effect: str,
     expected_state: str,
+    expected_posture: str,
 ) -> None:
     with TemporaryDirectory() as td:
         root = Path(td)
@@ -816,3 +819,4 @@ def test_list_cognition_schema_options_derives_current_authority_state_from_chil
         parent_option = next(item for item in options if item["id"] == "sv_parent")
         assert parent_option["current_authority_state"] == expected_state
         assert parent_option["authority_state_target_schema_version_id"] == "sv_child"
+        assert parent_option["runtime_release_posture"] == expected_posture

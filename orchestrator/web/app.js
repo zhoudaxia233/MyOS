@@ -490,6 +490,8 @@ const I18N = {
     candidate_detail_lineage_justification: "Lineage 理由",
     candidate_detail_parent_effect: "Parent 效力",
     candidate_detail_parent_schema: "父 schema",
+    candidate_detail_runtime_release_posture: "Runtime Release 姿态",
+    candidate_detail_runtime_release_guidance: "Runtime Release 提示",
     candidate_detail_governance_state: "治理状态",
     candidate_detail_affected_by: "作用来源",
     candidate_detail_lineage_relation: "Lineage 关系",
@@ -982,6 +984,8 @@ const I18N = {
     candidate_detail_lineage_justification: "Lineage Justification",
     candidate_detail_parent_effect: "Parent Effect",
     candidate_detail_parent_schema: "Parent Schema",
+    candidate_detail_runtime_release_posture: "Runtime Release Posture",
+    candidate_detail_runtime_release_guidance: "Runtime Release Guidance",
     candidate_detail_governance_state: "Governance State",
     candidate_detail_affected_by: "Affected By",
     candidate_detail_lineage_relation: "Lineage Relation",
@@ -1774,6 +1778,48 @@ function cognitionSchemaAuthorityStateLabel(option) {
     alongside: "alongside",
   };
   return map[state] || state;
+}
+
+function cognitionSchemaRuntimeReleasePostureLabel(option) {
+  const posture = String((option && option.runtime_release_posture) || "").trim().toLowerCase() || "clear";
+  if (uiLanguage !== "zh") {
+    return posture;
+  }
+  const map = {
+    clear: "clear",
+    hold: "hold",
+    review_scope: "review_scope",
+    review_coexistence: "review_coexistence",
+  };
+  return map[posture] || posture;
+}
+
+function cognitionSchemaRuntimeReleaseGuidanceText(option) {
+  const posture = String((option && option.runtime_release_posture) || "").trim().toLowerCase() || "clear";
+  const target = formatCognitionSchemaReference(option && option.authority_state_target_schema_version_id);
+  const relation = String((option && option.authority_state_relation) || "").trim();
+  if (uiLanguage === "zh") {
+    if (posture === "hold") {
+      return `当前 lineage 已 superseded；在重新论证并存之前，不应继续放行 runtime release。${target && target !== "-" ? `影响来源：${target}` : ""}`;
+    }
+    if (posture === "review_scope") {
+      return `当前 lineage 已 narrowed；若要放行 runtime release，先复核作用范围与边界。${relation ? `关系：${relation}` : ""}`;
+    }
+    if (posture === "review_coexistence") {
+      return `当前 lineage 处于 alongside；只有在你明确要让新旧 schema 并存进入 runtime 时才应放行。${relation ? `关系：${relation}` : ""}`;
+    }
+    return "当前 lineage 本身不阻止 runtime release，但是否放行仍然需要 owner 显式授权。";
+  }
+  if (posture === "hold") {
+    return `This lineage is superseded; keep runtime release on hold unless coexistence is explicitly re-justified.${target && target !== "-" ? ` Source: ${target}.` : ""}`;
+  }
+  if (posture === "review_scope") {
+    return `This lineage is narrowed; review scope and boundaries before runtime release.${relation ? ` Relation: ${relation}.` : ""}`;
+  }
+  if (posture === "review_coexistence") {
+    return `This lineage is alongside another schema; release only if concurrent runtime authority is intentional.${relation ? ` Relation: ${relation}.` : ""}`;
+  }
+  return "Lineage state does not block runtime release, but explicit owner release is still required.";
 }
 
 function formatCognitionSchemaOptionLabel(option) {
@@ -3029,6 +3075,7 @@ function renderCognitionLineageReview(options) {
       `${uiLanguage === "zh" ? "schema" : "schema"}: ${formatCognitionSchemaOptionLabel(item)}`,
       `${uiLanguage === "zh" ? "作用来源" : "Affected by"}: ${affectedBy}`,
       `${uiLanguage === "zh" ? "关系" : "Relation"}: ${String(item.authority_state_relation || "-")}`,
+      `${uiLanguage === "zh" ? "runtime release" : "runtime release"}: ${cognitionSchemaRuntimeReleasePostureLabel(item)}`,
       `${uiLanguage === "zh" ? "摘要" : "Summary"}: ${String(item.summary || "-")}`,
     ];
     for (const text of lines) {
@@ -4351,6 +4398,16 @@ function renderCognitionSchemaSupportDetail(option, options = {}) {
       suggestionDetailCard,
       "candidate_detail_governance_state",
       cognitionSchemaAuthorityStateText(option)
+    );
+    appendSuggestionDetailSection(
+      suggestionDetailCard,
+      "candidate_detail_runtime_release_posture",
+      cognitionSchemaRuntimeReleasePostureLabel(option)
+    );
+    appendSuggestionDetailSection(
+      suggestionDetailCard,
+      "candidate_detail_runtime_release_guidance",
+      cognitionSchemaRuntimeReleaseGuidanceText(option)
     );
     appendSuggestionDetailSection(
       suggestionDetailCard,
