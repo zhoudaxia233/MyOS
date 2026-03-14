@@ -1850,6 +1850,25 @@ function candidateCognitionRuntimeReleaseGuidanceText(item) {
   return String((item && item.canonical_runtime_release_note) || "").trim() || "-";
 }
 
+function candidateHasCognitionRuntimeReleaseContext(item) {
+  return (
+    String((item && item.candidate_type) || "").trim().toLowerCase() === "cognition_revision" &&
+    Boolean(String((item && item.canonical_schema_version_id) || "").trim())
+  );
+}
+
+function candidateRuntimeReleaseQueueNoteText(item) {
+  if (!candidateHasCognitionRuntimeReleaseContext(item)) {
+    return "";
+  }
+  const posture = candidateCognitionRuntimeReleasePostureLabel(item);
+  const guidance = candidateCognitionRuntimeReleaseGuidanceText(item);
+  if (uiLanguage === "zh") {
+    return `运行授权提示：${posture}。${guidance}`;
+  }
+  return `Runtime release cue: ${posture}. ${guidance}`;
+}
+
 function runtimeEligibilityDefaultNote(item) {
   const candidateType = String((item && item.candidate_type) || "").trim().toLowerCase();
   if (candidateType !== "cognition_revision" || !String((item && item.canonical_schema_version_id) || "").trim()) {
@@ -3522,6 +3541,9 @@ function renderCandidateCards(container, items, emptyKey) {
       [t("candidate_label_evidence"), evidence],
       [t("candidate_label_status"), lifecycleNextAction(item)],
     ];
+    if (candidateHasCognitionRuntimeReleaseContext(item)) {
+      rows.push([t("candidate_detail_runtime_release_posture"), candidateCognitionRuntimeReleasePostureLabel(item)]);
+    }
     for (const row of rows) {
       const line = document.createElement("div");
       const label = document.createElement("strong");
@@ -3537,6 +3559,7 @@ function renderCandidateCards(container, items, emptyKey) {
 
     const actions = document.createElement("div");
     actions.className = "todo-actions";
+    let runtimeReleaseQueueNote = "";
 
     if (item.can_review) {
       const acceptBtn = document.createElement("button");
@@ -3622,6 +3645,7 @@ function renderCandidateCards(container, items, emptyKey) {
           openLearningReviewModal(item, "runtime_eligible");
         });
         actions.appendChild(enableBtn);
+        runtimeReleaseQueueNote = candidateRuntimeReleaseQueueNoteText(item);
       }
 
       if (eligibilityStatus !== "holding") {
@@ -3652,6 +3676,12 @@ function renderCandidateCards(container, items, emptyKey) {
     wrap.appendChild(statement);
     wrap.appendChild(meta);
     wrap.appendChild(context);
+    if (runtimeReleaseQueueNote) {
+      const runtimeNote = document.createElement("div");
+      runtimeNote.className = "helper-note";
+      runtimeNote.textContent = runtimeReleaseQueueNote;
+      wrap.appendChild(runtimeNote);
+    }
     wrap.appendChild(actions);
     container.appendChild(wrap);
   }

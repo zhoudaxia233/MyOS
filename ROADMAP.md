@@ -182,6 +182,7 @@ Keep rollout evolutionary: preserve existing extraction/distillation pipelines a
     - `current` -> `clear`
   - this is runtime guidance only; it does not change runtime policy or auto-release authority
   - owner runtime-release review for canonicalized cognition candidates now also surfaces that posture at the authorization step, so release judgment is no longer detached from lineage governance state
+  - the learning-candidate queue now also surfaces that posture inline before opening detail or modal, so runtime release can be triaged directly from the owner queue
   - after canonicalization, `cognition_revision` may now be explicitly marked runtime-eligible through the existing runtime release path
 - Kept intentionally minimal:
   - only `cognition_revision`
@@ -192,7 +193,7 @@ Keep rollout evolutionary: preserve existing extraction/distillation pipelines a
   - no broader cognition event ontology; `parent_effect` is still encoded inside the narrow existing revision audit path
   - no automatic runtime eligibility expansion for Class C artifacts
 - Next continuation slice:
-  - make runtime-release posture visible from the runtime-eligibility queue itself, not only after opening a candidate card
+  - make queue-level runtime-release triage more sortable/filterable for cognition candidates without changing runtime policy semantics
   - then decide whether to introduce a separate upstream candidate taxonomy for schema seed vs schema revision
 
 #### Immediate Priority - Perceivable MVP Flow (2026-03-09)

@@ -453,6 +453,7 @@ The repo now has a third explicit Class C ratification path for `cognition_revis
     - owner runtime-release review now also surfaces that posture at the release decision point for canonicalized cognition candidates:
       - the release modal shows posture + guidance before explicit authorization
       - candidate detail also carries that posture so release judgment is not detached from lineage state
+      - the main learning-candidate queue now also surfaces that posture before opening detail or modal, so runtime-release triage starts at the queue itself
 - the UI guides the owner toward the right choice, but still does not infer `seed` vs `revision`
 - what remains deferred:
   - candidate-taxonomy split between schema-seed vs schema-revision artifacts
