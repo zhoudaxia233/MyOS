@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from idgen import next_id_for_rel_path
+from profile_authority import profile_trait_ratification_map
 from principles_authority import principle_ratification_map
 from validators import append_jsonl
 
@@ -169,6 +170,11 @@ def _guarded_runtime_hold_note(artifact_type: str, *, seeded: bool = False) -> s
 
 def _generic_runtime_release_block_message(artifact_type: str) -> str:
     normalized = str(artifact_type or "").strip() or "artifact"
+    if normalized == "profile_trait":
+        return (
+            "profile_trait cannot be marked runtime-eligible until it is canonicalized through "
+            "the explicit profile trait ratification path"
+        )
     if normalized == "principle":
         return (
             "principle cannot be marked runtime-eligible until it is canonicalized through "
@@ -187,6 +193,13 @@ def _principle_is_canonicalized(repo_root: Path, candidate_ref: str | None) -> b
     return principle_ratification_map(repo_root).get(target_candidate_ref) is not None
 
 
+def _profile_trait_is_canonicalized(repo_root: Path, candidate_ref: str | None) -> bool:
+    target_candidate_ref = str(candidate_ref or "").strip()
+    if not target_candidate_ref:
+        return False
+    return profile_trait_ratification_map(repo_root).get(target_candidate_ref) is not None
+
+
 def can_release_runtime_authority(
     repo_root: Path,
     *,
@@ -196,6 +209,8 @@ def can_release_runtime_authority(
     normalized = str(artifact_type or "").strip().lower()
     if not requires_runtime_ratification(normalized):
         return True
+    if normalized == "profile_trait":
+        return _profile_trait_is_canonicalized(repo_root, candidate_ref)
     if normalized == "principle":
         return _principle_is_canonicalized(repo_root, candidate_ref)
     return False

@@ -44,6 +44,7 @@ from owner_report import (
 )
 from planner import plan_task
 from plugin_contract import validate_repo
+from profile_authority import ratify_profile_trait_candidate
 from principles_authority import ratify_principle_candidate
 from prompting import schema_debugger_output_sections, schema_debugger_questions
 from retrieval import build_index, load_retrieval_config, search_index
@@ -1285,6 +1286,23 @@ def api_action(root: Path, payload: dict[str, Any]) -> dict:
         candidate_id = str(payload.get("candidate_id", "")).strip()
         ratification_note = str(payload.get("ratification_note", "")).strip()
         result = ratify_principle_candidate(
+            root,
+            candidate_ref=candidate_id,
+            ratification_note=ratification_note,
+        )
+        return {
+            "ok": True,
+            "action": action,
+            **result,
+            "learning_candidates": list_recent_learning_candidates(root, limit=12, include_resolved=True),
+            "candidate_pipeline_summary": summarize_learning_pipeline(root, window_days=30),
+            "candidate_pipeline_trend": summarize_learning_pipeline_trend(root),
+        }
+
+    if action == "ratify_profile_trait_candidate":
+        candidate_id = str(payload.get("candidate_id", "")).strip()
+        ratification_note = str(payload.get("ratification_note", "")).strip()
+        result = ratify_profile_trait_candidate(
             root,
             candidate_ref=candidate_id,
             ratification_note=ratification_note,

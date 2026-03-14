@@ -760,6 +760,96 @@ def test_api_action_ratifies_promoted_principle_candidate_into_constitution() ->
             )
 
 
+def test_api_action_ratifies_promoted_profile_trait_candidate_into_psych_profile() -> None:
+    with TemporaryDirectory() as td:
+        root = _copy_repo_subset(Path(td))
+        import_result = api_action(
+            root,
+            {
+                "action": "learning_handoff_import",
+                "response_text": json.dumps(
+                    {
+                        "source": {"title": "P", "url": "u", "source_type": "video"},
+                        "summary": "s",
+                        "key_points": ["p"],
+                        "candidate_artifacts": {
+                            "profile_traits": [{"statement": "Prefer slower commitment when stress signals are elevated."}]
+                        },
+                    }
+                ),
+            },
+        )
+        candidate_id = import_result["candidate_record_ids"][0]
+        api_action(
+            root,
+            {
+                "action": "review_learning_candidate",
+                "candidate_id": candidate_id,
+                "verdict": "accept",
+                "owner_note": "accept first",
+            },
+        )
+        api_action(
+            root,
+            {
+                "action": "promote_learning_candidate",
+                "candidate_id": candidate_id,
+                "approval_note": "approved for promotion",
+            },
+        )
+
+        ratify_result = api_action(
+            root,
+            {
+                "action": "ratify_profile_trait_candidate",
+                "candidate_id": candidate_id,
+                "ratification_note": "Approved as a durable profile baseline update.",
+            },
+        )
+        assert ratify_result["ok"] is True
+        assert ratify_result["action"] == "ratify_profile_trait_candidate"
+        assert ratify_result["candidate_ref"] == candidate_id
+        assert ratify_result["profile_change_record_id"].startswith("pf_")
+        assert ratify_result["ratification_approval_ref"].startswith("ap_")
+        assert ratify_result["canonical_profile_trait_id"].startswith("pft_")
+        assert ratify_result["profile_updated"] is True
+
+        matched = next(item for item in ratify_result["learning_candidates"] if item["id"] == candidate_id)
+        assert matched["lifecycle_stage"] == "canonicalized"
+        assert matched["canonicalization_ref"] == ratify_result["profile_change_record_id"]
+        assert matched["canonical_profile_trait_id"] == ratify_result["canonical_profile_trait_id"]
+        assert matched["can_ratify"] is False
+
+        psych_profile_text = (root / "modules/profile/data/psych_profile.yaml").read_text(encoding="utf-8")
+        assert ratify_result["canonical_profile_trait_id"] in psych_profile_text
+        assert "Prefer slower commitment when stress signals are elevated." in psych_profile_text
+
+        eligibility_result = api_action(
+            root,
+            {
+                "action": "set_runtime_eligibility",
+                "candidate_id": candidate_id,
+                "eligibility_status": "eligible",
+                "change_note": "release runtime authority after canonicalization",
+            },
+        )
+        assert eligibility_result["runtime_eligibility"]["runtime_eligibility_status"] == "eligible"
+        matched = next(item for item in eligibility_result["learning_candidates"] if item["id"] == candidate_id)
+        assert matched["lifecycle_stage"] == "canonicalized"
+        assert matched["runtime_eligibility_status"] == "eligible"
+        assert matched["runtime_state"] == "cooling"
+
+        with pytest.raises(ValueError):
+            api_action(
+                root,
+                {
+                    "action": "ratify_profile_trait_candidate",
+                    "candidate_id": candidate_id,
+                    "ratification_note": "second ratification should fail",
+                },
+            )
+
+
 def test_api_action_validate_metrics_and_schedule() -> None:
     with TemporaryDirectory() as td:
         root = _copy_repo_subset(Path(td))

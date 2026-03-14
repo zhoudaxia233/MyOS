@@ -224,11 +224,13 @@ This includes direct `memory_events` and `memory_insights` created by ingest flo
 - Canonical SSOT update:
   - No by default.
   - Canonicalization requires explicit profile update path:
-    - target file in `identity.yaml`, `operating_preferences.yaml`, or `psych_profile.yaml`
+    - current implemented path: `psych_profile.yaml` `ratified_traits`
+    - broader future targets may include `identity.yaml` or `operating_preferences.yaml`
     - corresponding `profile_changes.jsonl` record
 - Runtime eligibility:
   - Must not become runtime-eligible merely because it is promoted.
-  - Desired contract: remain `holding` until canonicalized.
+  - Current implemented contract: remain `holding` until canonicalized.
+  - After canonicalization, runtime release may be granted only through a separate explicit eligibility action.
 - Separate ratification required:
   - Yes, always.
 - Runtime-active use without explicit eligibility:
@@ -378,6 +380,28 @@ The repo now has a first explicit Class C ratification path, but only for `princ
   - exception-driven canonicalization flows from promoted candidates
   - equivalent ratification paths for `profile_trait` and `cognition_revision`
 
+## Implementation Note: First Profile Trait Canonicalization Path (2026-03-14)
+
+The repo now has a second explicit Class C ratification path for `profile_trait`:
+
+- scope is intentionally narrow:
+  - only promoted `profile_trait` candidates
+  - only append into `psych_profile.yaml` `ratified_traits`
+- the path writes:
+  - one append-only canonicalization record in `modules/profile/logs/profile_changes.jsonl`
+  - one targeted trait append into `modules/profile/data/psych_profile.yaml`
+- this means:
+  - `profile_trait` can now move from `promoted_ledger` to `canonicalized` through an explicit owner action
+  - profile baseline authority comes from `psych_profile.yaml` + `profile_changes.jsonl`, not from generic promoted candidate sinks
+- follow-up guard now in code:
+  - a canonicalized `profile_trait` may be explicitly marked runtime-eligible
+  - but that release still does not happen automatically at ratification time
+  - runtime authority therefore remains a separate owner action after canonical self-model truth exists
+- what remains deferred:
+  - canonical writes into `identity.yaml` or `operating_preferences.yaml`
+  - typed supersession/edit flows for already-canonical profile traits
+  - equivalent ratification path for `cognition_revision`
+
 ## Near-Term Guardrails
 
 Until a dedicated canonicalization layer exists:
@@ -386,7 +410,7 @@ Until a dedicated canonicalization layer exists:
 - do not interpret runtime-active injection as canonical truth
 - do not treat `candidate_state` inside `learning_candidates.jsonl` as the full lifecycle source of truth
 - derive lifecycle from verdict + promotion + runtime eligibility logs
-- treat `profile_trait`, `principle`, and `cognition_revision` promotions as ledger-only unless a typed ratification path is completed
+- treat `cognition_revision` promotions as ledger-only unless a typed ratification path is completed
 
 ## Decision Rule For Future Changes
 

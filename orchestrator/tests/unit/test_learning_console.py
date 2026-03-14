@@ -14,6 +14,7 @@ from learning_console import (
     summarize_learning_pipeline,
     summarize_learning_pipeline_trend,
 )
+from profile_authority import ratify_profile_trait_candidate
 from principles_authority import ratify_principle_candidate
 from runtime_eligibility import set_runtime_eligibility
 
@@ -100,6 +101,41 @@ def _prepare_principles_foundation(root: Path) -> None:
             "approval_ref",
             "effective_from",
             "source_refs",
+            "proposal_target",
+        ],
+        [],
+    )
+
+
+def _prepare_profile_foundation(root: Path) -> None:
+    psych_profile = root / "modules/profile/data/psych_profile.yaml"
+    psych_profile.parent.mkdir(parents=True, exist_ok=True)
+    psych_profile.write_text(
+        "\n".join(
+            [
+                'profile_type: "operational_non_clinical"',
+                'intent: "Improve self-regulation quality in high-impact decisions and execution cycles."',
+                "",
+                "stabilizers:",
+                '  - "Written precommit checklist for high-risk decisions"',
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    _write_jsonl(
+        root / "modules/profile/logs/profile_changes.jsonl",
+        "profile_changes",
+        [
+            "id",
+            "created_at",
+            "status",
+            "change_type",
+            "change_summary",
+            "reason",
+            "expected_effect",
+            "source_refs",
+            "object_type",
             "proposal_target",
         ],
         [],
@@ -648,6 +684,62 @@ def test_principle_can_be_runtime_eligible_after_canonicalization() -> None:
         assert matched["lifecycle_stage"] == "canonicalized"
         assert matched["runtime_eligibility_status"] == "eligible"
         assert matched["canonicalized_at"]
+
+
+def test_profile_trait_can_be_runtime_eligible_after_canonicalization() -> None:
+    with TemporaryDirectory() as td:
+        root = Path(td)
+        _prepare_memory_logs(root)
+        _prepare_profile_foundation(root)
+
+        result = ingest_learning_handoff_response(
+            root,
+            json.dumps(
+                {
+                    "source": {"title": "P", "url": "u-profile", "source_type": "video"},
+                    "summary": "profile trait candidate",
+                    "key_points": ["typed seriousness"],
+                    "candidate_artifacts": {
+                        "profile_traits": [{"statement": "Prefer slower commitment when stress signals are elevated."}]
+                    },
+                }
+            ),
+        )
+        candidate_id = result["candidate_record_ids"][0]
+        apply_learning_candidate_verdict(
+            root,
+            candidate_id=candidate_id,
+            verdict="accept",
+            owner_note="accept for ledger",
+        )
+        promotion = promote_learning_candidate(
+            root,
+            candidate_id=candidate_id,
+            approval_note="approve ledger promotion",
+        )
+        assert promotion["runtime_eligibility_status"] == "holding"
+
+        ratified = ratify_profile_trait_candidate(
+            root,
+            candidate_ref=candidate_id,
+            ratification_note="Approve psych profile update.",
+        )
+        assert ratified["canonical_profile_trait_id"].startswith("pft_")
+
+        updated = set_runtime_eligibility(
+            root,
+            candidate_ref=candidate_id,
+            eligibility_status="eligible",
+            change_note="release runtime authority after canonicalization",
+        )
+        assert updated["runtime_eligibility_status"] == "eligible"
+
+        recent = list_recent_learning_candidates(root, include_resolved=True)
+        matched = next(item for item in recent if item["id"] == candidate_id)
+        assert matched["lifecycle_stage"] == "canonicalized"
+        assert matched["runtime_eligibility_status"] == "eligible"
+        assert matched["canonicalized_at"]
+        assert matched["canonical_profile_trait_id"]
 
 
 def test_summarize_learning_pipeline_includes_promotion_readiness() -> None:

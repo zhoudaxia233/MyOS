@@ -128,7 +128,29 @@ Keep rollout evolutionary: preserve existing extraction/distillation pipelines a
   - no automatic runtime eligibility expansion for Class C artifacts
 - Next continuation slice:
   - decide whether `principle` ratification should support amendment of existing clauses or stay add-only for another iteration
-  - then implement the next typed path for either `profile_trait` or `cognition_revision`, but not both at once
+  - then implement the next typed path for `profile_trait`
+
+#### Profile Trait Canonicalization Slice (2026-03-14)
+
+- Why this slice:
+  - after `principle`, the next highest-leverage Class C gap was owner self-model baseline
+  - the profile module already had the required SSOT substrate: `psych_profile.yaml` plus append-only `profile_changes.jsonl`
+- Shipped in this iteration:
+  - promoted `profile_trait` candidates can now be explicitly ratified through a dedicated action
+  - ratification appends one canonicalization record to `modules/profile/logs/profile_changes.jsonl`
+  - ratification also appends one new trait entry into `modules/profile/data/psych_profile.yaml`
+  - Audit now shows `Canonicalized` state and a dedicated `Ratify Profile Trait` action for promoted profile trait candidates
+  - after canonicalization, `profile_trait` may now be explicitly marked runtime-eligible through the existing runtime release path
+- Kept intentionally minimal:
+  - only `profile_trait`
+  - only append into `psych_profile.yaml` `ratified_traits`
+  - no generic profile canonicalization engine
+  - no identity/preferences write path yet
+  - no cognition ratification yet
+  - no automatic runtime eligibility expansion for Class C artifacts
+- Next continuation slice:
+  - decide whether canonical profile traits should remain psych-profile-only for now or branch into typed destinations (`identity` vs `operating_preferences`)
+  - then implement the first explicit ratification path for `cognition_revision`
 
 #### Immediate Priority - Perceivable MVP Flow (2026-03-09)
 
