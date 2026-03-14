@@ -294,6 +294,24 @@
         <section class="review-queue">
           <div class="review-queue-head">
             <div>
+              <h3 data-i18n="reviewed_queue_title">学习候选运行分诊</h3>
+              <p class="helper-note" data-i18n="reviewed_queue_desc">这里处理已 canonicalized 或已进入 runtime 流程的学习项，优先显示需要 runtime triage judgment 的 cognition candidates。</p>
+            </div>
+            <span id="reviewedQueueCount" class="queue-count-badge">0</span>
+          </div>
+          <div id="reviewedCandidates" class="todo-list">
+            <div class="todo-item">
+              <div class="todo-head">
+                <span class="todo-metric">Loading...</span>
+              </div>
+              <div class="todo-action">-</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="review-queue">
+          <div class="review-queue-head">
+            <div>
               <h3 data-i18n="owner_todo_title">Owner 待办</h3>
               <p class="helper-note" data-i18n="owner_todo_desc">这是系统已经升级成 owner judgment 的异常与待确认事项。</p>
             </div>

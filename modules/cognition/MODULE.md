@@ -77,6 +77,7 @@ It tracks how mental models (schemas) are used, where they fail, how they are re
      - Audit may also surface that posture directly in the learning-candidate queue so runtime release can be triaged before opening detail
      - queue-level triage may filter canonicalized cognition candidates by runtime-release posture without changing runtime policy semantics
      - queue-level triage may also expose direct posture count chips so the owner can jump into `hold` / `review_scope` / `review_coexistence` / `clear` queues in one click
+     - canonicalized/runtime candidates may also be surfaced in a dedicated inbox queue where non-`clear` cognition runtime posture is shown first by default
      - Audit may expose a small non-`current` lineage review list so owner can scan affected schemas directly
 5. Log equilibration
    - Record whether revision improves explanatory and predictive coherence.

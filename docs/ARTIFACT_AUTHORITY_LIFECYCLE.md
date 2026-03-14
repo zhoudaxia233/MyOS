@@ -456,6 +456,7 @@ The repo now has a third explicit Class C ratification path for `cognition_revis
       - the main learning-candidate queue now also surfaces that posture before opening detail or modal, so runtime-release triage starts at the queue itself
       - the queue now also supports direct filtering by cognition runtime-release posture (`hold`, `review_scope`, `review_coexistence`, `clear`)
       - the queue now also surfaces direct runtime-triage count chips for those postures, so the owner can jump into the corresponding queue without opening the filter controls first
+      - reviewed/runtime candidates now also have a dedicated inbox queue, and that queue defaults to front-loading cognition candidates with non-`clear` runtime-release posture
 - the UI guides the owner toward the right choice, but still does not infer `seed` vs `revision`
 - what remains deferred:
   - candidate-taxonomy split between schema-seed vs schema-revision artifacts

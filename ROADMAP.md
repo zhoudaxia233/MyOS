@@ -185,6 +185,7 @@ Keep rollout evolutionary: preserve existing extraction/distillation pipelines a
   - the learning-candidate queue now also surfaces that posture inline before opening detail or modal, so runtime release can be triaged directly from the owner queue
   - the owner queue now also supports direct filtering by cognition runtime-release posture, so `hold` / `review_scope` / `review_coexistence` / `clear` candidates can be isolated without leaving the inbox
   - the owner queue now also shows direct runtime-triage count chips for those postures, so the owner can jump into the corresponding queue in one click
+  - reviewed/runtime candidates now also have a dedicated inbox queue, with non-`clear` cognition runtime postures automatically front-loaded for default owner triage
   - after canonicalization, `cognition_revision` may now be explicitly marked runtime-eligible through the existing runtime release path
 - Kept intentionally minimal:
   - only `cognition_revision`
@@ -195,7 +196,7 @@ Keep rollout evolutionary: preserve existing extraction/distillation pipelines a
   - no broader cognition event ontology; `parent_effect` is still encoded inside the narrow existing revision audit path
   - no automatic runtime eligibility expansion for Class C artifacts
 - Next continuation slice:
-  - decide whether queue-level runtime-release triage should also influence default inbox ordering without changing runtime policy semantics
+  - decide whether runtime-triage queue should also affect top-level inbox summary counts/cards without changing runtime policy semantics
   - then decide whether to introduce a separate upstream candidate taxonomy for schema seed vs schema revision
 
 #### Immediate Priority - Perceivable MVP Flow (2026-03-09)

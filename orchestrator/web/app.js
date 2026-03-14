@@ -57,6 +57,7 @@ const reviewCountTodo = document.getElementById("reviewCountTodo");
 const suggestionReviewCount = document.getElementById("suggestionReviewCount");
 const reviewQueueCount = document.getElementById("reviewQueueCount");
 const promoteQueueCount = document.getElementById("promoteQueueCount");
+const reviewedQueueCount = document.getElementById("reviewedQueueCount");
 const ownerTodoCount = document.getElementById("ownerTodoCount");
 const reviewStageFilter = document.getElementById("reviewStageFilter");
 const reviewTypeFilter = document.getElementById("reviewTypeFilter");
@@ -81,6 +82,7 @@ const auditTimelineCount = document.getElementById("auditTimelineCount");
 const auditTimelineList = document.getElementById("auditTimelineList");
 const reviewCandidates = document.getElementById("reviewCandidates");
 const promoteCandidates = document.getElementById("promoteCandidates");
+const reviewedCandidates = document.getElementById("reviewedCandidates");
 const ownerTodos = document.getElementById("ownerTodos");
 const learningLifecycle = document.getElementById("learningLifecycle");
 const candidatePipeline = document.getElementById("candidatePipeline");
@@ -217,6 +219,7 @@ const I18N = {
     review_inbox_lead_suggestion: "当前有任务建议等待判断。先做 Accept / Modify / Reject，再处理学习候选或其他治理事项。",
     review_inbox_lead_review: "当前有待复核候选。先做 Accept / Modify / Reject，再决定哪些值得进入下一阶段。",
     review_inbox_lead_promote: "当前有候选已经通过复核。Accept 不等于 Promote，请单独判断是否值得晋升。",
+    review_inbox_lead_runtime: "当前主要是 canonicalized / runtime triage 候选。先判断哪些应继续 hold，哪些需要复核 scope / coexistence，哪些值得放行 runtime。",
     review_inbox_lead_todo: "当前主要是 Owner 待办。先处理这些异常与判断事项，再回看支持上下文。",
     review_inbox_lead_empty: "当前收件箱为空。你可以回到工作台补充学习素材，或按需运行一次 quick audit。",
     review_inbox_lead_filtered_empty: "当前筛选条件下没有匹配候选。你可以放宽筛选范围，或回到全部视图。",
@@ -338,6 +341,8 @@ const I18N = {
     review_queue_desc: "这里处理学习候选的 Accept / Modify / Reject，不把判断淹没在日志里。",
     promote_queue_title: "学习候选可晋升",
     promote_queue_desc: "Accept 不等于 Promote。这里只处理已经通过复核的学习项。",
+    reviewed_queue_title: "学习候选运行分诊",
+    reviewed_queue_desc: "这里处理已 canonicalized 或已进入 runtime 流程的学习项，优先显示需要 runtime triage judgment 的 cognition candidates。",
     owner_todo_title: "Owner 待办",
     owner_todo_desc: "这是系统已经升级成 owner judgment 的异常与待确认事项。",
     review_history_summary: "近期已处理 / 冷却中",
@@ -719,6 +724,7 @@ const I18N = {
     review_inbox_lead_suggestion: "Task suggestions are waiting for judgment. Decide Accept / Modify / Reject before switching to learning governance or support context.",
     review_inbox_lead_review: "Pending candidates need review now. Decide Accept / Modify / Reject before thinking about promotion.",
     review_inbox_lead_promote: "Some candidates already passed review. Accept is not Promote, so judge promotion separately.",
+    review_inbox_lead_runtime: "Canonicalized / runtime-triage candidates are the main queue right now. Decide what should stay on hold, what needs scope/coexistence review, and what is ready for runtime release.",
     review_inbox_lead_todo: "Owner todos are the main work right now. Clear these judgment items first, then use support context if needed.",
     review_inbox_lead_empty: "The inbox is empty for now. Add new learning material from Workspace or run quick audit if you want fresh context.",
     review_inbox_lead_filtered_empty: "No candidates match the current filters. Relax the filters or return to the full inbox view.",
@@ -840,6 +846,8 @@ const I18N = {
     review_queue_desc: "This queue is for learning candidate Accept / Modify / Reject without burying judgment under logs.",
     promote_queue_title: "Learning Candidates Ready To Promote",
     promote_queue_desc: "Accept is not Promote. This queue is only for learning items that already passed review.",
+    reviewed_queue_title: "Learning Candidates In Runtime Triage",
+    reviewed_queue_desc: "This queue handles canonicalized or runtime-flow learning items, with cognition candidates needing runtime triage shown first.",
     owner_todo_title: "Owner Todos",
     owner_todo_desc: "These are exceptions and decisions that have already escalated into owner judgment work.",
     review_history_summary: "Recently Reviewed / Cooling",
@@ -1444,6 +1452,48 @@ function splitLearningCandidates(items) {
     buckets.reviewed.push(item);
   }
   return buckets;
+}
+
+function reviewedCandidateInboxRank(item) {
+  if (candidateHasCognitionRuntimeReleaseContext(item)) {
+    const posture = candidateCognitionRuntimeReleasePostureKey(item);
+    const postureRank = {
+      hold: 0,
+      review_scope: 1,
+      review_coexistence: 2,
+      clear: 3,
+    };
+    return postureRank[posture] ?? 4;
+  }
+  const stage = String((item && item.lifecycle_stage) || "").trim().toLowerCase();
+  if (stage === "canonicalized") {
+    return 5;
+  }
+  if (stage === "active_runtime") {
+    return 6;
+  }
+  if (stage === "promoted") {
+    return 7;
+  }
+  return 8;
+}
+
+function sortReviewedCandidatesForInbox(items) {
+  if (!Array.isArray(items)) {
+    return [];
+  }
+  return items.slice().sort((left, right) => {
+    const rankDiff = reviewedCandidateInboxRank(left) - reviewedCandidateInboxRank(right);
+    if (rankDiff !== 0) {
+      return rankDiff;
+    }
+    const rightTimestamp = String(learningTimelineTimestamp(right) || "").trim();
+    const leftTimestamp = String(learningTimelineTimestamp(left) || "").trim();
+    if (rightTimestamp !== leftTimestamp) {
+      return rightTimestamp.localeCompare(leftTimestamp);
+    }
+    return String((right && right.id) || "").localeCompare(String((left && left.id) || ""));
+  });
 }
 
 function candidateStageBucket(item) {
@@ -2897,6 +2947,9 @@ function renderReviewInboxSummary() {
   if (promoteQueueCount) {
     promoteQueueCount.textContent = String(buckets.promote.length);
   }
+  if (reviewedQueueCount) {
+    reviewedQueueCount.textContent = String(buckets.reviewed.length);
+  }
   if (ownerTodoCount) {
     ownerTodoCount.textContent = String(todoTotal);
   }
@@ -2914,6 +2967,8 @@ function renderReviewInboxSummary() {
     leadKey = "review_inbox_lead_review";
   } else if (buckets.promote.length > 0) {
     leadKey = "review_inbox_lead_promote";
+  } else if (buckets.reviewed.length > 0) {
+    leadKey = "review_inbox_lead_runtime";
   } else if (todoTotal > 0) {
     leadKey = "review_inbox_lead_todo";
   } else if (!hasLifecycleSignals(auditUiSnapshot.candidate_pipeline_summary)) {
@@ -2933,7 +2988,8 @@ function updateAuditConsoleDensity() {
     !hasRealOwnerTodos(auditUiSnapshot.owner_todos) &&
     suggestionPendingTotal(auditUiSnapshot.suggestion_review_queue) === 0 &&
     buckets.review.length === 0 &&
-    buckets.promote.length === 0;
+    buckets.promote.length === 0 &&
+    buckets.reviewed.length === 0;
   const showZero = empty && !auditManualForcedVisible;
   auditZeroState.hidden = !showZero;
   if (auditManualActions) {
@@ -3774,8 +3830,10 @@ function renderLearningCandidates(items) {
   renderReviewRuntimePostureTriage(items);
   const filtered = filterLearningCandidates(items);
   const buckets = splitLearningCandidates(filtered);
+  const reviewedRows = sortReviewedCandidatesForInbox(buckets.reviewed);
   renderCandidateCards(reviewCandidates, buckets.review, "queue_empty_review");
   renderCandidateCards(promoteCandidates, buckets.promote, "queue_empty_promote");
+  renderCandidateCards(reviewedCandidates, reviewedRows, "queue_empty_reviewed");
   updateReviewFilterMeta(filtered.length, total);
 }
 
