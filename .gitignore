@@ -21,3 +21,6 @@ modules/*/outputs/*
 !modules/*/outputs/.gitkeep
 !modules/*/outputs/templates/
 !modules/*/outputs/templates/**
+
+# Learning handoff exchange payloads (source notes stay tracked)
+modules/memory/data/learning_assets/*_handoff_*.json
