@@ -218,6 +218,7 @@ def test_ratify_cognition_revision_candidate_requires_explicit_parent_for_revisi
             canonicalization_mode="revision",
             parent_schema_version_id="sv_20260314_001",
             lineage_justification="This candidate directly refines the existing overload-diagnosis lineage instead of starting a new root.",
+            revision_type="replace",
         )
 
         assert result["canonicalization_mode"] == "revision"
@@ -225,7 +226,7 @@ def test_ratify_cognition_revision_candidate_requires_explicit_parent_for_revisi
         assert result["accommodation_revision_id"].startswith("ar_")
         assert result["parent_schema_version_id"] == "sv_20260314_001"
         assert result["lineage_justification"].startswith("This candidate directly refines")
-        assert result["revision_type"] == "refine"
+        assert result["revision_type"] == "replace"
 
         schema_lines = (root / "modules/cognition/logs/schema_versions.jsonl").read_text(encoding="utf-8").splitlines()
         latest_schema = json.loads(schema_lines[-1])
@@ -235,7 +236,7 @@ def test_ratify_cognition_revision_candidate_requires_explicit_parent_for_revisi
         latest_revision = json.loads(revision_lines[-1])
         assert latest_revision["previous_schema_version_id"] == "sv_20260314_001"
         assert latest_revision["new_schema_version_id"] == result["canonical_schema_version_id"]
-        assert latest_revision["revision_type"] == "refine"
+        assert latest_revision["revision_type"] == "replace"
         assert latest_revision["object_type"] == "cognition"
         assert latest_revision["proposal_target"] == "cognition"
         assert "Lineage justification:" in latest_revision["revision_summary"]
@@ -361,8 +362,55 @@ def test_ratify_cognition_revision_candidate_rejects_revision_without_lineage_ju
                 canonicalization_mode="revision",
                 parent_schema_version_id="sv_20260314_011",
                 lineage_justification=None,
+                revision_type="refine",
             )
         assert "lineage_justification is required" in str(excinfo.value)
+
+
+def test_ratify_cognition_revision_candidate_rejects_revision_without_revision_type() -> None:
+    with TemporaryDirectory() as td:
+        root = Path(td)
+        _prepare_cognition_logs(
+            root,
+            schema_rows=[
+                {
+                    "id": "sv_20260314_012",
+                    "created_at": "2026-03-14T09:00:00Z",
+                    "status": "active",
+                    "schema_id": "sm_existing_revision_type_root",
+                    "version": 1,
+                    "topic": "Existing revision type root",
+                    "schema_name": "Existing revision type root",
+                    "summary": "Baseline schema.",
+                    "assumptions": ["Baseline assumption"],
+                    "predictions": ["Baseline prediction"],
+                    "boundaries": ["Baseline boundary"],
+                    "parent_schema_version_id": None,
+                    "source_refs": [],
+                    "tags": ["baseline"],
+                    "object_type": "cognition",
+                    "proposal_target": "cognition",
+                }
+            ],
+        )
+        _prepare_promoted_cognition_candidate(
+            root,
+            candidate_id="lc_20260314_008",
+            title="Revision needs an explicit type",
+            statement="Revision without type should fail.",
+        )
+
+        with pytest.raises(ValueError) as excinfo:
+            ratify_cognition_revision_candidate(
+                root,
+                candidate_ref="lc_20260314_008",
+                ratification_note="type is still missing",
+                canonicalization_mode="revision",
+                parent_schema_version_id="sv_20260314_012",
+                lineage_justification="This candidate clearly extends the selected lineage.",
+                revision_type=None,
+            )
+        assert "revision_type is required" in str(excinfo.value)
 
 
 def test_ratify_cognition_revision_candidate_rejects_seed_with_parent() -> None:
@@ -407,6 +455,29 @@ def test_ratify_cognition_revision_candidate_rejects_seed_with_parent() -> None:
                 parent_schema_version_id="sv_20260314_010",
             )
         assert "must be absent when canonicalization_mode=seed" in str(excinfo.value)
+
+
+def test_ratify_cognition_revision_candidate_rejects_seed_with_revision_type() -> None:
+    with TemporaryDirectory() as td:
+        root = Path(td)
+        _prepare_cognition_logs(root)
+        _prepare_promoted_cognition_candidate(
+            root,
+            candidate_id="lc_20260314_009",
+            title="Seed must not carry a revision type",
+            statement="Seed with revision type should fail.",
+        )
+
+        with pytest.raises(ValueError) as excinfo:
+            ratify_cognition_revision_candidate(
+                root,
+                candidate_ref="lc_20260314_009",
+                ratification_note="seed must reject revision-only semantics",
+                canonicalization_mode="seed",
+                parent_schema_version_id=None,
+                revision_type="refine",
+            )
+        assert "revision_type applies only when canonicalization_mode=revision" in str(excinfo.value)
 
 
 def test_list_cognition_schema_options_exposes_parent_context() -> None:

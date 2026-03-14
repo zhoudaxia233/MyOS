@@ -65,6 +65,7 @@ It tracks how mental models (schemas) are used, where they fail, how they are re
      - use `seed` when forcing an existing parent would distort lineage history
      - if revision is chosen, the owner must explicitly pick a real parent schema lineage
      - if revision is chosen, the owner must also state why the candidate belongs to that lineage rather than merely sharing a topic
+     - if revision is chosen, the owner must explicitly classify the change (`refine`, `replace`, `weaken`, `split`, `merge`)
 5. Log equilibration
    - Record whether revision improves explanatory and predictive coherence.
 6. Weekly synthesis
@@ -88,6 +89,7 @@ It tracks how mental models (schemas) are used, where they fail, how they are re
 - Keep schema revisions explicit: what failed, what changed, what improved.
 - `revision` requires explicit parent lineage.
 - `revision` should carry explicit lineage justification in the audit path.
+- `revision` should carry explicit revision type in the audit path.
 - `seed` must not carry parent lineage and must not write accommodation semantics.
 - Guidance may help the owner choose, but the system must not silently decide `seed` vs `revision`.
 - Preserve append-only history across all cognition logs.

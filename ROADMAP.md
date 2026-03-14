@@ -166,6 +166,7 @@ Keep rollout evolutionary: preserve existing extraction/distillation pipelines a
   - Audit now shows operator guidance for `seed` vs `revision` at ratification time instead of leaving that distinction implicit
   - revision mode now uses an explicit parent-lineage selector with parent schema summary context, rather than a raw prompt
   - revision mode now also requires an explicit lineage justification, so the audit trail records why the candidate belongs to that parent lineage
+  - revision mode now also requires explicit `revision_type` selection instead of silently defaulting to `refine`
   - after canonicalization, `cognition_revision` may now be explicitly marked runtime-eligible through the existing runtime release path
 - Kept intentionally minimal:
   - only `cognition_revision`
@@ -173,7 +174,7 @@ Keep rollout evolutionary: preserve existing extraction/distillation pipelines a
   - no candidate-taxonomy split yet
   - no broader lineage browser yet; current parent selection is still a narrow selector, not a full lineage explorer
   - no new cognition log taxonomy; lineage justification is kept inside the existing revision audit path
-  - no broader operator-selection UX yet; current revision path uses conservative `refine`
+  - no broader operator-selection UX yet beyond explicit revision-type choice
   - no automatic runtime eligibility expansion for Class C artifacts
 - Next continuation slice:
   - tighten typed edit/supersession paths for already-canonical cognition lineage

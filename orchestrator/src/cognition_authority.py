@@ -8,8 +8,8 @@ from typing import Any
 from cognition import log_accommodation_revision, log_schema_version
 from idgen import next_id_for_rel_path
 
-DEFAULT_COGNITION_REVISION_TYPE = "refine"
 COGNITION_CANONICALIZATION_MODES = frozenset({"seed", "revision"})
+COGNITION_REVISION_TYPES = frozenset({"weaken", "replace", "split", "merge", "refine"})
 REVISION_SUMMARY_LINEAGE_PREFIX = "Lineage justification:"
 REVISION_SUMMARY_NOTE_PREFIX = "Ratification note:"
 
@@ -74,6 +74,14 @@ def _extract_lineage_justification(summary: Any) -> str | None:
         if line.startswith(prefix):
             return _optional_text(line[len(prefix) :])
     return None
+
+
+def _normalize_revision_type(revision_type: str | None) -> str:
+    normalized = str(revision_type or "").strip().lower()
+    if normalized not in COGNITION_REVISION_TYPES:
+        allowed = ", ".join(sorted(COGNITION_REVISION_TYPES))
+        raise ValueError(f"revision_type must be one of: {allowed}")
+    return normalized
 
 
 def _candidate_row_by_id(repo_root: Path, candidate_ref: str) -> dict[str, Any] | None:
@@ -229,6 +237,7 @@ def ratify_cognition_revision_candidate(
     canonicalization_mode: str,
     parent_schema_version_id: str | None = None,
     lineage_justification: str | None = None,
+    revision_type: str | None = None,
 ) -> dict[str, Any]:
     target_candidate_ref = str(candidate_ref or "").strip()
     if not target_candidate_ref:
@@ -240,6 +249,7 @@ def ratify_cognition_revision_candidate(
     mode = _normalize_canonicalization_mode(canonicalization_mode)
     parent_schema_version = str(parent_schema_version_id or "").strip() or None
     lineage_justification_text = _optional_text(lineage_justification)
+    revision_type_text = _optional_text(revision_type)
 
     candidate = _candidate_row_by_id(repo_root, target_candidate_ref)
     if candidate is None:
@@ -292,11 +302,16 @@ def ratify_cognition_revision_candidate(
             raise ValueError(f"parent_schema_version_id not found: {parent_schema_version}")
         if lineage_justification_text is None:
             raise ValueError("lineage_justification is required when canonicalization_mode=revision")
+        if revision_type_text is None:
+            raise ValueError("revision_type is required when canonicalization_mode=revision")
+        revision_type_text = _normalize_revision_type(revision_type_text)
     else:
         if parent_schema_version is not None:
             raise ValueError("parent_schema_version_id must be absent when canonicalization_mode=seed")
         if lineage_justification_text is not None:
             raise ValueError("lineage_justification applies only when canonicalization_mode=revision")
+        if revision_type_text is not None:
+            raise ValueError("revision_type applies only when canonicalization_mode=revision")
 
     accommodation_revision_id: str | None = None
     revision_type: str | None = None
@@ -304,7 +319,7 @@ def ratify_cognition_revision_candidate(
     canonicalized_at = _utc_now()
 
     if mode == "revision":
-        revision_type = DEFAULT_COGNITION_REVISION_TYPE
+        revision_type = revision_type_text
         result = log_accommodation_revision(
             repo_root,
             topic=topic,
