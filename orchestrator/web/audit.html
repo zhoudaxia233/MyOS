@@ -153,6 +153,30 @@
               <button type="button" class="review-preset-btn" data-review-preset="recent" data-i18n="review_preset_recent">近 7 天新增</button>
             </div>
           </div>
+          <div class="review-runtime-strip">
+            <div class="review-preset-copy">
+              <span class="review-preset-label" data-i18n="review_runtime_triage_title">Cognition Runtime Triage</span>
+              <p class="helper-note" data-i18n="review_runtime_triage_desc">按当前其余筛选条件下的 posture 数量，直接切到对应 runtime triage 队列。</p>
+            </div>
+            <div class="review-runtime-chips" role="toolbar" aria-label="Cognition runtime triage">
+              <button type="button" class="review-runtime-btn" data-runtime-posture-chip="hold">
+                <span data-i18n="review_filter_cognition_runtime_hold">hold</span>
+                <strong id="reviewRuntimePostureCountHold">0</strong>
+              </button>
+              <button type="button" class="review-runtime-btn" data-runtime-posture-chip="review_scope">
+                <span data-i18n="review_filter_cognition_runtime_review_scope">review_scope</span>
+                <strong id="reviewRuntimePostureCountReviewScope">0</strong>
+              </button>
+              <button type="button" class="review-runtime-btn" data-runtime-posture-chip="review_coexistence">
+                <span data-i18n="review_filter_cognition_runtime_review_coexistence">review_coexistence</span>
+                <strong id="reviewRuntimePostureCountReviewCoexistence">0</strong>
+              </button>
+              <button type="button" class="review-runtime-btn" data-runtime-posture-chip="clear">
+                <span data-i18n="review_filter_cognition_runtime_clear">clear</span>
+                <strong id="reviewRuntimePostureCountClear">0</strong>
+              </button>
+            </div>
+          </div>
           <div class="review-filter-head">
             <div>
               <h3 data-i18n="review_filters_title">收件箱筛选</h3>

@@ -872,6 +872,55 @@ body {
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent);
 }
 
+.review-runtime-strip {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 75%, white);
+}
+
+.review-runtime-chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.review-runtime-btn {
+  border: 1px solid color-mix(in srgb, var(--border) 82%, white);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--card) 95%, white 5%);
+  color: var(--text);
+  padding: 7px 10px;
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: border-color 140ms ease, background 140ms ease, color 140ms ease, transform 140ms ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.review-runtime-btn:hover {
+  border-color: color-mix(in srgb, var(--accent) 36%, var(--border));
+  transform: translateY(-1px);
+}
+
+.review-runtime-btn strong {
+  font-size: 0.86rem;
+  color: var(--accent-ink);
+}
+
+.review-runtime-btn[data-active="true"] {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+  background: color-mix(in srgb, var(--accent-soft) 76%, white 24%);
+  color: var(--accent-ink);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
 .review-filter-head {
   display: flex;
   justify-content: space-between;
@@ -2133,12 +2182,14 @@ pre {
     grid-template-columns: 1fr;
   }
 
-  .review-preset-strip {
+  .review-preset-strip,
+  .review-runtime-strip {
     flex-direction: column;
     align-items: flex-start;
   }
 
-  .review-preset-chips {
+  .review-preset-chips,
+  .review-runtime-chips {
     justify-content: flex-start;
   }
 }

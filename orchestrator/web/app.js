@@ -63,9 +63,14 @@ const reviewTypeFilter = document.getElementById("reviewTypeFilter");
 const reviewSourceFilter = document.getElementById("reviewSourceFilter");
 const reviewAgeFilter = document.getElementById("reviewAgeFilter");
 const reviewRuntimePostureFilter = document.getElementById("reviewRuntimePostureFilter");
+const reviewRuntimePostureCountHold = document.getElementById("reviewRuntimePostureCountHold");
+const reviewRuntimePostureCountReviewScope = document.getElementById("reviewRuntimePostureCountReviewScope");
+const reviewRuntimePostureCountReviewCoexistence = document.getElementById("reviewRuntimePostureCountReviewCoexistence");
+const reviewRuntimePostureCountClear = document.getElementById("reviewRuntimePostureCountClear");
 const reviewFilterResetBtn = document.getElementById("reviewFilterResetBtn");
 const reviewFilterMeta = document.getElementById("reviewFilterMeta");
 const reviewPresetButtons = Array.from(document.querySelectorAll("[data-review-preset]"));
+const reviewRuntimePostureButtons = Array.from(document.querySelectorAll("[data-runtime-posture-chip]"));
 const suggestionReviewList = document.getElementById("suggestionReviewList");
 const auditTimelineKindFilter = document.getElementById("auditTimelineKindFilter");
 const auditTimelineStatusFilter = document.getElementById("auditTimelineStatusFilter");
@@ -226,6 +231,8 @@ const I18N = {
     review_preset_review: "待复核优先",
     review_preset_promote: "可晋升",
     review_preset_recent: "近 7 天新增",
+    review_runtime_triage_title: "Cognition Runtime Triage",
+    review_runtime_triage_desc: "按当前其余筛选条件下的 posture 数量，直接切到对应 runtime triage 队列。",
     review_filters_title: "收件箱筛选",
     review_filters_desc: "按阶段、类型、来源和时效收窄候选范围。",
     review_filter_stage: "阶段",
@@ -726,6 +733,8 @@ const I18N = {
     review_preset_review: "Needs Review",
     review_preset_promote: "Ready To Promote",
     review_preset_recent: "Last 7d",
+    review_runtime_triage_title: "Cognition Runtime Triage",
+    review_runtime_triage_desc: "Counts respect the current non-posture filters so you can jump straight into a runtime triage queue.",
     review_filters_title: "Inbox Filters",
     review_filters_desc: "Narrow candidates by stage, type, source, and recency.",
     review_filter_stage: "Stage",
@@ -1584,7 +1593,8 @@ function hasActiveReviewFilters() {
   );
 }
 
-function filterLearningCandidates(items) {
+function filterLearningCandidates(items, options = {}) {
+  const ignorePosture = Boolean(options && options.ignorePosture);
   if (!Array.isArray(items)) {
     return [];
   }
@@ -1614,7 +1624,7 @@ function filterLearningCandidates(items) {
     if (reviewFilterState.age === "30d" && (ageHours === null || ageHours > 24 * 30)) {
       return false;
     }
-    if (reviewFilterState.posture !== "all") {
+    if (!ignorePosture && reviewFilterState.posture !== "all") {
       if (!candidateHasCognitionRuntimeReleaseContext(item)) {
         return false;
       }
@@ -1625,6 +1635,47 @@ function filterLearningCandidates(items) {
     }
     return true;
   });
+}
+
+function cognitionRuntimePostureCounts(items) {
+  const counts = {
+    hold: 0,
+    review_scope: 0,
+    review_coexistence: 0,
+    clear: 0,
+  };
+  for (const item of filterLearningCandidates(items, { ignorePosture: true })) {
+    if (!candidateHasCognitionRuntimeReleaseContext(item)) {
+      continue;
+    }
+    const posture = candidateCognitionRuntimeReleasePostureKey(item);
+    if (Object.prototype.hasOwnProperty.call(counts, posture)) {
+      counts[posture] += 1;
+    }
+  }
+  return counts;
+}
+
+function renderReviewRuntimePostureTriage(items) {
+  const counts = cognitionRuntimePostureCounts(items);
+  if (reviewRuntimePostureCountHold) {
+    reviewRuntimePostureCountHold.textContent = String(counts.hold || 0);
+  }
+  if (reviewRuntimePostureCountReviewScope) {
+    reviewRuntimePostureCountReviewScope.textContent = String(counts.review_scope || 0);
+  }
+  if (reviewRuntimePostureCountReviewCoexistence) {
+    reviewRuntimePostureCountReviewCoexistence.textContent = String(counts.review_coexistence || 0);
+  }
+  if (reviewRuntimePostureCountClear) {
+    reviewRuntimePostureCountClear.textContent = String(counts.clear || 0);
+  }
+  for (const button of reviewRuntimePostureButtons) {
+    const posture = String(button.dataset.runtimePostureChip || "").trim();
+    const isActive = posture !== "" && reviewFilterState.posture === posture;
+    button.dataset.active = isActive ? "true" : "false";
+    button.setAttribute("aria-pressed", isActive ? "true" : "false");
+  }
 }
 
 function refreshReviewTypeOptions() {
@@ -3720,6 +3771,7 @@ function renderCandidateCards(container, items, emptyKey) {
 
 function renderLearningCandidates(items) {
   const total = Array.isArray(items) ? items.length : 0;
+  renderReviewRuntimePostureTriage(items);
   const filtered = filterLearningCandidates(items);
   const buckets = splitLearningCandidates(filtered);
   renderCandidateCards(reviewCandidates, buckets.review, "queue_empty_review");
@@ -6434,6 +6486,14 @@ if (reviewAgeFilter) {
 if (reviewRuntimePostureFilter) {
   reviewRuntimePostureFilter.addEventListener("change", () => {
     reviewFilterState.posture = reviewRuntimePostureFilter.value || "all";
+    rerenderReviewInbox();
+  });
+}
+
+for (const button of reviewRuntimePostureButtons) {
+  button.addEventListener("click", () => {
+    reviewFilterState.posture = String(button.dataset.runtimePostureChip || "").trim() || "all";
+    syncReviewFilterControls();
     rerenderReviewInbox();
   });
 }
