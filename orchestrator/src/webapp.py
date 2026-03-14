@@ -17,6 +17,7 @@ from cognition import (
     render_disequilibrium_report,
 )
 from cognition_authority import ratify_cognition_revision_candidate
+from cognition_authority import list_cognition_schema_options
 from config import load_runtime_config
 from idgen import next_id_for_rel_path
 from learning_console import (
@@ -849,6 +850,7 @@ def api_status(root: Path) -> dict:
         "has_deepseek_api_key": bool(get_deepseek_api_key(root)),
         "modules": modules,
         "cognition_cards": cognition_cards,
+        "cognition_schema_options": list_cognition_schema_options(root),
         "owner_todos": list_open_owner_todos(root),
         "learning_candidates": list_recent_learning_candidates(root, limit=12, include_resolved=True),
         "candidate_pipeline_summary": summarize_learning_pipeline(root, window_days=30),
@@ -1220,6 +1222,7 @@ def api_action(root: Path, payload: dict[str, Any]) -> dict:
             "ok": True,
             "action": action,
             **result,
+            "cognition_schema_options": list_cognition_schema_options(root),
             "learning_candidates": list_recent_learning_candidates(root, limit=12, include_resolved=True),
             "candidate_pipeline_summary": summarize_learning_pipeline(root, window_days=30),
             "candidate_pipeline_trend": summarize_learning_pipeline_trend(root),
@@ -1241,6 +1244,7 @@ def api_action(root: Path, payload: dict[str, Any]) -> dict:
             "ok": True,
             "action": action,
             **result,
+            "cognition_schema_options": list_cognition_schema_options(root),
             "learning_candidates": list_recent_learning_candidates(root, limit=12, include_resolved=True),
             "candidate_pipeline_summary": summarize_learning_pipeline(root, window_days=30),
             "candidate_pipeline_trend": summarize_learning_pipeline_trend(root),
@@ -1258,6 +1262,7 @@ def api_action(root: Path, payload: dict[str, Any]) -> dict:
             "ok": True,
             "action": action,
             **result,
+            "cognition_schema_options": list_cognition_schema_options(root),
             "learning_candidates": list_recent_learning_candidates(root, limit=12, include_resolved=True),
             "candidate_pipeline_summary": summarize_learning_pipeline(root, window_days=30),
             "candidate_pipeline_trend": summarize_learning_pipeline_trend(root),
@@ -1333,6 +1338,7 @@ def api_action(root: Path, payload: dict[str, Any]) -> dict:
             "ok": True,
             "action": action,
             **result,
+            "cognition_schema_options": list_cognition_schema_options(root),
             "learning_candidates": list_recent_learning_candidates(root, limit=12, include_resolved=True),
             "candidate_pipeline_summary": summarize_learning_pipeline(root, window_days=30),
             "candidate_pipeline_trend": summarize_learning_pipeline_trend(root),

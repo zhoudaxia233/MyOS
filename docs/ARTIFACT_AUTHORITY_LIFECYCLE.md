@@ -424,10 +424,14 @@ The repo now has a third explicit Class C ratification path for `cognition_revis
   - a canonicalized `cognition_revision` may be explicitly marked runtime-eligible
   - but that release still does not happen automatically at ratification time
   - runtime authority therefore remains a separate owner action after canonical schema lineage exists
+- owner guidance now in code:
+  - Audit exposes explicit `Ratify Schema Seed` vs `Ratify Schema Revision` guidance at the decision point
+  - revision ratification now uses a visible parent-lineage selector with schema summary context
+  - the UI guides the owner toward the right choice, but still does not infer `seed` vs `revision`
 - what remains deferred:
   - candidate-taxonomy split between schema-seed vs schema-revision artifacts
+  - broader lineage browser / graph exploration beyond the current parent selector
   - richer operator selection beyond the current conservative default revision type
-  - richer cognition-specific ratification UI beyond the generic audit modal
 
 ## Near-Term Guardrails
 

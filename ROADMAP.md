@@ -163,11 +163,14 @@ Keep rollout evolutionary: preserve existing extraction/distillation pipelines a
   - `seed` writes a new canonical schema root to `modules/cognition/logs/schema_versions.jsonl`
   - `revision` requires explicit `parent_schema_version_id`, writes a new canonical schema version, and appends `modules/cognition/logs/accommodation_revisions.jsonl`
   - Audit now exposes separate `Ratify Schema Seed` and `Ratify Schema Revision` actions for promoted cognition revision candidates
+  - Audit now shows operator guidance for `seed` vs `revision` at ratification time instead of leaving that distinction implicit
+  - revision mode now uses an explicit parent-lineage selector with parent schema summary context, rather than a raw prompt
   - after canonicalization, `cognition_revision` may now be explicitly marked runtime-eligible through the existing runtime release path
 - Kept intentionally minimal:
   - only `cognition_revision`
   - no generic cognition canonicalization engine
   - no candidate-taxonomy split yet
+  - no broader lineage browser yet; current parent selection is still a narrow selector, not a full lineage explorer
   - no broader operator-selection UX yet; current revision path uses conservative `refine`
   - no automatic runtime eligibility expansion for Class C artifacts
 - Next continuation slice:

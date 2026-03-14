@@ -49,6 +49,7 @@ def test_api_status_lists_modules() -> None:
         assert "content" in data["modules"]
         assert "decision" in data["modules"]
         assert isinstance(data["cognition_cards"], list)
+        assert isinstance(data["cognition_schema_options"], list)
         assert isinstance(data["learning_candidates"], list)
         assert isinstance(data["candidate_pipeline_summary"], dict)
         assert isinstance(data["candidate_pipeline_trend"], dict)
@@ -907,6 +908,10 @@ def test_api_action_ratifies_promoted_cognition_revision_into_schema_seed() -> N
         assert ratify_result["canonical_schema_version_id"].startswith("sv_")
         assert ratify_result["accommodation_revision_id"] is None
         assert ratify_result["schema_updated"] is True
+        assert any(
+            item.get("id") == ratify_result["canonical_schema_version_id"]
+            for item in ratify_result["cognition_schema_options"]
+        )
 
         matched = next(item for item in ratify_result["learning_candidates"] if item["id"] == candidate_id)
         assert matched["lifecycle_stage"] == "canonicalized"
@@ -1052,6 +1057,13 @@ def test_api_action_ratifies_promoted_cognition_revision_into_explicit_revision(
         assert ratify_result["parent_schema_version_id"] == parent_schema_version_id
         assert ratify_result["canonical_schema_version_id"].startswith("sv_")
         assert ratify_result["accommodation_revision_id"].startswith("ar_")
+        assert any(
+            item.get("id") == parent_schema_version_id for item in ratify_result["cognition_schema_options"]
+        )
+        assert any(
+            item.get("id") == ratify_result["canonical_schema_version_id"]
+            for item in ratify_result["cognition_schema_options"]
+        )
 
         matched = next(item for item in ratify_result["learning_candidates"] if item["id"] == candidate_id)
         assert matched["lifecycle_stage"] == "canonicalized"

@@ -6,7 +6,7 @@ from tempfile import TemporaryDirectory
 
 import pytest
 
-from cognition_authority import ratify_cognition_revision_candidate
+from cognition_authority import list_cognition_schema_options, ratify_cognition_revision_candidate
 
 
 def _write_jsonl(path: Path, schema_name: str, fields: list[str], rows: list[dict]) -> None:
@@ -356,3 +356,57 @@ def test_ratify_cognition_revision_candidate_rejects_seed_with_parent() -> None:
                 parent_schema_version_id="sv_20260314_010",
             )
         assert "must be absent when canonicalization_mode=seed" in str(excinfo.value)
+
+
+def test_list_cognition_schema_options_exposes_parent_context() -> None:
+    with TemporaryDirectory() as td:
+        root = Path(td)
+        _prepare_cognition_logs(
+            root,
+            schema_rows=[
+                {
+                    "id": "sv_20260314_001",
+                    "created_at": "2026-03-14T09:00:00Z",
+                    "status": "active",
+                    "schema_id": "sm_root",
+                    "version": 1,
+                    "topic": "Root schema",
+                    "schema_name": "Root schema",
+                    "summary": "Baseline cognition root.",
+                    "assumptions": ["baseline"],
+                    "predictions": ["predict"],
+                    "boundaries": ["bound"],
+                    "parent_schema_version_id": None,
+                    "source_refs": [],
+                    "tags": ["baseline"],
+                    "object_type": "cognition",
+                    "proposal_target": "cognition",
+                },
+                {
+                    "id": "sv_20260314_002",
+                    "created_at": "2026-03-14T10:00:00Z",
+                    "status": "active",
+                    "schema_id": "sm_root",
+                    "version": 2,
+                    "topic": "Root schema revised",
+                    "schema_name": "Root schema revised",
+                    "summary": "A later revision in the same lineage.",
+                    "assumptions": ["refined"],
+                    "predictions": ["predict better"],
+                    "boundaries": ["bound"],
+                    "parent_schema_version_id": "sv_20260314_001",
+                    "source_refs": [],
+                    "tags": ["revision"],
+                    "object_type": "cognition",
+                    "proposal_target": "cognition",
+                },
+            ],
+        )
+
+        options = list_cognition_schema_options(root)
+
+        assert [item["id"] for item in options] == ["sv_20260314_002", "sv_20260314_001"]
+        assert options[0]["lineage_role"] == "revision"
+        assert options[0]["parent_schema_version_id"] == "sv_20260314_001"
+        assert options[1]["lineage_role"] == "root"
+        assert options[1]["parent_schema_version_id"] is None

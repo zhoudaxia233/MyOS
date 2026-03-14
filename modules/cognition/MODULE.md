@@ -60,6 +60,10 @@ It tracks how mental models (schemas) are used, where they fail, how they are re
    - `seed`: create a new canonical schema root with no parent lineage.
    - `revision`: extend an existing canonical schema lineage and require explicit `parent_schema_version_id`.
    - Never silently infer `seed` vs `revision` at ratification time.
+   - The operator UI should guide this choice explicitly:
+     - use `revision` only when the candidate genuinely continues an existing lineage
+     - use `seed` when forcing an existing parent would distort lineage history
+     - if revision is chosen, the owner must explicitly pick a real parent schema lineage
 5. Log equilibration
    - Record whether revision improves explanatory and predictive coherence.
 6. Weekly synthesis
@@ -83,5 +87,6 @@ It tracks how mental models (schemas) are used, where they fail, how they are re
 - Keep schema revisions explicit: what failed, what changed, what improved.
 - `revision` requires explicit parent lineage.
 - `seed` must not carry parent lineage and must not write accommodation semantics.
+- Guidance may help the owner choose, but the system must not silently decide `seed` vs `revision`.
 - Preserve append-only history across all cognition logs.
 </instructions>

@@ -143,6 +143,39 @@ def _schema_version_by_id(repo_root: Path, schema_version_id: str | None) -> dic
     return None
 
 
+def list_cognition_schema_options(repo_root: Path) -> list[dict[str, Any]]:
+    def sort_key(row: dict[str, Any]) -> tuple[str, str]:
+        created_at = _optional_text(row.get("created_at")) or ""
+        row_id = _optional_text(row.get("id")) or ""
+        return created_at, row_id
+
+    rows = sorted(_active_schema_versions(repo_root), key=sort_key, reverse=True)
+    options: list[dict[str, Any]] = []
+    for row in rows:
+        option_id = _optional_text(row.get("id"))
+        if not option_id:
+            continue
+        parent_schema_version_id = _optional_text(row.get("parent_schema_version_id"))
+        version_raw = row.get("version")
+        try:
+            version = int(version_raw)
+        except (TypeError, ValueError):
+            version = None
+        options.append(
+            {
+                "id": option_id,
+                "created_at": _optional_text(row.get("created_at")),
+                "schema_name": _optional_text(row.get("schema_name")) or _optional_text(row.get("topic")) or option_id,
+                "topic": _optional_text(row.get("topic")),
+                "summary": _optional_text(row.get("summary")),
+                "version": version,
+                "parent_schema_version_id": parent_schema_version_id,
+                "lineage_role": "root" if parent_schema_version_id is None else "revision",
+            }
+        )
+    return options
+
+
 def _normalize_canonicalization_mode(mode: str | None) -> str:
     normalized = str(mode or "").strip().lower()
     if normalized not in COGNITION_CANONICALIZATION_MODES:

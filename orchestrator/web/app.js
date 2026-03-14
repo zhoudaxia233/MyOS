@@ -107,6 +107,12 @@ const auditMachineFold = document.getElementById("auditMachineFold");
 const learningReviewModal = document.getElementById("learningReviewModal");
 const learningReviewTitle = document.getElementById("learningReviewTitle");
 const learningReviewMeta = document.getElementById("learningReviewMeta");
+const learningReviewGuidance = document.getElementById("learningReviewGuidance");
+const learningReviewParentWrap = document.getElementById("learningReviewParentWrap");
+const learningReviewParentLabel = document.getElementById("learningReviewParentLabel");
+const learningReviewParentSelect = document.getElementById("learningReviewParentSelect");
+const learningReviewParentHint = document.getElementById("learningReviewParentHint");
+const learningReviewParentPreview = document.getElementById("learningReviewParentPreview");
 const learningReviewNote = document.getElementById("learningReviewNote");
 const learningReviewStatementWrap = document.getElementById("learningReviewStatementWrap");
 const learningReviewStatement = document.getElementById("learningReviewStatement");
@@ -141,6 +147,7 @@ let latestMessagePayload = { role: null, text: "" };
 let auditUiSnapshot = {
   owner_todos: [],
   learning_candidates: [],
+  cognition_schema_options: [],
   candidate_pipeline_summary: {},
   recent_runtime_influence_drift: {},
   suggestion_review_queue: {
@@ -1182,6 +1189,9 @@ function refreshAuditUiSnapshot(data) {
   if (Array.isArray(data.learning_candidates)) {
     auditUiSnapshot.learning_candidates = data.learning_candidates;
   }
+  if (Array.isArray(data.cognition_schema_options)) {
+    auditUiSnapshot.cognition_schema_options = data.cognition_schema_options;
+  }
   if (data.candidate_pipeline_summary && typeof data.candidate_pipeline_summary === "object") {
     auditUiSnapshot.candidate_pipeline_summary = data.candidate_pipeline_summary;
   }
@@ -1612,6 +1622,178 @@ function formatCandidateCreatedAt(item) {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+function listCognitionSchemaOptions() {
+  return Array.isArray(auditUiSnapshot.cognition_schema_options) ? auditUiSnapshot.cognition_schema_options : [];
+}
+
+function findCognitionSchemaOption(schemaVersionId) {
+  const target = String(schemaVersionId || "").trim();
+  if (!target) {
+    return null;
+  }
+  return listCognitionSchemaOptions().find((item) => String(item.id || "").trim() === target) || null;
+}
+
+function formatCognitionSchemaOptionLabel(option) {
+  const id = String((option && option.id) || "-").trim() || "-";
+  const title = String((option && (option.schema_name || option.topic || option.id)) || "-").trim() || "-";
+  const versionText =
+    typeof (option && option.version) === "number" && Number.isFinite(option.version) ? `v${option.version}` : "";
+  const parentSchemaVersionId = String((option && option.parent_schema_version_id) || "").trim();
+  const lineageText = parentSchemaVersionId
+    ? uiLanguage === "zh"
+      ? `parent=${parentSchemaVersionId}`
+      : `parent=${parentSchemaVersionId}`
+    : uiLanguage === "zh"
+      ? "root"
+      : "root";
+  return [id, title, versionText, lineageText].filter(Boolean).join(" | ");
+}
+
+function cognitionGuidanceHtml(verdict) {
+  const revisionSelected = verdict === "ratify_cognition_revision";
+  if (uiLanguage === "zh") {
+    const current = revisionSelected
+      ? "当前动作：Revision。只有当这条候选真实延续、修正或替代一条已有 schema lineage 时才选它；仅仅主题相似还不够。"
+      : "当前动作：Seed。只有当这条候选应成为新的 canonical schema root，且硬塞进现有 lineage 会扭曲历史时才选它。";
+    return [
+      "<strong>如何判断 seed vs revision</strong>",
+      current,
+      "<strong>Revision</strong>：当这条候选是在延展、修正或取代一条已有 schema line，且你能明确指出真实 parent schema 时使用。",
+      "<strong>Seed</strong>：当这条候选是在开启新的 canonical schema root，且没有有意义的 parent lineage 时使用。",
+    ].join("<br><br>");
+  }
+  const current = revisionSelected
+    ? "Current action: Revision. Choose this only when the candidate genuinely continues, adjusts, or supersedes an existing schema lineage; topical similarity alone is not enough."
+    : "Current action: Seed. Choose this only when the candidate should become a new canonical schema root and forcing it into an existing lineage would distort the history.";
+  return [
+    "<strong>How to choose seed vs revision</strong>",
+    current,
+    "<strong>Revision</strong>: use when this candidate materially extends, adjusts, or supersedes an existing schema line and you can name a real parent schema.",
+    "<strong>Seed</strong>: use when this candidate starts a genuinely new canonical schema root and there is no meaningful parent lineage.",
+  ].join("<br><br>");
+}
+
+function renderLearningReviewGuidance(verdict) {
+  if (!learningReviewGuidance) {
+    return;
+  }
+  const isCognitionRatification =
+    verdict === "ratify_cognition_seed" || verdict === "ratify_cognition_revision";
+  learningReviewGuidance.hidden = !isCognitionRatification;
+  if (!isCognitionRatification) {
+    learningReviewGuidance.innerHTML = "";
+    return;
+  }
+  learningReviewGuidance.innerHTML = cognitionGuidanceHtml(verdict);
+}
+
+function populateLearningReviewParentOptions(selectedId = "") {
+  if (!learningReviewParentSelect) {
+    return 0;
+  }
+  learningReviewParentSelect.innerHTML = "";
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent =
+    uiLanguage === "zh" ? "请选择 parent schema lineage" : "Choose a parent schema lineage";
+  learningReviewParentSelect.appendChild(placeholder);
+
+  const options = listCognitionSchemaOptions();
+  for (const option of options) {
+    const row = document.createElement("option");
+    row.value = String(option.id || "").trim();
+    row.textContent = formatCognitionSchemaOptionLabel(option);
+    if (row.value && row.value === String(selectedId || "").trim()) {
+      row.selected = true;
+    }
+    learningReviewParentSelect.appendChild(row);
+  }
+  if (!String(selectedId || "").trim()) {
+    learningReviewParentSelect.value = "";
+  }
+  return options.length;
+}
+
+function renderLearningReviewParentPreview(schemaVersionId) {
+  if (!learningReviewParentPreview || !learningReviewParentHint) {
+    return;
+  }
+  const option = findCognitionSchemaOption(schemaVersionId);
+  if (!option) {
+    if (learningReviewSubmit && learningReviewParentWrap && !learningReviewParentWrap.hidden) {
+      learningReviewSubmit.disabled = true;
+    }
+    learningReviewParentPreview.hidden = true;
+    learningReviewParentPreview.textContent = "-";
+    if (listCognitionSchemaOptions().length === 0) {
+      learningReviewParentHint.textContent =
+        uiLanguage === "zh"
+          ? "当前没有可选 parent schema。若这条候选应开启新 lineage，请改选 seed。"
+          : "No parent schema is available right now. If this candidate should start a new lineage, use seed instead.";
+    } else {
+      learningReviewParentHint.textContent =
+        uiLanguage === "zh"
+          ? "只有当这条候选真实延续该 lineage 时才选 revision；如果没有真实 parent，请返回改选 seed。"
+          : "Choose revision only when the candidate genuinely continues that lineage. If no real parent fits, go back and use seed instead.";
+    }
+    return;
+  }
+
+  const parentText = String(option.parent_schema_version_id || "").trim();
+  const lines = [
+    uiLanguage === "zh" ? "已选 parent schema" : "Selected parent schema",
+    formatCognitionSchemaOptionLabel(option),
+    `${uiLanguage === "zh" ? "创建时间" : "Created"}: ${formatCandidateCreatedAt({ created_at: option.created_at || "" })}`,
+    `${uiLanguage === "zh" ? "摘要" : "Summary"}: ${String(option.summary || "-")}`,
+    `${uiLanguage === "zh" ? "上级 lineage" : "Upstream lineage"}: ${parentText || (uiLanguage === "zh" ? "root" : "root")}`,
+  ];
+  if (learningReviewSubmit && learningReviewParentWrap && !learningReviewParentWrap.hidden) {
+    learningReviewSubmit.disabled = false;
+  }
+  learningReviewParentPreview.hidden = false;
+  learningReviewParentPreview.textContent = lines.join("\n");
+  learningReviewParentHint.textContent =
+    uiLanguage === "zh"
+      ? "请确认这条候选是在延续这条 lineage，而不只是主题相近。"
+      : "Confirm that this candidate continues this lineage, not merely a similar topic.";
+}
+
+function configureLearningReviewCognitionControls(verdict) {
+  renderLearningReviewGuidance(verdict);
+  if (!learningReviewParentWrap || !learningReviewSubmit) {
+    return;
+  }
+  const needsParent = verdict === "ratify_cognition_revision";
+  learningReviewParentWrap.hidden = !needsParent;
+  learningReviewSubmit.disabled = false;
+  if (!needsParent) {
+    if (learningReviewParentSelect) {
+      learningReviewParentSelect.innerHTML = "";
+      learningReviewParentSelect.value = "";
+    }
+    if (learningReviewParentHint) {
+      learningReviewParentHint.textContent = "-";
+    }
+    if (learningReviewParentPreview) {
+      learningReviewParentPreview.hidden = true;
+      learningReviewParentPreview.textContent = "-";
+    }
+    return;
+  }
+
+  if (learningReviewParentLabel) {
+    learningReviewParentLabel.textContent =
+      uiLanguage === "zh" ? "Parent schema version（显式必填）" : "Parent schema version (explicitly required)";
+  }
+  const optionCount = populateLearningReviewParentOptions("");
+  learningReviewSubmit.disabled = optionCount > 0;
+  renderLearningReviewParentPreview("");
+  if (optionCount === 0) {
+    learningReviewSubmit.disabled = true;
+  }
 }
 
 function summarizeSuggestionTask(item) {
@@ -4228,6 +4410,7 @@ function openLearningReviewModal(item, mode) {
   const needsStatement = verdict === "modify";
   learningReviewStatementWrap.hidden = !needsStatement;
   learningReviewStatement.value = needsStatement ? learningReviewDraft.statement : "";
+  configureLearningReviewCognitionControls(verdict);
   learningReviewModal.classList.remove("hidden");
   learningReviewNote.focus();
 }
@@ -4237,6 +4420,27 @@ function closeLearningReviewModal() {
     return;
   }
   learningReviewDraft = null;
+  if (learningReviewGuidance) {
+    learningReviewGuidance.hidden = true;
+    learningReviewGuidance.innerHTML = "";
+  }
+  if (learningReviewParentWrap) {
+    learningReviewParentWrap.hidden = true;
+  }
+  if (learningReviewParentSelect) {
+    learningReviewParentSelect.innerHTML = "";
+    learningReviewParentSelect.value = "";
+  }
+  if (learningReviewParentHint) {
+    learningReviewParentHint.textContent = "-";
+  }
+  if (learningReviewParentPreview) {
+    learningReviewParentPreview.hidden = true;
+    learningReviewParentPreview.textContent = "-";
+  }
+  if (learningReviewSubmit) {
+    learningReviewSubmit.disabled = false;
+  }
   learningReviewModal.classList.add("hidden");
 }
 
@@ -4278,13 +4482,18 @@ async function submitLearningReviewModal() {
     return;
   }
   if (verdict === "ratify_cognition_seed") {
-    await ratifyCognitionSeedCandidate(id, ownerNote);
-    closeLearningReviewModal();
+    const ok = await ratifyCognitionSeedCandidate(id, ownerNote);
+    if (ok) {
+      closeLearningReviewModal();
+    }
     return;
   }
   if (verdict === "ratify_cognition_revision") {
-    await ratifyCognitionRevisionCandidate(id, ownerNote);
-    closeLearningReviewModal();
+    const parentSchemaVersionId = learningReviewParentSelect ? String(learningReviewParentSelect.value || "").trim() : "";
+    const ok = await ratifyCognitionRevisionCandidate(id, ownerNote, parentSchemaVersionId);
+    if (ok) {
+      closeLearningReviewModal();
+    }
     return;
   }
   if (verdict === "runtime_eligible" || verdict === "runtime_hold" || verdict === "runtime_revoke") {
@@ -4411,12 +4620,12 @@ async function ratifyProfileTraitCandidate(candidateId, ratificationNote) {
 async function ratifyCognitionSeedCandidate(candidateId, ratificationNote) {
   const id = String(candidateId || "").trim();
   if (!id) {
-    return;
+    return false;
   }
   const note = String(ratificationNote || "").trim();
   if (!note) {
     addBubble("system", t("msg_review_note_required"));
-    return;
+    return false;
   }
 
   try {
@@ -4429,33 +4638,27 @@ async function ratifyCognitionSeedCandidate(candidateId, ratificationNote) {
     });
     renderActionResult(data);
     addBubble("system", t("msg_cognition_seed_ratified_done", { id, schema: data.canonical_schema_version_id || "-" }));
+    return true;
   } catch (err) {
     addBubble("system", t("msg_cognition_seed_ratify_failed", { error: err.message }));
+    return false;
   }
 }
 
-async function ratifyCognitionRevisionCandidate(candidateId, ratificationNote) {
+async function ratifyCognitionRevisionCandidate(candidateId, ratificationNote, parentSchemaVersionId) {
   const id = String(candidateId || "").trim();
   if (!id) {
-    return;
+    return false;
   }
   const note = String(ratificationNote || "").trim();
   if (!note) {
     addBubble("system", t("msg_review_note_required"));
-    return;
+    return false;
   }
-  const parentPrompt =
-    uiLanguage === "zh"
-      ? "请输入 parent schema version ID（必填，例如 sv_20260314_001）："
-      : "Enter parent schema version ID (required, e.g. sv_20260314_001):";
-  const parent = window.prompt(parentPrompt, "");
-  if (parent === null) {
-    return;
-  }
-  const parentSchemaVersionId = String(parent || "").trim();
-  if (!parentSchemaVersionId) {
+  const parentSchemaVersion = String(parentSchemaVersionId || "").trim();
+  if (!parentSchemaVersion) {
     addBubble("system", t("msg_cognition_revision_parent_required"));
-    return;
+    return false;
   }
 
   try {
@@ -4464,12 +4667,14 @@ async function ratifyCognitionRevisionCandidate(candidateId, ratificationNote) {
       candidate_id: id,
       ratification_note: note,
       canonicalization_mode: "revision",
-      parent_schema_version_id: parentSchemaVersionId,
+      parent_schema_version_id: parentSchemaVersion,
     });
     renderActionResult(data);
     addBubble("system", t("msg_cognition_revision_ratified_done", { id, schema: data.canonical_schema_version_id || "-" }));
+    return true;
   } catch (err) {
     addBubble("system", t("msg_cognition_revision_ratify_failed", { error: err.message }));
+    return false;
   }
 }
 
@@ -5400,6 +5605,11 @@ if (learningReviewCancel) {
 if (learningReviewSubmit) {
   learningReviewSubmit.addEventListener("click", () => {
     submitLearningReviewModal();
+  });
+}
+if (learningReviewParentSelect) {
+  learningReviewParentSelect.addEventListener("change", () => {
+    renderLearningReviewParentPreview(learningReviewParentSelect.value || "");
   });
 }
 if (learningReviewModal) {
