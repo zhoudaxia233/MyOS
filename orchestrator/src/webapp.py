@@ -51,6 +51,7 @@ from principles_authority import ratify_principle_candidate
 from prompting import schema_debugger_output_sections, schema_debugger_questions
 from retrieval import build_index, load_retrieval_config, search_index
 from route_selector import select_route
+from review_objects import build_run_review_object, is_reviewable_suggestion
 from runner import run_with_provider
 from runtime_eligibility import set_runtime_eligibility
 from runtime_influence import summarize_recent_runtime_influence_drift
@@ -539,6 +540,7 @@ def _execute_task(
 
     debug_prompts = schema_debugger_questions(module, task)
     debug_sections = schema_debugger_output_sections(module, task)
+    review_object = build_run_review_object(module=module, skill=plan["skill"], content=content)
     suggestion_id = next_id_for_rel_path(root, "sg", "orchestrator/logs/suggestions.jsonl")
     suggestion_record = {
         "id": suggestion_id,
@@ -548,6 +550,13 @@ def _execute_task(
         "interpreted_task": task,
         "module": module,
         "skill": plan["skill"],
+        "review_object_type": review_object["review_object_type"],
+        "proposal_kind": review_object["proposal_kind"],
+        "proposal_heading": review_object["proposal_heading"],
+        "proposal_title": review_object["proposal_title"],
+        "proposal_summary": review_object["proposal_summary"],
+        "proposal_statement": review_object["proposal_statement"],
+        "review_reason": review_object["review_reason"],
         "route_reason": run_record["route_reason"],
         "matched_keywords": route["matched_keywords"],
         "loaded_files": [f["path"] for f in bundle["files"]],
@@ -570,6 +579,12 @@ def _execute_task(
         "route": route,
         "plan": plan,
         "suggestion_id": suggestion_id,
+        "review_object_type": review_object["review_object_type"],
+        "suggestion_reviewable": is_reviewable_suggestion(suggestion_record),
+        "proposal_kind": review_object["proposal_kind"],
+        "proposal_title": review_object["proposal_title"],
+        "proposal_summary": review_object["proposal_summary"],
+        "review_reason": review_object["review_reason"],
         "output_path": _root_relative(out, root),
         "output_hash": output_hash,
         "output_preview": _preview_text(content),
@@ -1116,6 +1131,8 @@ def api_action(root: Path, payload: dict[str, Any]) -> dict:
 
         suggestion_payload = api_suggestion(root, suggestion_id)
         suggestion = suggestion_payload.get("suggestion", {})
+        if not is_reviewable_suggestion(suggestion):
+            raise ValueError("suggestion is not owner-reviewable; no judgment proposal was extracted")
         run_ref = str(suggestion.get("run_ref", "")).strip()
         source_refs: list[str] = [suggestion_id]
         if run_ref:

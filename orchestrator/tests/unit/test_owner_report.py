@@ -218,7 +218,17 @@ def test_owner_snapshot_and_render() -> None:
         _write_jsonl(
             root / "orchestrator/logs/suggestions.jsonl",
             "suggestions",
-            ["id", "created_at", "status", "module", "task_raw"],
+            [
+                "id",
+                "created_at",
+                "status",
+                "module",
+                "task_raw",
+                "review_object_type",
+                "proposal_kind",
+                "proposal_title",
+                "proposal_summary",
+            ],
             [
                 {
                     "id": "sg_1",
@@ -226,6 +236,10 @@ def test_owner_snapshot_and_render() -> None:
                     "status": "active",
                     "module": "decision",
                     "task_raw": "triage weekly decision queue",
+                    "review_object_type": "judgment_proposal",
+                    "proposal_kind": "owner_action_proposal",
+                    "proposal_title": "Owner action proposal: tighten weekly review scope",
+                    "proposal_summary": "Tighten weekly review scope and add explicit risk notes.",
                 },
                 {
                     "id": "sg_2",
@@ -233,6 +247,10 @@ def test_owner_snapshot_and_render() -> None:
                     "status": "active",
                     "module": "memory",
                     "task_raw": "ingest learning summary",
+                    "review_object_type": "judgment_proposal",
+                    "proposal_kind": "retained_judgment",
+                    "proposal_title": "Judgment proposal: preserve this learning summary for later review",
+                    "proposal_summary": "Keep the learning summary visible for judgment review.",
                 },
             ],
         )
@@ -315,7 +333,17 @@ def test_suggestion_review_summary_filter_and_trend() -> None:
         _write_jsonl(
             root / "orchestrator/logs/suggestions.jsonl",
             "suggestions",
-            ["id", "created_at", "status", "module", "task_raw"],
+            [
+                "id",
+                "created_at",
+                "status",
+                "module",
+                "task_raw",
+                "review_object_type",
+                "proposal_kind",
+                "proposal_title",
+                "proposal_summary",
+            ],
             [
                 {
                     "id": "sg_1",
@@ -323,6 +351,10 @@ def test_suggestion_review_summary_filter_and_trend() -> None:
                     "status": "active",
                     "module": "decision",
                     "task_raw": "task a",
+                    "review_object_type": "judgment_proposal",
+                    "proposal_kind": "owner_action_proposal",
+                    "proposal_title": "Owner action proposal A",
+                    "proposal_summary": "Action bundle A",
                 },
                 {
                     "id": "sg_2",
@@ -330,6 +362,10 @@ def test_suggestion_review_summary_filter_and_trend() -> None:
                     "status": "active",
                     "module": "decision",
                     "task_raw": "task b",
+                    "review_object_type": "judgment_proposal",
+                    "proposal_kind": "owner_action_proposal",
+                    "proposal_title": "Owner action proposal B",
+                    "proposal_summary": "Action bundle B",
                 },
                 {
                     "id": "sg_3",
@@ -337,6 +373,10 @@ def test_suggestion_review_summary_filter_and_trend() -> None:
                     "status": "active",
                     "module": "memory",
                     "task_raw": "task c",
+                    "review_object_type": "judgment_proposal",
+                    "proposal_kind": "retained_judgment",
+                    "proposal_title": "Judgment proposal C",
+                    "proposal_summary": "Action bundle C",
                 },
             ],
         )

@@ -228,7 +228,7 @@ DECISION_CONSTITUTION_CHECKS_SCHEMA = {
 SUGGESTIONS_SCHEMA = {
     "_schema": {
         "name": "suggestions",
-        "version": "1.2",
+        "version": "1.3",
         "fields": [
             "id",
             "created_at",
@@ -237,6 +237,13 @@ SUGGESTIONS_SCHEMA = {
             "interpreted_task",
             "module",
             "skill",
+            "review_object_type",
+            "proposal_kind",
+            "proposal_heading",
+            "proposal_title",
+            "proposal_summary",
+            "proposal_statement",
+            "review_reason",
             "route_reason",
             "matched_keywords",
             "loaded_files",

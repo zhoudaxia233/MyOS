@@ -354,6 +354,7 @@ def test_e2e_cli_command_chain(monkeypatch, capsys) -> None:
         suggestion = json.loads(suggestion_lines[-1])
         assert suggestion["run_ref"] == record["id"]
         assert suggestion["module"] == "decision"
+        assert suggestion["review_object_type"] == "execution_trace"
         assert suggestion["object_type"] == "system"
         assert suggestion["proposal_target"] is None
 

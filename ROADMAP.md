@@ -316,6 +316,27 @@ Keep rollout evolutionary: preserve existing extraction/distillation pipelines a
   - do not move learning back into a generic task box
   - do not refactor backend governance architecture just to satisfy UI structure
 
+#### Review Object Boundary Slice (2026-03-14)
+
+- Why this slice:
+  - the biggest remaining owner-review confusion was object conflation, not missing visual polish
+  - raw `task / run / output` residue was still too easily surfacing like a review object
+- Shipped in this iteration:
+  - run follow-up records are now explicitly classified as either:
+    - `execution_trace`
+    - `judgment_proposal`
+  - only `judgment_proposal` objects enter suggestion review queues, summaries, and owner verdict flow
+  - `execution_trace` objects remain inspectable in support detail, but no longer masquerade as inbox review objects
+  - suggestion review wording now uses lighter owner-verdict language (`keep / rewrite & keep / do not keep`)
+  - owner todo area is now framed as serious authority review, separate from ordinary suggestions and learning candidates
+- Remaining next:
+  - teach modules to emit explicit proposal blocks only where owner judgment is genuinely needed
+  - consider a future log split if `execution_trace` and `judgment_proposal` should no longer share `suggestions.jsonl`
+- Do not change yet:
+  - do not turn all review actions into ratification language
+  - do not merge suggestion review with learning candidate governance
+  - do not widen this slice into runtime/delegation redesign
+
 #### Stage 1 - Transparent Suggestion Pipeline (Current)
 
 - Completed:

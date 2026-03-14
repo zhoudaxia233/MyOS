@@ -40,6 +40,76 @@ def _write_jsonl(path: Path, schema_name: str, fields: list[str], rows: list[dic
             handle.write(json.dumps(row) + "\n")
 
 
+def _append_jsonl_row(path: Path, row: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(row) + "\n")
+
+
+def _seed_reviewable_suggestion(
+    root: Path,
+    *,
+    suggestion_id: str,
+    created_at: str,
+    module: str = "decision",
+    task_raw: str = "review weekly owner actions",
+    run_ref: str | None = None,
+    output_path: str = "modules/decision/outputs/reviewable_proposal.md",
+) -> str:
+    (root / output_path).parent.mkdir(parents=True, exist_ok=True)
+    (root / output_path).write_text(
+        "\n".join(
+            [
+                "# Weekly Review",
+                "",
+                "## Owner Actions",
+                "- Tighten weekly review scope to the top 3 reversible actions.",
+                "- Add explicit risk notes before acting.",
+                "- Log one falsification check for each action.",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    _append_jsonl_row(
+        root / "orchestrator/logs/suggestions.jsonl",
+        {
+            "id": suggestion_id,
+            "created_at": created_at,
+            "status": "active",
+            "task_raw": task_raw,
+            "interpreted_task": task_raw,
+            "module": module,
+            "skill": "modules/decision/skills/weekly_review.md",
+            "review_object_type": "judgment_proposal",
+            "proposal_kind": "owner_action_proposal",
+            "proposal_heading": "Owner Actions",
+            "proposal_title": "Owner action proposal: tighten weekly review scope",
+            "proposal_summary": "Tighten weekly review scope / Add risk notes / Log one falsification check",
+            "proposal_statement": "- Tighten weekly review scope.\n- Add risk notes.\n- Log one falsification check.",
+            "review_reason": "Extracted from a concrete action section in the decision output.",
+            "route_reason": "manifest_keyword_match|s=2|p=2|n=0",
+            "matched_keywords": ["decision", "review"],
+            "loaded_files": ["core/ROUTER.md", "modules/decision/MODULE.md"],
+            "runtime_influences": [],
+            "retrieval_hit_ids": [],
+            "retrieval_hit_count": 0,
+            "invoked_artifacts": ["modules/decision/skills/weekly_review.md"],
+            "invoked_rules": ["plan_skill:weekly_review"],
+            "invoked_traits": [],
+            "tensions": [],
+            "uncertainties": [],
+            "recommendation_path": output_path,
+            "audit_focus_points": ["Owner Actions"],
+            "run_ref": run_ref,
+            "output_hash": "a" * 64,
+            "object_type": "system",
+            "proposal_target": None,
+        },
+    )
+    return suggestion_id
+
+
 def test_api_status_lists_modules() -> None:
     with TemporaryDirectory() as td:
         root = _copy_repo_subset(Path(td))
@@ -195,6 +265,8 @@ def test_api_inspect_and_run_writes_output() -> None:
         assert run_result["output_path"].endswith(".md")
         assert len(run_result["output_hash"]) == 64
         assert run_result["suggestion_id"].startswith("sg_")
+        assert run_result["review_object_type"] == "execution_trace"
+        assert run_result["suggestion_reviewable"] is False
         assert isinstance(run_result["output_preview"], str)
         assert len(run_result["output_preview"]) > 0
         assert isinstance(run_result["debug_prompts"], list)
@@ -248,6 +320,8 @@ def test_api_suggestion_includes_recent_runtime_influence_drift() -> None:
         suggestion_record = json.loads(suggestion_lines[-1])
         assert suggestion_record["id"] == run_result["suggestion_id"]
         assert suggestion_record["run_ref"] == run_record["id"]
+        assert suggestion_record["review_object_type"] == "execution_trace"
+        assert suggestion_record["proposal_title"] in {None, ""}
         assert suggestion_record["object_type"] == "system"
         assert suggestion_record["proposal_target"] is None
         assert isinstance(suggestion_record["runtime_influences"], list)
@@ -357,6 +431,7 @@ def test_api_run_logs_runtime_influences_from_runtime_eligibility() -> None:
         suggestion_record = json.loads((root / "orchestrator/logs/suggestions.jsonl").read_text(encoding="utf-8").splitlines()[-1])
         assert any(item["artifact_ref"] == "rc_runtime" for item in run_record["runtime_influences"])
         assert any(item["artifact_ref"] == "rc_runtime" for item in suggestion_record["runtime_influences"])
+        assert suggestion_record["review_object_type"] == "execution_trace"
 
         suggestion_detail = api_suggestion(root, run_result["suggestion_id"])
         assert any(item["artifact_ref"] == "rc_runtime" for item in suggestion_detail["suggestion"]["runtime_influences"])
@@ -371,7 +446,7 @@ def test_api_suggestion_rejects_missing_or_unknown_id() -> None:
             api_suggestion(root, "sg_missing")
 
 
-def test_api_action_review_suggestion_writes_verdict_and_correction() -> None:
+def test_api_action_review_suggestion_rejects_execution_trace_record() -> None:
     with TemporaryDirectory() as td:
         root = _copy_repo_subset(Path(td))
         run_result = api_run(
@@ -382,7 +457,25 @@ def test_api_action_review_suggestion_writes_verdict_and_correction() -> None:
                 "with_retrieval": False,
             },
         )
-        suggestion_id = run_result["suggestion_id"]
+        with pytest.raises(ValueError):
+            api_action(
+                root,
+                {
+                    "action": "review_suggestion",
+                    "suggestion_id": run_result["suggestion_id"],
+                    "verdict": "accept",
+                    "owner_note": "Should fail because no proposal exists.",
+                },
+            )
+
+def test_api_action_review_suggestion_writes_verdict_and_correction() -> None:
+    with TemporaryDirectory() as td:
+        root = _copy_repo_subset(Path(td))
+        suggestion_id = _seed_reviewable_suggestion(
+            root,
+            suggestion_id="sg_reviewable_001",
+            created_at="2026-03-09T19:20:00Z",
+        )
 
         accept_result = api_action(
             root,
@@ -404,12 +497,18 @@ def test_api_action_review_suggestion_writes_verdict_and_correction() -> None:
         assert accept_detail["owner_review"]["verdict"]["id"] == accept_result["verdict_record_id"]
         assert accept_detail["owner_review"]["correction"] is None
 
+        second_id = _seed_reviewable_suggestion(
+            root,
+            suggestion_id="sg_reviewable_002",
+            created_at="2026-03-09T19:21:00Z",
+        )
+
         with pytest.raises(ValueError):
             api_action(
                 root,
                 {
                     "action": "review_suggestion",
-                    "suggestion_id": suggestion_id,
+                    "suggestion_id": second_id,
                     "verdict": "modify",
                     "owner_note": "Needs refinement.",
                 },
@@ -419,7 +518,7 @@ def test_api_action_review_suggestion_writes_verdict_and_correction() -> None:
             root,
             {
                 "action": "review_suggestion",
-                "suggestion_id": suggestion_id,
+                "suggestion_id": second_id,
                 "verdict": "modify",
                 "owner_note": "Direction good, framing should be tighter.",
                 "replacement_judgment": "Use narrower scope and defer irreversible commitment.",
@@ -432,7 +531,7 @@ def test_api_action_review_suggestion_writes_verdict_and_correction() -> None:
         assert modify_result["verdict_record_id"].startswith("ov_")
         assert modify_result["correction_record_id"].startswith("oc_")
 
-        modify_detail = api_suggestion(root, suggestion_id)
+        modify_detail = api_suggestion(root, second_id)
         verdict_row = modify_detail["owner_review"]["verdict"]
         correction_row = modify_detail["owner_review"]["correction"]
         assert verdict_row is not None
@@ -446,7 +545,7 @@ def test_api_action_review_suggestion_writes_verdict_and_correction() -> None:
 def test_api_status_suggestion_review_queue_tracks_pending_items() -> None:
     with TemporaryDirectory() as td:
         root = _copy_repo_subset(Path(td))
-        run_a = api_run(
+        trace_run = api_run(
             root,
             {
                 "task": "run weekly decision review",
@@ -454,27 +553,30 @@ def test_api_status_suggestion_review_queue_tracks_pending_items() -> None:
                 "with_retrieval": False,
             },
         )
-        run_b = api_run(
+        run_a = _seed_reviewable_suggestion(
             root,
-            {
-                "task": "draft a short market narrative",
-                "provider": "dry-run",
-                "with_retrieval": False,
-            },
+            suggestion_id="sg_queue_001",
+            created_at="2026-03-09T19:20:00Z",
+        )
+        run_b = _seed_reviewable_suggestion(
+            root,
+            suggestion_id="sg_queue_002",
+            created_at="2026-03-09T19:21:00Z",
         )
 
         initial_status = api_status(root)
         queue = initial_status["suggestion_review_queue"]
         pending_ids = {row["id"] for row in queue["pending"]}
         assert queue["pending_total"] >= 2
-        assert run_a["suggestion_id"] in pending_ids
-        assert run_b["suggestion_id"] in pending_ids
+        assert run_a in pending_ids
+        assert run_b in pending_ids
+        assert trace_run["suggestion_id"] not in pending_ids
 
         api_action(
             root,
             {
                 "action": "review_suggestion",
-                "suggestion_id": run_a["suggestion_id"],
+                "suggestion_id": run_a,
                 "verdict": "accept",
                 "owner_note": "Aligned with current operating intent.",
             },
@@ -485,9 +587,9 @@ def test_api_status_suggestion_review_queue_tracks_pending_items() -> None:
         updated_pending_ids = {row["id"] for row in updated_queue["pending"]}
         reviewed_items = updated_queue["recently_reviewed"]
 
-        assert run_a["suggestion_id"] not in updated_pending_ids
+        assert run_a not in updated_pending_ids
         assert any(
-            row["id"] == run_a["suggestion_id"] and row["owner_review"]["verdict"] == "accept"
+            row["id"] == run_a and row["owner_review"]["verdict"] == "accept"
             for row in reviewed_items
         )
 
@@ -495,28 +597,30 @@ def test_api_status_suggestion_review_queue_tracks_pending_items() -> None:
 def test_api_action_suggestion_review_summary_filters() -> None:
     with TemporaryDirectory() as td:
         root = _copy_repo_subset(Path(td))
-        run_a = api_run(
+        api_run(
             root,
             {
-                "task": "decision review A",
+                "task": "run weekly decision review",
                 "provider": "dry-run",
                 "with_retrieval": False,
             },
         )
-        run_b = api_run(
+        run_a = _seed_reviewable_suggestion(
             root,
-            {
-                "task": "decision review B",
-                "provider": "dry-run",
-                "with_retrieval": False,
-            },
+            suggestion_id="sg_summary_001",
+            created_at="2026-03-09T19:20:00Z",
+        )
+        run_b = _seed_reviewable_suggestion(
+            root,
+            suggestion_id="sg_summary_002",
+            created_at="2026-03-09T19:21:00Z",
         )
 
         api_action(
             root,
             {
                 "action": "review_suggestion",
-                "suggestion_id": run_a["suggestion_id"],
+                "suggestion_id": run_a,
                 "verdict": "accept",
                 "owner_note": "Accept for execution.",
             },
@@ -525,7 +629,7 @@ def test_api_action_suggestion_review_summary_filters() -> None:
             root,
             {
                 "action": "review_suggestion",
-                "suggestion_id": run_b["suggestion_id"],
+                "suggestion_id": run_b,
                 "verdict": "reject",
                 "owner_note": "Not aligned with current context.",
             },

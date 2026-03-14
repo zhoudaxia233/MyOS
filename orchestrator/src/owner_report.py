@@ -8,6 +8,7 @@ from pathlib import Path
 from idgen import next_id_for_path
 from learning_console import summarize_learning_pipeline, summarize_learning_pipeline_trend
 from metrics import compute_drift_metrics
+from review_objects import is_reviewable_suggestion
 from validators import append_jsonl
 
 OWNER_TODOS_SCHEMA = {
@@ -229,6 +230,7 @@ def summarize_suggestion_reviews(
         now,
         window_days,
     )
+    suggestions_rows = [row for row in suggestions_rows if is_reviewable_suggestion(row)]
     suggestions_by_id: dict[str, dict] = {}
     for row in suggestions_rows:
         sid = str(row.get("id", "")).strip()
@@ -241,8 +243,14 @@ def summarize_suggestion_reviews(
         window_days,
     )
     verdict_rows = [r for r in verdict_rows if str(r.get("status", "active")).strip().lower() == "active"]
+    verdict_rows = [
+        row
+        for row in verdict_rows
+        if str(row.get("suggestion_ref", "")).strip() in suggestions_by_id
+    ]
     if normalized_filter:
         verdict_rows = [r for r in verdict_rows if str(r.get("verdict", "")).strip().lower() == normalized_filter]
+    verdict_ids = {str(row.get("id", "")).strip() for row in verdict_rows if str(row.get("id", "")).strip()}
 
     correction_rows = _window_filter(
         _load_jsonl(repo_root / "orchestrator/logs/owner_corrections.jsonl"),
@@ -250,6 +258,12 @@ def summarize_suggestion_reviews(
         window_days,
     )
     correction_rows = [r for r in correction_rows if str(r.get("status", "active")).strip().lower() == "active"]
+    correction_rows = [
+        row
+        for row in correction_rows
+        if str(row.get("suggestion_ref", "")).strip() in suggestions_by_id
+        or str(row.get("verdict_ref", "")).strip() in verdict_ids
+    ]
     correction_by_verdict_ref: dict[str, dict] = {}
     for row in correction_rows:
         verdict_ref = str(row.get("verdict_ref", "")).strip()
@@ -283,6 +297,8 @@ def summarize_suggestion_reviews(
                 "correction_ref": str((correction or {}).get("id", "")).strip() or None,
                 "module": str(suggestion.get("module", "")).strip() or None,
                 "task_raw": str(suggestion.get("task_raw", "")).strip() or None,
+                "proposal_title": str(suggestion.get("proposal_title", "")).strip() or None,
+                "proposal_summary": str(suggestion.get("proposal_summary", "")).strip() or None,
                 "created_at": str(row.get("created_at", "")).strip(),
             }
         )
@@ -323,7 +339,7 @@ def list_suggestion_review_queue(
         now,
         window_days,
     )
-    suggestions_rows = [row for row in suggestions_rows if str(row.get("status", "active")).strip().lower() == "active"]
+    suggestions_rows = [row for row in suggestions_rows if is_reviewable_suggestion(row)]
     suggestions_rows = sorted(suggestions_rows, key=lambda row: str(row.get("created_at", "")), reverse=True)
 
     verdict_rows = _window_filter(
@@ -340,6 +356,14 @@ def list_suggestion_review_queue(
         window_days,
     )
     correction_rows = [row for row in correction_rows if str(row.get("status", "active")).strip().lower() == "active"]
+    valid_verdict_ids = {str(row.get("id", "")).strip() for row in verdict_rows if str(row.get("id", "")).strip()}
+    valid_suggestion_ids = {str(row.get("id", "")).strip() for row in suggestions_rows if str(row.get("id", "")).strip()}
+    correction_rows = [
+        row
+        for row in correction_rows
+        if str(row.get("suggestion_ref", "")).strip() in valid_suggestion_ids
+        or str(row.get("verdict_ref", "")).strip() in valid_verdict_ids
+    ]
     correction_rows = sorted(correction_rows, key=lambda row: str(row.get("created_at", "")), reverse=True)
 
     latest_verdict_by_suggestion: dict[str, dict] = {}
@@ -364,6 +388,12 @@ def list_suggestion_review_queue(
             "created_at": str(suggestion.get("created_at", "")).strip(),
             "module": str(suggestion.get("module", "")).strip() or None,
             "task_raw": str(suggestion.get("task_raw", "")).strip() or None,
+            "review_object_type": str(suggestion.get("review_object_type", "")).strip() or None,
+            "proposal_kind": str(suggestion.get("proposal_kind", "")).strip() or None,
+            "proposal_title": str(suggestion.get("proposal_title", "")).strip() or None,
+            "proposal_summary": str(suggestion.get("proposal_summary", "")).strip() or None,
+            "proposal_statement": str(suggestion.get("proposal_statement", "")).strip() or None,
+            "review_reason": str(suggestion.get("review_reason", "")).strip() or None,
             "recommendation_path": str(suggestion.get("recommendation_path", "")).strip() or None,
             "run_ref": str(suggestion.get("run_ref", "")).strip() or None,
             "output_hash": str(suggestion.get("output_hash", "")).strip() or None,

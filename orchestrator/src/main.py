@@ -34,6 +34,7 @@ from planner import plan_task
 from plugin_contract import validate_repo
 from prompting import schema_debugger_output_sections, schema_debugger_questions
 from retrieval import build_index, format_hits, load_retrieval_config, search_index
+from review_objects import build_run_review_object, is_reviewable_suggestion
 from route_selector import select_route
 from runner import run_with_provider
 from scheduling import task_from_routine
@@ -242,6 +243,7 @@ def execute_task(
 
     debug_prompts = schema_debugger_questions(module, task)
     debug_sections = schema_debugger_output_sections(module, task)
+    review_object = build_run_review_object(module=module, skill=plan["skill"], content=content)
     suggestion_id = next_id_for_rel_path(root, "sg", "orchestrator/logs/suggestions.jsonl")
     suggestion_record = {
         "id": suggestion_id,
@@ -251,6 +253,13 @@ def execute_task(
         "interpreted_task": task,
         "module": module,
         "skill": plan["skill"],
+        "review_object_type": review_object["review_object_type"],
+        "proposal_kind": review_object["proposal_kind"],
+        "proposal_heading": review_object["proposal_heading"],
+        "proposal_title": review_object["proposal_title"],
+        "proposal_summary": review_object["proposal_summary"],
+        "proposal_statement": review_object["proposal_statement"],
+        "review_reason": review_object["review_reason"],
         "route_reason": run_record["route_reason"],
         "matched_keywords": route["matched_keywords"],
         "loaded_files": [f["path"] for f in bundle["files"]],
@@ -273,6 +282,12 @@ def execute_task(
         "route": route,
         "plan": plan,
         "suggestion_id": suggestion_id,
+        "review_object_type": review_object["review_object_type"],
+        "suggestion_reviewable": is_reviewable_suggestion(suggestion_record),
+        "proposal_kind": review_object["proposal_kind"],
+        "proposal_title": review_object["proposal_title"],
+        "proposal_summary": review_object["proposal_summary"],
+        "review_reason": review_object["review_reason"],
         "output_path": _root_relative(out, root),
         "output_hash": output_hash,
         "retrieval_hits": len(hits),
@@ -372,6 +387,13 @@ def cmd_run(args: argparse.Namespace) -> int:
             reason = str(item.get("selection_reason", "")).strip() or "runtime"
             print(f"- [{artifact_type}] {title} via={reason}")
     print(f"Suggestion ID: {result['suggestion_id']}")
+    print(f"Review object type: {result['review_object_type']}")
+    if result.get("proposal_kind"):
+        print(f"Proposal kind: {result['proposal_kind']}")
+    if result.get("proposal_title"):
+        print(f"Proposal title: {result['proposal_title']}")
+    if result.get("review_reason"):
+        print(f"Review note: {result['review_reason']}")
     print(f"Wrote: {root / result['output_path']}")
     return 0
 

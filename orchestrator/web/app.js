@@ -215,19 +215,19 @@ const I18N = {
     hint_audit: "在这里做漂移检查、报告复核和学习与进化候选治理。",
     audit_kicker: "Owner Review",
     review_inbox_title: "待判断事项",
-    review_inbox_desc: "先处理任务建议、学习候选与 Owner 待办，再按需查看生命周期、报告和机器轨迹。",
-    review_inbox_lead_suggestion: "当前有任务建议等待判断。先做 Accept / Modify / Reject，再处理学习候选或其他治理事项。",
+    review_inbox_desc: "先处理判断提案、学习候选与重大治理事项，再按需查看生命周期、报告和机器轨迹。",
+    review_inbox_lead_suggestion: "当前有判断提案等待裁决。先决定哪些应保留为你的判断，再处理学习候选或其他治理事项。",
     review_inbox_lead_review: "当前有待复核候选。先做 Accept / Modify / Reject，再决定哪些值得进入下一阶段。",
     review_inbox_lead_promote: "当前有候选已经通过复核。Accept 不等于 Promote，请单独判断是否值得晋升。",
     review_inbox_lead_runtime: "当前主要是 canonicalized / runtime triage 候选。先判断哪些应继续 hold，哪些需要复核 scope / coexistence，哪些值得放行 runtime。",
-    review_inbox_lead_todo: "当前主要是 Owner 待办。先处理这些异常与判断事项，再回看支持上下文。",
+    review_inbox_lead_todo: "当前主要是重大治理事项。先处理这些高严重度判断，再回看支持上下文。",
     review_inbox_lead_empty: "当前收件箱为空。你可以回到工作台补充学习素材，或按需运行一次 quick audit。",
     review_inbox_lead_filtered_empty: "当前筛选条件下没有匹配候选。你可以放宽筛选范围，或回到全部视图。",
     review_inbox_lead_mixed: "先处理真正需要你判断的对象；生命周期和机器轨迹只作为辅助上下文。",
-    review_count_suggestion: "建议复核",
+    review_count_suggestion: "判断提案",
     review_count_review: "待复核",
     review_count_promote: "可晋升",
-    review_count_todo: "Owner 待办",
+    review_count_todo: "重大事项",
     review_presets_title: "常用分诊视图",
     review_presets_desc: "一键回到常见 Owner 队列；手动微调筛选时会自动进入自定义视图。",
     review_preset_all: "全部",
@@ -261,20 +261,20 @@ const I18N = {
     btn_reset_filters: "清空筛选",
     review_filter_meta_idle: "当前显示全部候选。",
     review_filter_meta_active: "当前显示 {shown} / {total} 条候选。",
-    suggestion_queue_title: "任务建议复核",
-    suggestion_queue_desc: "这里处理最近执行产出的建议判断，不和学习候选治理混在一起。",
-    suggestion_queue_next: "下一步：判断这条建议是保留、改写还是拒绝。",
-    suggestion_queue_empty: "当前没有待复核的任务建议。",
+    suggestion_queue_title: "判断提案待裁决",
+    suggestion_queue_desc: "这里只显示从运行结果中抽取出的可裁决判断提案；原始 task / run / output 只留在历史与 trace。",
+    suggestion_queue_next: "你要决定：是否把这条提案保留为你的当前判断。",
+    suggestion_queue_empty: "当前没有待裁决的判断提案。没有明确 proposal 的 runs 不会进入这里。",
     suggestion_queue_open_detail: "查看细节",
     suggestion_meta_created: "进入队列 {created}",
-    suggestion_history_summary: "最近执行判断",
-    suggestion_history_desc: "这里回看最近已经完成的 execution judgment，不重新打开操作动作。",
-    suggestion_history_empty: "当前没有最近已复核的执行建议。",
+    suggestion_history_summary: "最近已裁决提案",
+    suggestion_history_desc: "这里回看最近已经完成的判断提案裁决，不重新打开操作动作。",
+    suggestion_history_empty: "当前没有最近已裁决的判断提案。",
     suggestion_history_reviewed: "已判断 {created}",
     audit_timeline_summary: "近期判断时间线",
-    audit_timeline_desc: "按时间回看最近完成的 execution judgment 与 learning judgment，主队列仍只保留待处理对象。",
+    audit_timeline_desc: "按时间回看最近完成的判断提案与学习判断，主队列仍只保留待处理对象。",
     audit_timeline_empty: "当前没有可回看的近期判断。",
-    audit_timeline_kind_suggestion: "执行建议",
+    audit_timeline_kind_suggestion: "判断提案",
     audit_timeline_kind_learning: "学习候选",
     audit_timeline_time_decided: "判断于 {created}",
     audit_timeline_time_reviewed: "复核于 {created}",
@@ -284,7 +284,7 @@ const I18N = {
     audit_timeline_open_detail: "打开支撑详情",
     audit_timeline_filter_kind: "对象",
     audit_timeline_filter_kind_all: "全部对象",
-    audit_timeline_filter_kind_suggestion: "执行建议",
+    audit_timeline_filter_kind_suggestion: "判断提案",
     audit_timeline_filter_kind_learning: "学习候选",
     audit_timeline_filter_status: "判断",
     audit_timeline_filter_status_all: "全部判断",
@@ -299,18 +299,30 @@ const I18N = {
     audit_timeline_meta_idle: "当前显示全部近期判断。",
     audit_timeline_meta_active: "当前显示 {shown} / {total} 条近期判断。",
     audit_timeline_empty_filtered: "当前没有符合时间线筛选的判断。",
-    suggestion_detail_empty: "选择一条建议或已处理学习项以查看复核支撑。",
+    suggestion_detail_empty: "选择一条判断提案、运行记录或已处理学习项以查看复核支撑。",
     suggestion_detail_raw: "原始快照（按需展开）",
-    suggestion_detail_task: "任务",
+    suggestion_detail_task: "来源任务",
     suggestion_detail_status: "当前状态",
     suggestion_detail_status_pending: "待复核",
     suggestion_detail_status_accept: "已接受",
     suggestion_detail_status_modify: "已修改",
     suggestion_detail_status_reject: "已拒绝",
+    suggestion_detail_status_trace: "仅留痕，不进入复核",
     suggestion_detail_created: "进入队列时间",
     suggestion_detail_module: "模块",
-    suggestion_detail_run: "运行记录",
-    suggestion_detail_output: "输出文件",
+    suggestion_detail_run: "来源运行",
+    suggestion_detail_output: "来源输出",
+    suggestion_detail_object: "对象类型",
+    suggestion_detail_object_proposal: "判断提案",
+    suggestion_detail_object_trace: "运行留痕",
+    suggestion_detail_proposal: "提案内容",
+    suggestion_detail_why_here: "为什么在这里",
+    suggestion_detail_decision: "你要决定什么",
+    suggestion_detail_action_meanings: "这三个动作分别意味着什么",
+    suggestion_detail_action_meanings_pending:
+      "保留为我的判断：把这条提案保留为当前判断。\n改写后保留：保留方向，但用你的表述重写。\n不采纳：不把这条提案保留为当前判断。",
+    suggestion_detail_trace_reason:
+      "这条记录只是一次运行留痕。当前输出没有形成明确的判断提案，所以不会进入 owner review inbox。",
     suggestion_detail_focus: "复核焦点",
     suggestion_detail_focus_none: "暂无显式复核焦点。",
     suggestion_detail_owner_note: "Owner 备注",
@@ -324,8 +336,9 @@ const I18N = {
     judgment_detail_kicker: "当前判断",
     judgment_detail_desc: "这里显示你当前选中的判断对象；支持上下文和机器轨迹放在下方。",
     judgment_detail_next: "下一步",
-    judgment_detail_subject_empty: "选择一条建议或已处理学习项以查看复核支撑。",
-    judgment_detail_subject_suggestion: "执行建议复核",
+    judgment_detail_subject_empty: "选择一条判断提案、运行记录或已处理学习项以查看复核支撑。",
+    judgment_detail_subject_suggestion: "判断提案复核",
+    judgment_detail_subject_trace: "运行留痕回看",
     judgment_detail_subject_learning: "学习判断回看",
     detail_compact_showing: "显示 {shown} / {total} 条",
     detail_compact_full: "展开完整内容",
@@ -333,23 +346,24 @@ const I18N = {
     detail_snapshot_fields: "字段",
     detail_snapshot_size: "估计体积",
     detail_snapshot_lists: "列表项",
-    suggestion_detail_next_pending: "提交 Accept / Modify / Reject，让这条执行建议完成 judgment。",
-    suggestion_detail_next_accept: "已接受：如需沉淀，再单独判断是否值得进入学习流程。",
-    suggestion_detail_next_modify: "已修改：修正记录已经写入，可继续对照输出与更正后的判断。",
-    suggestion_detail_next_reject: "已拒绝：这条执行建议不会作为你的判断被保留。",
+    suggestion_detail_next_pending: "提交保留 / 改写后保留 / 不采纳，让这条提案完成 owner verdict。",
+    suggestion_detail_next_accept: "已保留：如需沉淀，再单独判断是否值得进入学习流程。",
+    suggestion_detail_next_modify: "已改写后保留：修正记录已经写入，可继续对照输出与更正后的判断。",
+    suggestion_detail_next_reject: "已不采纳：这条提案不会作为你的判断被保留。",
+    suggestion_detail_next_trace: "这条记录只作为运行留痕保留；如需 owner review，运行结果必须先形成明确提案。",
     review_queue_title: "学习候选待复核",
     review_queue_desc: "这里处理学习候选的 Accept / Modify / Reject，不把判断淹没在日志里。",
     promote_queue_title: "学习候选可晋升",
     promote_queue_desc: "Accept 不等于 Promote。这里只处理已经通过复核的学习项。",
     reviewed_queue_title: "学习候选运行分诊",
     reviewed_queue_desc: "这里处理已 canonicalized 或已进入 runtime 流程的学习项，优先显示需要 runtime triage judgment 的 cognition candidates。",
-    owner_todo_title: "Owner 待办",
-    owner_todo_desc: "这是系统已经升级成 owner judgment 的异常与待确认事项。",
+    owner_todo_title: "重大治理事项",
+    owner_todo_desc: "这里只放高严重度的 authority / exception judgment；普通执行建议不会进入这里。",
     review_history_summary: "近期已处理 / 冷却中",
     queue_empty_review: "当前没有待复核候选。",
     queue_empty_promote: "当前没有可晋升候选。",
     queue_empty_reviewed: "当前没有近期已处理或冷却中的候选。",
-    queue_empty_todo: "当前没有 Owner 待办。",
+    queue_empty_todo: "当前没有重大治理事项。",
     queue_empty_cognition_lineage_review: "当前没有需要额外关注的 cognition lineage 状态。",
     audit_support_kicker: "支持上下文",
     audit_support_title: "支持上下文",
@@ -407,12 +421,12 @@ const I18N = {
     audit_start_desc: "先点击一键审计，再按结果做手动动作。",
     btn_audit_quick_run: "一键审计（校验 -> 7天指标 -> Owner报告）",
     audit_guide_idle: "审计指引：先跑一键审计，再看右侧认知信号和待办。",
-    audit_zero_state_desc: "当前没有待复核建议、学习候选或 Owner 待办。建议先去工作台输入学习素材，或先跑一次一键审计。",
+    audit_zero_state_desc: "当前没有待裁决的判断提案、学习候选或重大治理事项。建议先去工作台输入学习素材，或先跑一次一键审计。",
     btn_go_workspace_learning: "去工作台学习与进化",
     btn_show_manual_actions: "仍然显示全部手动动作",
     audit_guide_title: "一键审计执行摘要",
     audit_guide_running: "进行中：正在依次执行校验、7天指标、Owner报告...",
-    audit_guide_done: "完成：先看右侧指标卡，再处理 Owner 待办（如果有）。",
+    audit_guide_done: "完成：先看右侧指标卡，再处理重大治理事项（如果有）。",
     audit_guide_failed: "一键审计失败：{error}",
     audit_step_validate: "1) 校验：状态={status}",
     audit_step_metrics: "2) 7天指标：输出={output_path}",
@@ -427,7 +441,7 @@ const I18N = {
     audit_cognition_timeline: "认知时间线",
     audit_schedule_weekly: "执行周循环",
     audit_build_index: "构建检索索引",
-    suggestion_review_filters: "建议复核筛选",
+    suggestion_review_filters: "判断提案筛选",
     filter_review_all: "全部",
     filter_accept: "接受",
     filter_modify: "修改",
@@ -444,14 +458,14 @@ const I18N = {
     trace_cognition_lineage_review_desc:
       "这里只显示当前已不再是 current 的 canonical schemas（superseded / narrowed / alongside）。",
     judgment_detail_subject_cognition_lineage: "认知 lineage 详情",
-    trace_owner_todos: "待办",
+    trace_owner_todos: "重大事项",
     trace_learning_lifecycle: "学习生命周期",
     trace_learning_lifecycle_note:
       "运行资格独立于晋升；晋升也不等于正式 SSOT。任何内容都必须先复核、再晋升入账；如要进入 runtime，还需显式 runtime eligibility，并在 eligible 后通过成熟期。",
     trace_learning_candidates: "学习候选与状态队列",
     trace_candidate_pipeline: "候选管道（30天 + 趋势）",
     trace_recent_influence_drift: "近期运行影响漂移",
-    trace_suggestion_reviews: "建议复核（30天 + 趋势）",
+    trace_suggestion_reviews: "判断提案复核（30天 + 趋势）",
     trace_route: "路由",
     trace_plan: "计划",
     trace_loaded_files: "已加载文件",
@@ -462,6 +476,9 @@ const I18N = {
     btn_accept: "接受",
     btn_modify: "修改",
     btn_reject: "拒绝",
+    suggestion_btn_accept: "保留为我的判断",
+    suggestion_btn_modify: "改写后保留",
+    suggestion_btn_reject: "不采纳",
     btn_promote: "晋升",
     btn_ratify_principle: "宪制确认",
     btn_ratify_profile_trait: "确认 trait 入档",
@@ -588,10 +605,10 @@ const I18N = {
     learning_review_statement_placeholder: "输入修改后的候选陈述...",
     learning_review_cancel: "取消",
     learning_review_submit: "提交",
-    suggestion_review_modal_title_accept: "接受建议",
-    suggestion_review_modal_title_modify: "修改建议",
-    suggestion_review_modal_title_reject: "拒绝建议",
-    suggestion_review_modal_title: "复核建议",
+    suggestion_review_modal_title_accept: "保留为我的判断",
+    suggestion_review_modal_title_modify: "改写后保留",
+    suggestion_review_modal_title_reject: "不采纳",
+    suggestion_review_modal_title: "裁决判断提案",
     suggestion_review_owner_note: "Owner 备注",
     suggestion_review_note_placeholder: "写下你的判断依据...",
     suggestion_review_replacement: "替代判断",
@@ -720,19 +737,19 @@ const I18N = {
     hint_audit: "Review drift, reports, and Learning & Evolution candidates before promoting into judgment core.",
     audit_kicker: "Owner Review",
     review_inbox_title: "Items Requiring Judgment",
-    review_inbox_desc: "Handle task suggestions, learning candidates, and owner todos first, then open lifecycle, reports, or machine traces only when needed.",
-    review_inbox_lead_suggestion: "Task suggestions are waiting for judgment. Decide Accept / Modify / Reject before switching to learning governance or support context.",
+    review_inbox_desc: "Handle judgment proposals, learning candidates, and serious authority review first, then open lifecycle, reports, or machine traces only when needed.",
+    review_inbox_lead_suggestion: "Judgment proposals are waiting for owner verdict. Decide what should be kept as your judgment before switching to learning governance or support context.",
     review_inbox_lead_review: "Pending candidates need review now. Decide Accept / Modify / Reject before thinking about promotion.",
     review_inbox_lead_promote: "Some candidates already passed review. Accept is not Promote, so judge promotion separately.",
     review_inbox_lead_runtime: "Canonicalized / runtime-triage candidates are the main queue right now. Decide what should stay on hold, what needs scope/coexistence review, and what is ready for runtime release.",
-    review_inbox_lead_todo: "Owner todos are the main work right now. Clear these judgment items first, then use support context if needed.",
+    review_inbox_lead_todo: "Serious authority review is the main work right now. Clear these high-seriousness items first, then use support context if needed.",
     review_inbox_lead_empty: "The inbox is empty for now. Add new learning material from Workspace or run quick audit if you want fresh context.",
     review_inbox_lead_filtered_empty: "No candidates match the current filters. Relax the filters or return to the full inbox view.",
     review_inbox_lead_mixed: "Focus on the objects that need owner judgment first; lifecycle and machine traces stay in a support role.",
-    review_count_suggestion: "Suggestion Review",
+    review_count_suggestion: "Judgment Proposals",
     review_count_review: "Needs Review",
     review_count_promote: "Ready To Promote",
-    review_count_todo: "Owner Todos",
+    review_count_todo: "Authority Review",
     review_presets_title: "Common Triage Views",
     review_presets_desc: "Jump back to common owner queues in one click. Manual filter tweaks automatically become a custom view.",
     review_preset_all: "All",
@@ -766,20 +783,20 @@ const I18N = {
     btn_reset_filters: "Reset Filters",
     review_filter_meta_idle: "Showing all candidates.",
     review_filter_meta_active: "Showing {shown} / {total} candidates.",
-    suggestion_queue_title: "Task Suggestion Inbox",
-    suggestion_queue_desc: "Review execution suggestions here without mixing them into learning candidate governance.",
-    suggestion_queue_next: "Next action: decide whether this suggestion should be kept, rewritten, or rejected.",
-    suggestion_queue_empty: "No task suggestions currently need review.",
+    suggestion_queue_title: "Judgment Proposal Review",
+    suggestion_queue_desc: "Only real judgment proposals extracted from run outputs appear here. Raw task / run / output shells stay in history and trace.",
+    suggestion_queue_next: "Decide whether this proposal should be kept as your current judgment.",
+    suggestion_queue_empty: "No judgment proposals currently need review. Runs without an explicit proposal stay out of this inbox.",
     suggestion_queue_open_detail: "Open Detail",
     suggestion_meta_created: "Queued {created}",
-    suggestion_history_summary: "Recent Execution Judgments",
-    suggestion_history_desc: "Review the latest completed execution judgments here without reopening decision actions.",
-    suggestion_history_empty: "No recently reviewed execution suggestions yet.",
+    suggestion_history_summary: "Recent Reviewed Proposals",
+    suggestion_history_desc: "Review the latest completed judgment-proposal verdicts here without reopening actions.",
+    suggestion_history_empty: "No recently reviewed judgment proposals yet.",
     suggestion_history_reviewed: "Reviewed {created}",
     audit_timeline_summary: "Recent Judgment Timeline",
-    audit_timeline_desc: "Review recent execution and learning judgments in time order. The main queues still keep only pending items.",
+    audit_timeline_desc: "Review recent judgment-proposal and learning judgments in time order. The main queues still keep only pending items.",
     audit_timeline_empty: "No recent judgments to review yet.",
-    audit_timeline_kind_suggestion: "Execution Suggestion",
+    audit_timeline_kind_suggestion: "Judgment Proposal",
     audit_timeline_kind_learning: "Learning Candidate",
     audit_timeline_time_decided: "Decided {created}",
     audit_timeline_time_reviewed: "Reviewed {created}",
@@ -789,7 +806,7 @@ const I18N = {
     audit_timeline_open_detail: "Open Support Detail",
     audit_timeline_filter_kind: "Object",
     audit_timeline_filter_kind_all: "All Objects",
-    audit_timeline_filter_kind_suggestion: "Execution Suggestions",
+    audit_timeline_filter_kind_suggestion: "Judgment Proposals",
     audit_timeline_filter_kind_learning: "Learning Candidates",
     audit_timeline_filter_status: "Judgment",
     audit_timeline_filter_status_all: "All Judgments",
@@ -804,18 +821,30 @@ const I18N = {
     audit_timeline_meta_idle: "Showing all recent judgments.",
     audit_timeline_meta_active: "Showing {shown} / {total} recent judgments.",
     audit_timeline_empty_filtered: "No recent judgments match the current timeline filters.",
-    suggestion_detail_empty: "Select a suggestion or reviewed learning item to open review support.",
+    suggestion_detail_empty: "Select a judgment proposal, run trace, or reviewed learning item to open review support.",
     suggestion_detail_raw: "Raw Snapshot (Open On Demand)",
-    suggestion_detail_task: "Task",
+    suggestion_detail_task: "Source Task",
     suggestion_detail_status: "Current Status",
     suggestion_detail_status_pending: "Needs Review",
     suggestion_detail_status_accept: "Accepted",
     suggestion_detail_status_modify: "Modified",
     suggestion_detail_status_reject: "Rejected",
+    suggestion_detail_status_trace: "Trace Only",
     suggestion_detail_created: "Queued At",
     suggestion_detail_module: "Module",
-    suggestion_detail_run: "Run Ref",
-    suggestion_detail_output: "Output File",
+    suggestion_detail_run: "Source Run",
+    suggestion_detail_output: "Source Output",
+    suggestion_detail_object: "Object Type",
+    suggestion_detail_object_proposal: "Judgment Proposal",
+    suggestion_detail_object_trace: "Execution Trace",
+    suggestion_detail_proposal: "Proposal",
+    suggestion_detail_why_here: "Why It Is Here",
+    suggestion_detail_decision: "What You Are Deciding",
+    suggestion_detail_action_meanings: "What Each Action Means",
+    suggestion_detail_action_meanings_pending:
+      "Keep as judgment: retain this proposal as your current judgment.\nRewrite & Keep: keep the direction but replace it with your wording.\nDo Not Keep: do not retain this proposal as your judgment.",
+    suggestion_detail_trace_reason:
+      "This record is only a run trace. The output did not produce an explicit judgment proposal, so it stays out of the owner-review inbox.",
     suggestion_detail_focus: "Review Focus",
     suggestion_detail_focus_none: "No explicit review focus points were recorded.",
     suggestion_detail_owner_note: "Owner Note",
@@ -829,8 +858,9 @@ const I18N = {
     judgment_detail_kicker: "Current Judgment",
     judgment_detail_desc: "This shows the judgment object you selected. Support context and machine trace stay below.",
     judgment_detail_next: "Next Action",
-    judgment_detail_subject_empty: "Select a suggestion or reviewed learning item to open review support.",
-    judgment_detail_subject_suggestion: "Execution Suggestion Review",
+    judgment_detail_subject_empty: "Select a judgment proposal, run trace, or reviewed learning item to open review support.",
+    judgment_detail_subject_suggestion: "Judgment Proposal Review",
+    judgment_detail_subject_trace: "Execution Trace",
     judgment_detail_subject_learning: "Learning Judgment Replay",
     detail_compact_showing: "Showing {shown} / {total}",
     detail_compact_full: "Open Full Content",
@@ -838,23 +868,24 @@ const I18N = {
     detail_snapshot_fields: "Fields",
     detail_snapshot_size: "Approx Size",
     detail_snapshot_lists: "List Entries",
-    suggestion_detail_next_pending: "Submit Accept / Modify / Reject so this execution suggestion completes judgment.",
-    suggestion_detail_next_accept: "Accepted. If it should become durable learning, judge that separately in the learning flow.",
-    suggestion_detail_next_modify: "Modified. The correction record is written; compare the output against the corrected judgment if needed.",
-    suggestion_detail_next_reject: "Rejected. This execution suggestion will not be retained as your judgment.",
+    suggestion_detail_next_pending: "Submit Keep / Rewrite & Keep / Do Not Keep so this proposal receives an owner verdict.",
+    suggestion_detail_next_accept: "Kept. If this should become durable learning, judge that separately in the learning flow.",
+    suggestion_detail_next_modify: "Rewritten and kept. The correction record is written; compare the output against the corrected judgment if needed.",
+    suggestion_detail_next_reject: "Not kept. This proposal will not be retained as your judgment.",
+    suggestion_detail_next_trace: "This record stays as execution trace only. If owner review is needed, the run must first emit an explicit proposal.",
     review_queue_title: "Learning Candidates Needing Review",
     review_queue_desc: "This queue is for learning candidate Accept / Modify / Reject without burying judgment under logs.",
     promote_queue_title: "Learning Candidates Ready To Promote",
     promote_queue_desc: "Accept is not Promote. This queue is only for learning items that already passed review.",
     reviewed_queue_title: "Learning Candidates In Runtime Triage",
     reviewed_queue_desc: "This queue handles canonicalized or runtime-flow learning items, with cognition candidates needing runtime triage shown first.",
-    owner_todo_title: "Owner Todos",
-    owner_todo_desc: "These are exceptions and decisions that have already escalated into owner judgment work.",
+    owner_todo_title: "Serious Authority Review",
+    owner_todo_desc: "Only high-seriousness authority and exception judgments belong here. Ordinary execution suggestions do not.",
     review_history_summary: "Recently Reviewed / Cooling",
     queue_empty_review: "No candidates currently need review.",
     queue_empty_promote: "No candidates are ready to promote right now.",
     queue_empty_reviewed: "No recently reviewed or cooling candidates yet.",
-    queue_empty_todo: "No owner todos right now.",
+    queue_empty_todo: "No serious authority review items right now.",
     queue_empty_cognition_lineage_review: "No cognition lineage states currently need extra governance review.",
     audit_support_kicker: "Support Context",
     audit_support_title: "Support Context",
@@ -912,12 +943,12 @@ const I18N = {
     audit_start_desc: "Run quick audit first, then use manual actions based on results.",
     btn_audit_quick_run: "Run Quick Audit (Validate -> Metrics -> Owner Report)",
     audit_guide_idle: "Audit guide: run quick audit first, then check Cognition Signals and Owner Todos on the right.",
-    audit_zero_state_desc: "No task suggestions, learning candidates, or owner todos need attention right now. Start from Workspace learning input or run quick audit first.",
+    audit_zero_state_desc: "No judgment proposals, learning candidates, or serious authority review items are waiting right now. Add learning material from Workspace or run quick audit for fresh context.",
     btn_go_workspace_learning: "Go To Workspace Learning",
     btn_show_manual_actions: "Show Manual Actions Anyway",
     audit_guide_title: "Quick Audit Summary",
     audit_guide_running: "Running: Validate -> Metrics 7D -> Owner Report...",
-    audit_guide_done: "Done: check metric cards first, then process Owner Todos if any.",
+    audit_guide_done: "Done: check metric cards first, then process serious authority review if any.",
     audit_guide_failed: "Quick audit failed: {error}",
     audit_step_validate: "1) Validate: status={status}",
     audit_step_metrics: "2) Metrics 7D: output={output_path}",
@@ -932,7 +963,7 @@ const I18N = {
     audit_cognition_timeline: "Cognition Timeline",
     audit_schedule_weekly: "Run Weekly Cycle",
     audit_build_index: "Build Retrieval Index",
-    suggestion_review_filters: "Suggestion Review Filters",
+    suggestion_review_filters: "Judgment Proposal Filters",
     filter_review_all: "Review All",
     filter_accept: "Accept",
     filter_modify: "Modify",
@@ -949,14 +980,14 @@ const I18N = {
     trace_cognition_lineage_review_desc:
       "Only canonical schemas whose derived governance state is no longer current appear here.",
     judgment_detail_subject_cognition_lineage: "Cognition Lineage Detail",
-    trace_owner_todos: "Owner Todos",
+    trace_owner_todos: "Authority Review",
     trace_learning_lifecycle: "Learning Lifecycle",
     trace_learning_lifecycle_note:
       "Runtime eligibility is distinct from promotion, and promotion is distinct from canonical SSOT. Items must still be reviewed, promoted into ledger, explicitly marked runtime-eligible, and then pass maturity before active runtime.",
     trace_learning_candidates: "Learning Candidate Lifecycle Queue",
     trace_candidate_pipeline: "Candidate Pipeline (30D + Trend)",
     trace_recent_influence_drift: "Recent Influence Drift",
-    trace_suggestion_reviews: "Suggestion Reviews (30D + Trend)",
+    trace_suggestion_reviews: "Judgment Proposals (30D + Trend)",
     trace_route: "Route",
     trace_plan: "Plan",
     trace_loaded_files: "Loaded Files",
@@ -967,6 +998,9 @@ const I18N = {
     btn_accept: "Accept",
     btn_modify: "Modify",
     btn_reject: "Reject",
+    suggestion_btn_accept: "Keep As Judgment",
+    suggestion_btn_modify: "Rewrite & Keep",
+    suggestion_btn_reject: "Do Not Keep",
     btn_promote: "Promote",
     btn_ratify_principle: "Ratify Principle",
     btn_ratify_profile_trait: "Ratify Profile Trait",
@@ -1094,10 +1128,10 @@ const I18N = {
     learning_review_statement_placeholder: "Refine the candidate statement...",
     learning_review_cancel: "Cancel",
     learning_review_submit: "Submit",
-    suggestion_review_modal_title_accept: "Accept Suggestion",
-    suggestion_review_modal_title_modify: "Modify Suggestion",
-    suggestion_review_modal_title_reject: "Reject Suggestion",
-    suggestion_review_modal_title: "Review Suggestion",
+    suggestion_review_modal_title_accept: "Keep As Judgment",
+    suggestion_review_modal_title_modify: "Rewrite & Keep",
+    suggestion_review_modal_title_reject: "Do Not Keep",
+    suggestion_review_modal_title: "Review Judgment Proposal",
     suggestion_review_owner_note: "Owner Note",
     suggestion_review_note_placeholder: "Write your owner rationale...",
     suggestion_review_replacement: "Replacement Judgment",
@@ -2481,11 +2515,43 @@ function configureLearningReviewCognitionControls(item, verdict) {
 }
 
 function summarizeSuggestionTask(item) {
+  const proposalTitle = String((item && item.proposal_title) || "").trim();
+  if (proposalTitle) {
+    return proposalTitle.length > 160 ? `${proposalTitle.slice(0, 157)}...` : proposalTitle;
+  }
   const raw = String((item && item.task_raw) || (item && item.id) || "").trim();
   if (!raw) {
     return "-";
   }
   return raw.length > 160 ? `${raw.slice(0, 157)}...` : raw;
+}
+
+function suggestionReviewableObject(item) {
+  return String((item && item.review_object_type) || "").trim().toLowerCase() === "judgment_proposal";
+}
+
+function suggestionProposalSummary(item, maxLength = 220) {
+  const raw = String((item && item.proposal_summary) || (item && item.proposal_statement) || "").trim();
+  return raw ? clipText(raw, maxLength) : "";
+}
+
+function suggestionProposalKindLabel(kind) {
+  const value = String(kind || "").trim().toLowerCase();
+  const labels = {
+    owner_action_proposal: uiLanguage === "zh" ? "Owner 行动提案" : "Owner Action Proposal",
+    retained_judgment: uiLanguage === "zh" ? "判断提案" : "Judgment Proposal",
+    content_direction_proposal: uiLanguage === "zh" ? "内容方向提案" : "Content Direction Proposal",
+  };
+  return labels[value] || (uiLanguage === "zh" ? "判断提案" : "Judgment Proposal");
+}
+
+function suggestionDecisionPrompt(item) {
+  if (!suggestionReviewableObject(item)) {
+    return t("suggestion_detail_trace_reason");
+  }
+  return uiLanguage === "zh"
+    ? "你在裁决的不是 task、run 或 output 本身，而是这次运行里抽取出的判断提案。"
+    : "You are not judging the raw task, run, or output shell. You are judging the distilled proposal extracted from this run.";
 }
 
 function clipText(value, maxLength = 240) {
@@ -2610,7 +2676,7 @@ function buildAuditTimelineItems() {
         ownerReview.target_layer ? `${t("suggestion_detail_target")}: ${String(ownerReview.target_layer)}` : "",
       ].filter(Boolean),
       statusKey: suggestionReviewBadgeKey(item),
-      summaryText: detailLines[0] || "",
+      summaryText: detailLines[0] || suggestionProposalSummary(item, 260),
       noteText: detailLines.length > 1 ? detailLines.slice(1).join("\n") : "",
       timestamp,
       active:
@@ -2811,6 +2877,10 @@ function renderSuggestionReviewQueue(queue) {
     metric.className = "todo-metric";
     metric.textContent = summarizeSuggestionTask(item);
     head.appendChild(metric);
+    const reason = document.createElement("span");
+    reason.className = "todo-reason";
+    reason.textContent = suggestionProposalKindLabel(item.proposal_kind);
+    head.appendChild(reason);
 
     const meta = document.createElement("div");
     meta.className = "suggestion-meta";
@@ -2820,6 +2890,10 @@ function renderSuggestionReviewQueue(queue) {
       moduleChip.textContent = String(item.module);
       meta.appendChild(moduleChip);
     }
+    const typeChip = document.createElement("span");
+    typeChip.className = "suggestion-meta-chip";
+    typeChip.textContent = suggestionProposalKindLabel(item.proposal_kind);
+    meta.appendChild(typeChip);
     const createdChip = document.createElement("span");
     createdChip.className = "suggestion-meta-chip";
     createdChip.textContent = t("suggestion_meta_created", { created: formatCandidateCreatedAt(item) });
@@ -2827,7 +2901,8 @@ function renderSuggestionReviewQueue(queue) {
 
     const nextAction = document.createElement("div");
     nextAction.className = "todo-action suggestion-next";
-    nextAction.textContent = t("suggestion_queue_next");
+    const summaryText = suggestionProposalSummary(item, 260);
+    nextAction.textContent = summaryText || t("suggestion_queue_next");
 
     const actions = document.createElement("div");
     actions.className = "todo-actions";
@@ -2845,7 +2920,7 @@ function renderSuggestionReviewQueue(queue) {
       const button = document.createElement("button");
       button.className = "todo-resolve-btn";
       button.type = "button";
-      button.textContent = t(`btn_${verdict}`);
+      button.textContent = t(`suggestion_btn_${verdict}`);
       button.addEventListener("click", () => {
         reviewSuggestion(verdict, suggestionId);
       });
@@ -4015,8 +4090,9 @@ function renderSuggestionReviewSummary(summary, trend = null) {
       const verdict = row.verdict || "-";
       const suggestionRef = row.suggestion_ref || "-";
       const module = row.module || "-";
+      const title = row.proposal_title || suggestionRef;
       const correction = row.correction_ref ? ` correction=${row.correction_ref}` : "";
-      lines.push(`  ${suggestionRef}: ${verdict} module=${module}${correction}`);
+      lines.push(`  ${title}: ${verdict} module=${module}${correction}`);
     }
   }
 
@@ -4758,7 +4834,8 @@ function renderSuggestionDetail(data) {
   const ownerReview = data.owner_review && typeof data.owner_review === "object" ? data.owner_review : {};
   const verdictRow = ownerReview.verdict && typeof ownerReview.verdict === "object" ? ownerReview.verdict : null;
   const correctionRow = ownerReview.correction && typeof ownerReview.correction === "object" ? ownerReview.correction : null;
-  const statusKey = suggestionReviewStatusKey(ownerReview);
+  const reviewable = suggestionReviewableObject(suggestion);
+  const statusKey = reviewable ? suggestionReviewStatusKey(ownerReview) : "trace";
   const payload = {
     suggestion,
     run: data.run || null,
@@ -4768,9 +4845,12 @@ function renderSuggestionDetail(data) {
   };
   suggestionTrace.textContent = JSON.stringify(payload, null, 2);
   syncAuditSupportSelection("suggestion", String(suggestion.id || "").trim());
-  setAuditSupportSubject("", `${t("judgment_detail_subject_suggestion")}: ${summarizeSuggestionTask(suggestion)}`);
+  setAuditSupportSubject(
+    "",
+    `${t(reviewable ? "judgment_detail_subject_suggestion" : "judgment_detail_subject_trace")}: ${summarizeSuggestionTask(suggestion)}`
+  );
   setAuditSupportRawVisible(true);
-  setAuditSupportActionsVisible(statusKey === "pending");
+  setAuditSupportActionsVisible(reviewable && statusKey === "pending");
 
   if (suggestionDetailCard) {
     suggestionDetailCard.innerHTML = "";
@@ -4794,7 +4874,35 @@ function renderSuggestionDetail(data) {
     meta.appendChild(statusChip);
 
     suggestionDetailCard.appendChild(meta);
-    appendSuggestionDetailSection(suggestionDetailCard, "suggestion_detail_task", summarizeSuggestionTask(suggestion));
+    appendSuggestionDetailSection(
+      suggestionDetailCard,
+      "suggestion_detail_object",
+      t(reviewable ? "suggestion_detail_object_proposal" : "suggestion_detail_object_trace")
+    );
+
+    if (reviewable) {
+      appendSuggestionDetailSection(
+        suggestionDetailCard,
+        "suggestion_detail_proposal",
+        String(suggestion.proposal_statement || suggestion.proposal_summary || suggestion.proposal_title || "").trim() || "-"
+      );
+      appendSuggestionDetailSection(
+        suggestionDetailCard,
+        "suggestion_detail_why_here",
+        String(suggestion.review_reason || "").trim() || suggestionProposalKindLabel(suggestion.proposal_kind)
+      );
+      appendSuggestionDetailSection(suggestionDetailCard, "suggestion_detail_decision", suggestionDecisionPrompt(suggestion));
+      appendSuggestionDetailSection(
+        suggestionDetailCard,
+        "suggestion_detail_action_meanings",
+        t("suggestion_detail_action_meanings_pending")
+      );
+    } else {
+      appendSuggestionDetailSection(suggestionDetailCard, "suggestion_detail_why_here", t("suggestion_detail_trace_reason"));
+      appendSuggestionDetailSection(suggestionDetailCard, "suggestion_detail_decision", suggestionDecisionPrompt(suggestion));
+    }
+
+    appendSuggestionDetailSection(suggestionDetailCard, "suggestion_detail_task", String(suggestion.task_raw || "").trim() || "-");
     appendSuggestionDetailSection(suggestionDetailCard, "suggestion_detail_output", String(data.output_path || "").trim() || "-");
     appendSuggestionDetailSection(suggestionDetailCard, "suggestion_detail_run", String(suggestion.run_ref || "").trim() || "-");
 
@@ -4878,7 +4986,7 @@ function renderSuggestionDetail(data) {
   }
   setPreview(data.output_preview || "-");
   refreshOutputTokenMeta();
-  setSuggestionReviewEnabled(statusKey === "pending");
+  setSuggestionReviewEnabled(reviewable && statusKey === "pending");
 }
 
 async function loadSuggestionDetail(suggestionId, options = {}) {
@@ -4958,6 +5066,18 @@ function renderRunResult(data) {
   ];
   if (data.suggestion_id) {
     lines.push(`suggestion_id: ${data.suggestion_id}`);
+  }
+  if (data.review_object_type) {
+    lines.push(`review_object_type: ${data.review_object_type}`);
+  }
+  if (data.proposal_kind) {
+    lines.push(`proposal_kind: ${data.proposal_kind}`);
+  }
+  if (data.proposal_title) {
+    lines.push(`proposal_title: ${data.proposal_title}`);
+  }
+  if (data.review_reason) {
+    lines.push(`review_reason: ${data.review_reason}`);
   }
   resultTrace.textContent = lines.join("\n");
   setPreview(data.output_preview || "-");
@@ -6192,9 +6312,15 @@ function openSuggestionReviewModal(suggestionId, mode) {
   suggestionReviewMeta.textContent = metaParts.filter(Boolean).join(" | ");
 
   const defaultNotes = {
-    accept: uiLanguage === "zh" ? "与当前判断核心一致，建议保留。" : "Aligned with current judgment core.",
-    modify: uiLanguage === "zh" ? "方向可用，但表达和判断边界需要收紧。" : "Direction is usable, but the framing and judgment boundary need tightening.",
-    reject: uiLanguage === "zh" ? "与当前判断核心不一致，不建议保留。" : "Not aligned with current judgment core and should not be kept.",
+    accept: uiLanguage === "zh" ? "这条提案符合我现在的判断，保留。" : "This proposal matches my current judgment and should be kept.",
+    modify:
+      uiLanguage === "zh"
+        ? "方向可用，但要改成更像我的表述后再保留。"
+        : "The direction is usable, but it should be rewritten in my own framing before keeping it.",
+    reject:
+      uiLanguage === "zh"
+        ? "这条提案不代表我的判断，不保留。"
+        : "This proposal does not represent my judgment and should not be kept.",
   };
   suggestionReviewNote.value = defaultNotes[verdict] || "";
 
