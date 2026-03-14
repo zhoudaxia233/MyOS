@@ -1327,12 +1327,14 @@ def api_action(root: Path, payload: dict[str, Any]) -> dict:
         ratification_note = str(payload.get("ratification_note", "")).strip()
         canonicalization_mode = str(payload.get("canonicalization_mode", "")).strip()
         parent_schema_version_id = _normalize_optional_str(payload.get("parent_schema_version_id"))
+        lineage_justification = _normalize_optional_str(payload.get("lineage_justification"))
         result = ratify_cognition_revision_candidate(
             root,
             candidate_ref=candidate_id,
             ratification_note=ratification_note,
             canonicalization_mode=canonicalization_mode,
             parent_schema_version_id=parent_schema_version_id,
+            lineage_justification=lineage_justification,
         )
         return {
             "ok": True,

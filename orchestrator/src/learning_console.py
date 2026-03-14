@@ -1410,6 +1410,12 @@ def list_recent_learning_candidates(
             or None,
             "canonicalization_mode": str((cognition_revision_ratification or {}).get("canonicalization_mode", "")).strip()
             or None,
+            "canonical_lineage_justification": (
+                str((cognition_revision_ratification or {}).get("lineage_justification")).strip()
+                if (cognition_revision_ratification or {}).get("lineage_justification") is not None
+                else ""
+            )
+            or None,
             "canonical_parent_schema_version_id": (
                 str((cognition_revision_ratification or {}).get("parent_schema_version_id")).strip()
                 if (cognition_revision_ratification or {}).get("parent_schema_version_id") is not None

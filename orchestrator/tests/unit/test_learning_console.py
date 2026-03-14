@@ -850,6 +850,7 @@ def test_cognition_revision_can_be_runtime_eligible_after_canonicalization() -> 
         assert matched["canonicalized_at"]
         assert matched["canonical_schema_version_id"]
         assert matched["canonicalization_mode"] == "seed"
+        assert matched["canonical_lineage_justification"] is None
         assert matched["canonical_parent_schema_version_id"] is None
 
 

@@ -113,6 +113,9 @@ const learningReviewParentLabel = document.getElementById("learningReviewParentL
 const learningReviewParentSelect = document.getElementById("learningReviewParentSelect");
 const learningReviewParentHint = document.getElementById("learningReviewParentHint");
 const learningReviewParentPreview = document.getElementById("learningReviewParentPreview");
+const learningReviewLineageWrap = document.getElementById("learningReviewLineageWrap");
+const learningReviewLineageJustification = document.getElementById("learningReviewLineageJustification");
+const learningReviewLineageHint = document.getElementById("learningReviewLineageHint");
 const learningReviewNote = document.getElementById("learningReviewNote");
 const learningReviewStatementWrap = document.getElementById("learningReviewStatementWrap");
 const learningReviewStatement = document.getElementById("learningReviewStatement");
@@ -470,6 +473,7 @@ const I18N = {
     candidate_detail_canonical_trait: "Canonical trait",
     candidate_detail_canonical_schema: "Canonical schema",
     candidate_detail_canonical_mode: "Canonical 模式",
+    candidate_detail_lineage_justification: "Lineage 理由",
     candidate_detail_parent_schema: "父 schema",
     candidate_detail_runtime: "运行时状态",
     candidate_detail_runtime_eligibility: "运行资格",
@@ -524,6 +528,8 @@ const I18N = {
     learning_review_modal_title_runtime_revoke: "撤销运行资格",
     learning_review_modal_title: "复核候选",
     learning_review_owner_note: "复核备注",
+    learning_review_lineage_justification: "Lineage 理由（revision 必填）",
+    learning_review_lineage_placeholder: "说明为什么这条候选是在延续所选 lineage，而不只是主题相近...",
     learning_review_note_placeholder: "写下你的判断依据...",
     learning_review_modified_statement: "修改后的陈述",
     learning_review_statement_placeholder: "输入修改后的候选陈述...",
@@ -543,6 +549,7 @@ const I18N = {
     suggestion_review_target_placeholder: "decision",
     suggestion_review_cancel: "取消",
     suggestion_review_submit: "提交",
+    msg_cognition_revision_lineage_required: "schema revision 必须说明为什么它属于所选 lineage。",
     settings_title: "连接与偏好设置",
     settings_intro: "只需配置一个 API Key 并保存即可。其余选项建议先保持默认。",
     settings_section_openai: "OpenAI（可选）",
@@ -933,6 +940,7 @@ const I18N = {
     candidate_detail_canonical_trait: "Canonical Trait",
     candidate_detail_canonical_schema: "Canonical Schema",
     candidate_detail_canonical_mode: "Canonical Mode",
+    candidate_detail_lineage_justification: "Lineage Justification",
     candidate_detail_parent_schema: "Parent Schema",
     candidate_detail_runtime: "Runtime Status",
     candidate_detail_runtime_eligibility: "Runtime Eligibility",
@@ -987,6 +995,9 @@ const I18N = {
     learning_review_modal_title_runtime_revoke: "Revoke Runtime Eligibility",
     learning_review_modal_title: "Review Candidate",
     learning_review_owner_note: "Owner Note",
+    learning_review_lineage_justification: "Lineage Justification (required for revision)",
+    learning_review_lineage_placeholder:
+      "Explain why this candidate continues the selected lineage instead of merely sharing a topic...",
     learning_review_note_placeholder: "Write your owner rationale...",
     learning_review_modified_statement: "Modified Statement",
     learning_review_statement_placeholder: "Refine the candidate statement...",
@@ -1006,6 +1017,8 @@ const I18N = {
     suggestion_review_target_placeholder: "decision",
     suggestion_review_cancel: "Cancel",
     suggestion_review_submit: "Submit",
+    msg_cognition_revision_lineage_required:
+      "Schema revision must explain why it belongs to the selected lineage.",
     settings_title: "Connection & Preferences",
     settings_intro: "You only need one API key and Save. Keep everything else as default first.",
     settings_section_openai: "OpenAI (Optional)",
@@ -1766,10 +1779,13 @@ function configureLearningReviewCognitionControls(verdict) {
   if (!learningReviewParentWrap || !learningReviewSubmit) {
     return;
   }
-  const needsParent = verdict === "ratify_cognition_revision";
-  learningReviewParentWrap.hidden = !needsParent;
+  const needsRevisionControls = verdict === "ratify_cognition_revision";
+  learningReviewParentWrap.hidden = !needsRevisionControls;
+  if (learningReviewLineageWrap) {
+    learningReviewLineageWrap.hidden = !needsRevisionControls;
+  }
   learningReviewSubmit.disabled = false;
-  if (!needsParent) {
+  if (!needsRevisionControls) {
     if (learningReviewParentSelect) {
       learningReviewParentSelect.innerHTML = "";
       learningReviewParentSelect.value = "";
@@ -1781,12 +1797,27 @@ function configureLearningReviewCognitionControls(verdict) {
       learningReviewParentPreview.hidden = true;
       learningReviewParentPreview.textContent = "-";
     }
+    if (learningReviewLineageJustification) {
+      learningReviewLineageJustification.value = "";
+    }
+    if (learningReviewLineageHint) {
+      learningReviewLineageHint.textContent = "-";
+    }
     return;
   }
 
   if (learningReviewParentLabel) {
     learningReviewParentLabel.textContent =
       uiLanguage === "zh" ? "Parent schema version（显式必填）" : "Parent schema version (explicitly required)";
+  }
+  if (learningReviewLineageHint) {
+    learningReviewLineageHint.textContent =
+      uiLanguage === "zh"
+        ? "请写明：为什么这条候选是在延续所选 lineage，而不只是主题接近。"
+        : "State why this candidate continues the selected lineage instead of merely sharing a topic.";
+  }
+  if (learningReviewLineageJustification) {
+    learningReviewLineageJustification.value = "";
   }
   const optionCount = populateLearningReviewParentOptions("");
   learningReviewSubmit.disabled = optionCount > 0;
@@ -2811,6 +2842,7 @@ function buildCandidateContext(item) {
     [t("candidate_detail_canonical_trait"), (item && item.canonical_profile_trait_id) || "-"],
     [t("candidate_detail_canonical_schema"), (item && item.canonical_schema_version_id) || "-"],
     [t("candidate_detail_canonical_mode"), (item && item.canonicalization_mode) || "-"],
+    [t("candidate_detail_lineage_justification"), (item && item.canonical_lineage_justification) || "-"],
     [t("candidate_detail_parent_schema"), (item && item.canonical_parent_schema_version_id) || "-"],
     [t("candidate_detail_runtime_eligibility"), candidateRuntimeEligibilityLabel(item)],
     [t("candidate_detail_runtime_scope"), candidateRuntimeScopeText(item)],
@@ -3709,6 +3741,11 @@ function renderLearningSupportDetail(item, options = {}) {
     );
     appendSuggestionDetailSection(
       suggestionDetailCard,
+      "candidate_detail_lineage_justification",
+      item.canonical_lineage_justification || "-"
+    );
+    appendSuggestionDetailSection(
+      suggestionDetailCard,
       "candidate_detail_parent_schema",
       item.canonical_parent_schema_version_id || "-"
     );
@@ -4056,6 +4093,9 @@ function renderActionResult(data) {
   if (data.canonicalization_mode) {
     out.push(`canonicalization_mode: ${data.canonicalization_mode}`);
   }
+  if (data.lineage_justification) {
+    out.push(`lineage_justification: ${data.lineage_justification}`);
+  }
   if (data.parent_schema_version_id) {
     out.push(`parent_schema_version_id: ${data.parent_schema_version_id}`);
   }
@@ -4397,8 +4437,8 @@ function openLearningReviewModal(item, mode) {
         : "Approve writing this cognition candidate as a new schema root into schema_versions lineage. Seed must not carry a parent and does not write accommodation semantics.",
     ratify_cognition_revision:
       uiLanguage === "zh"
-        ? "批准把该 cognition 候选作为 revision 写入 schema lineage。revision 必须显式提供 parent schema version，且不会自动降级为 seed。"
-        : "Approve writing this cognition candidate as a revision into schema lineage. Revision requires an explicit parent schema version and will not silently downgrade into seed.",
+        ? "批准把该 cognition 候选作为 revision 写入 schema lineage。revision 必须显式提供 parent schema version，并说明为什么它属于该 lineage；系统不会自动降级为 seed。"
+        : "Approve writing this cognition candidate as a revision into schema lineage. Revision requires an explicit parent schema version plus lineage justification and will not silently downgrade into seed.",
     runtime_eligible:
       uiLanguage === "zh" ? "批准该条目进入 runtime eligibility，并接受当前边界。" : "Authorize runtime eligibility under current boundaries.",
     runtime_hold:
@@ -4437,6 +4477,15 @@ function closeLearningReviewModal() {
   if (learningReviewParentPreview) {
     learningReviewParentPreview.hidden = true;
     learningReviewParentPreview.textContent = "-";
+  }
+  if (learningReviewLineageWrap) {
+    learningReviewLineageWrap.hidden = true;
+  }
+  if (learningReviewLineageJustification) {
+    learningReviewLineageJustification.value = "";
+  }
+  if (learningReviewLineageHint) {
+    learningReviewLineageHint.textContent = "-";
   }
   if (learningReviewSubmit) {
     learningReviewSubmit.disabled = false;
@@ -4490,7 +4539,10 @@ async function submitLearningReviewModal() {
   }
   if (verdict === "ratify_cognition_revision") {
     const parentSchemaVersionId = learningReviewParentSelect ? String(learningReviewParentSelect.value || "").trim() : "";
-    const ok = await ratifyCognitionRevisionCandidate(id, ownerNote, parentSchemaVersionId);
+    const lineageJustification = learningReviewLineageJustification
+      ? String(learningReviewLineageJustification.value || "").trim()
+      : "";
+    const ok = await ratifyCognitionRevisionCandidate(id, ownerNote, parentSchemaVersionId, lineageJustification);
     if (ok) {
       closeLearningReviewModal();
     }
@@ -4645,7 +4697,7 @@ async function ratifyCognitionSeedCandidate(candidateId, ratificationNote) {
   }
 }
 
-async function ratifyCognitionRevisionCandidate(candidateId, ratificationNote, parentSchemaVersionId) {
+async function ratifyCognitionRevisionCandidate(candidateId, ratificationNote, parentSchemaVersionId, lineageJustification) {
   const id = String(candidateId || "").trim();
   if (!id) {
     return false;
@@ -4660,6 +4712,11 @@ async function ratifyCognitionRevisionCandidate(candidateId, ratificationNote, p
     addBubble("system", t("msg_cognition_revision_parent_required"));
     return false;
   }
+  const lineageReason = String(lineageJustification || "").trim();
+  if (!lineageReason) {
+    addBubble("system", t("msg_cognition_revision_lineage_required"));
+    return false;
+  }
 
   try {
     const data = await postJson("/api/action", {
@@ -4668,6 +4725,7 @@ async function ratifyCognitionRevisionCandidate(candidateId, ratificationNote, p
       ratification_note: note,
       canonicalization_mode: "revision",
       parent_schema_version_id: parentSchemaVersion,
+      lineage_justification: lineageReason,
     });
     renderActionResult(data);
     addBubble("system", t("msg_cognition_revision_ratified_done", { id, schema: data.canonical_schema_version_id || "-" }));

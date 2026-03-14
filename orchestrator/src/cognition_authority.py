@@ -10,6 +10,8 @@ from idgen import next_id_for_rel_path
 
 DEFAULT_COGNITION_REVISION_TYPE = "refine"
 COGNITION_CANONICALIZATION_MODES = frozenset({"seed", "revision"})
+REVISION_SUMMARY_LINEAGE_PREFIX = "Lineage justification:"
+REVISION_SUMMARY_NOTE_PREFIX = "Ratification note:"
 
 
 def _utc_now() -> str:
@@ -52,6 +54,26 @@ def _optional_text(value: Any) -> str | None:
         return None
     text = str(value).strip()
     return text or None
+
+
+def _compose_revision_summary(note: str, lineage_justification: str) -> str:
+    return "\n".join(
+        [
+            f"{REVISION_SUMMARY_LINEAGE_PREFIX} {lineage_justification}",
+            f"{REVISION_SUMMARY_NOTE_PREFIX} {note}",
+        ]
+    )
+
+
+def _extract_lineage_justification(summary: Any) -> str | None:
+    text = _optional_text(summary)
+    if not text:
+        return None
+    prefix = f"{REVISION_SUMMARY_LINEAGE_PREFIX} "
+    for line in text.splitlines():
+        if line.startswith(prefix):
+            return _optional_text(line[len(prefix) :])
+    return None
 
 
 def _candidate_row_by_id(repo_root: Path, candidate_ref: str) -> dict[str, Any] | None:
@@ -116,6 +138,7 @@ def cognition_revision_ratification_map(repo_root: Path) -> dict[str, dict[str, 
                     "revision_type": None,
                     "canonicalization_mode": "seed",
                     "parent_schema_version_id": _optional_text(row.get("parent_schema_version_id")),
+                    "lineage_justification": None,
                 }
     for row in _active_accommodation_revisions(repo_root):
         refs = [str(item).strip() for item in row.get("source_refs", []) if str(item).strip()]
@@ -129,6 +152,7 @@ def cognition_revision_ratification_map(repo_root: Path) -> dict[str, dict[str, 
                     "revision_type": str(row.get("revision_type", "")).strip() or None,
                     "canonicalization_mode": "revision",
                     "parent_schema_version_id": _optional_text(row.get("previous_schema_version_id")),
+                    "lineage_justification": _extract_lineage_justification(row.get("revision_summary")),
                 }
     return out
 
@@ -204,6 +228,7 @@ def ratify_cognition_revision_candidate(
     ratification_note: str,
     canonicalization_mode: str,
     parent_schema_version_id: str | None = None,
+    lineage_justification: str | None = None,
 ) -> dict[str, Any]:
     target_candidate_ref = str(candidate_ref or "").strip()
     if not target_candidate_ref:
@@ -214,6 +239,7 @@ def ratify_cognition_revision_candidate(
         raise ValueError("ratification_note is required")
     mode = _normalize_canonicalization_mode(canonicalization_mode)
     parent_schema_version = str(parent_schema_version_id or "").strip() or None
+    lineage_justification_text = _optional_text(lineage_justification)
 
     candidate = _candidate_row_by_id(repo_root, target_candidate_ref)
     if candidate is None:
@@ -264,9 +290,13 @@ def ratify_cognition_revision_candidate(
             raise ValueError("parent_schema_version_id is required when canonicalization_mode=revision")
         if previous_schema is None:
             raise ValueError(f"parent_schema_version_id not found: {parent_schema_version}")
+        if lineage_justification_text is None:
+            raise ValueError("lineage_justification is required when canonicalization_mode=revision")
     else:
         if parent_schema_version is not None:
             raise ValueError("parent_schema_version_id must be absent when canonicalization_mode=seed")
+        if lineage_justification_text is not None:
+            raise ValueError("lineage_justification applies only when canonicalization_mode=revision")
 
     accommodation_revision_id: str | None = None
     revision_type: str | None = None
@@ -281,7 +311,7 @@ def ratify_cognition_revision_candidate(
             previous_schema_version_id=parent_schema_version or "",
             revision_type=revision_type,
             failed_assumptions=evidence or [str(previous_schema.get("summary", "")).strip()],
-            revision_summary=note,
+            revision_summary=_compose_revision_summary(note, lineage_justification_text or ""),
             new_schema_hypothesis=statement,
             create_schema_version=True,
             schema_name=title,
@@ -320,6 +350,7 @@ def ratify_cognition_revision_candidate(
         "canonicalization_mode": mode,
         "ratification_approval_ref": ratification_approval_ref,
         "parent_schema_version_id": parent_schema_version,
+        "lineage_justification": lineage_justification_text,
         "canonical_schema_version_id": schema_version_id,
         "accommodation_revision_id": accommodation_revision_id,
         "revision_type": revision_type,

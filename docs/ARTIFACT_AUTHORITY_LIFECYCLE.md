@@ -427,6 +427,7 @@ The repo now has a third explicit Class C ratification path for `cognition_revis
 - owner guidance now in code:
   - Audit exposes explicit `Ratify Schema Seed` vs `Ratify Schema Revision` guidance at the decision point
   - revision ratification now uses a visible parent-lineage selector with schema summary context
+  - revision ratification now also requires explicit lineage justification: why the candidate belongs to that lineage rather than merely sharing a topic
   - the UI guides the owner toward the right choice, but still does not infer `seed` vs `revision`
 - what remains deferred:
   - candidate-taxonomy split between schema-seed vs schema-revision artifacts

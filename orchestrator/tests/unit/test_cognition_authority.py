@@ -217,12 +217,14 @@ def test_ratify_cognition_revision_candidate_requires_explicit_parent_for_revisi
             ratification_note="Approved as an explicit schema-lineage refinement.",
             canonicalization_mode="revision",
             parent_schema_version_id="sv_20260314_001",
+            lineage_justification="This candidate directly refines the existing overload-diagnosis lineage instead of starting a new root.",
         )
 
         assert result["canonicalization_mode"] == "revision"
         assert result["canonical_schema_version_id"].startswith("sv_")
         assert result["accommodation_revision_id"].startswith("ar_")
         assert result["parent_schema_version_id"] == "sv_20260314_001"
+        assert result["lineage_justification"].startswith("This candidate directly refines")
         assert result["revision_type"] == "refine"
 
         schema_lines = (root / "modules/cognition/logs/schema_versions.jsonl").read_text(encoding="utf-8").splitlines()
@@ -236,6 +238,8 @@ def test_ratify_cognition_revision_candidate_requires_explicit_parent_for_revisi
         assert latest_revision["revision_type"] == "refine"
         assert latest_revision["object_type"] == "cognition"
         assert latest_revision["proposal_target"] == "cognition"
+        assert "Lineage justification:" in latest_revision["revision_summary"]
+        assert "Ratification note:" in latest_revision["revision_summary"]
 
 
 def test_ratify_cognition_revision_candidate_requires_promoted_candidate() -> None:
@@ -288,6 +292,7 @@ def test_ratify_cognition_revision_candidate_rejects_revision_without_parent() -
                 ratification_note="should fail without parent",
                 canonicalization_mode="revision",
                 parent_schema_version_id=None,
+                lineage_justification="This still tries to revise an existing lineage.",
             )
         assert "parent_schema_version_id is required" in str(excinfo.value)
 
@@ -310,8 +315,54 @@ def test_ratify_cognition_revision_candidate_rejects_revision_with_missing_paren
                 ratification_note="should fail with unknown parent",
                 canonicalization_mode="revision",
                 parent_schema_version_id="sv_missing",
+                lineage_justification="This candidate claims to extend the missing lineage.",
             )
         assert "parent_schema_version_id not found" in str(excinfo.value)
+
+
+def test_ratify_cognition_revision_candidate_rejects_revision_without_lineage_justification() -> None:
+    with TemporaryDirectory() as td:
+        root = Path(td)
+        _prepare_cognition_logs(
+            root,
+            schema_rows=[
+                {
+                    "id": "sv_20260314_011",
+                    "created_at": "2026-03-14T09:00:00Z",
+                    "status": "active",
+                    "schema_id": "sm_existing_revision_root",
+                    "version": 1,
+                    "topic": "Existing revision root",
+                    "schema_name": "Existing revision root",
+                    "summary": "Baseline schema.",
+                    "assumptions": ["Baseline assumption"],
+                    "predictions": ["Baseline prediction"],
+                    "boundaries": ["Baseline boundary"],
+                    "parent_schema_version_id": None,
+                    "source_refs": [],
+                    "tags": ["baseline"],
+                    "object_type": "cognition",
+                    "proposal_target": "cognition",
+                }
+            ],
+        )
+        _prepare_promoted_cognition_candidate(
+            root,
+            candidate_id="lc_20260314_007",
+            title="Revision needs a lineage reason",
+            statement="Revision without lineage justification should fail.",
+        )
+
+        with pytest.raises(ValueError) as excinfo:
+            ratify_cognition_revision_candidate(
+                root,
+                candidate_ref="lc_20260314_007",
+                ratification_note="parent exists, but rationale is missing",
+                canonicalization_mode="revision",
+                parent_schema_version_id="sv_20260314_011",
+                lineage_justification=None,
+            )
+        assert "lineage_justification is required" in str(excinfo.value)
 
 
 def test_ratify_cognition_revision_candidate_rejects_seed_with_parent() -> None:
