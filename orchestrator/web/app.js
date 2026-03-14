@@ -119,6 +119,9 @@ const learningReviewLineageHint = document.getElementById("learningReviewLineage
 const learningReviewRevisionTypeWrap = document.getElementById("learningReviewRevisionTypeWrap");
 const learningReviewRevisionType = document.getElementById("learningReviewRevisionType");
 const learningReviewRevisionTypeHint = document.getElementById("learningReviewRevisionTypeHint");
+const learningReviewParentEffectWrap = document.getElementById("learningReviewParentEffectWrap");
+const learningReviewParentEffect = document.getElementById("learningReviewParentEffect");
+const learningReviewParentEffectHint = document.getElementById("learningReviewParentEffectHint");
 const learningReviewNote = document.getElementById("learningReviewNote");
 const learningReviewStatementWrap = document.getElementById("learningReviewStatementWrap");
 const learningReviewStatement = document.getElementById("learningReviewStatement");
@@ -478,6 +481,7 @@ const I18N = {
     candidate_detail_canonical_mode: "Canonical 模式",
     candidate_detail_revision_type: "Revision 类型",
     candidate_detail_lineage_justification: "Lineage 理由",
+    candidate_detail_parent_effect: "Parent 效力",
     candidate_detail_parent_schema: "父 schema",
     candidate_detail_runtime: "运行时状态",
     candidate_detail_runtime_eligibility: "运行资格",
@@ -539,6 +543,11 @@ const I18N = {
     learning_review_revision_type_weaken: "weaken：缩小旧 schema 的适用范围或强度",
     learning_review_revision_type_split: "split：把原本一条 schema line 拆成更细的分支",
     learning_review_revision_type_merge: "merge：吸收邻近 line 的内容，但仍以所选 parent 为主 lineage",
+    learning_review_parent_effect: "Parent 效力（仅 replace / weaken 必填）",
+    learning_review_parent_effect_placeholder: "请选择 parent 效力",
+    learning_review_parent_effect_supersede: "supersede：新 schema 取代 parent 成为主解释",
+    learning_review_parent_effect_narrow: "narrow：旧 schema 保留，但适用范围被显式收窄",
+    learning_review_parent_effect_keep_alongside: "keep-alongside：新旧 schema 暂时并存，后续再审计",
     learning_review_lineage_justification: "Lineage 理由（revision 必填）",
     learning_review_lineage_placeholder: "说明为什么这条候选是在延续所选 lineage，而不只是主题相近...",
     learning_review_note_placeholder: "写下你的判断依据...",
@@ -562,6 +571,7 @@ const I18N = {
     suggestion_review_submit: "提交",
     msg_cognition_revision_lineage_required: "schema revision 必须说明为什么它属于所选 lineage。",
     msg_cognition_revision_type_required: "schema revision 必须显式选择 revision 类型。",
+    msg_cognition_revision_parent_effect_required: "replace / weaken 类型的 schema revision 必须显式说明它对 parent 的效力关系。",
     settings_title: "连接与偏好设置",
     settings_intro: "只需配置一个 API Key 并保存即可。其余选项建议先保持默认。",
     settings_section_openai: "OpenAI（可选）",
@@ -954,6 +964,7 @@ const I18N = {
     candidate_detail_canonical_mode: "Canonical Mode",
     candidate_detail_revision_type: "Revision Type",
     candidate_detail_lineage_justification: "Lineage Justification",
+    candidate_detail_parent_effect: "Parent Effect",
     candidate_detail_parent_schema: "Parent Schema",
     candidate_detail_runtime: "Runtime Status",
     candidate_detail_runtime_eligibility: "Runtime Eligibility",
@@ -1015,6 +1026,11 @@ const I18N = {
     learning_review_revision_type_weaken: "weaken: narrow the old schema's range or strength",
     learning_review_revision_type_split: "split: break one schema line into more specific branches",
     learning_review_revision_type_merge: "merge: absorb nearby material while keeping the selected parent as primary lineage",
+    learning_review_parent_effect: "Parent Effect (required only for replace / weaken)",
+    learning_review_parent_effect_placeholder: "Choose the parent effect",
+    learning_review_parent_effect_supersede: "supersede: the new schema overtakes the parent as the primary explanation",
+    learning_review_parent_effect_narrow: "narrow: the parent remains, but its scope is explicitly reduced",
+    learning_review_parent_effect_keep_alongside: "keep-alongside: old and new schemas remain side by side for now",
     learning_review_lineage_justification: "Lineage Justification (required for revision)",
     learning_review_lineage_placeholder:
       "Explain why this candidate continues the selected lineage instead of merely sharing a topic...",
@@ -1041,6 +1057,8 @@ const I18N = {
       "Schema revision must explain why it belongs to the selected lineage.",
     msg_cognition_revision_type_required:
       "Schema revision must explicitly choose a revision type.",
+    msg_cognition_revision_parent_effect_required:
+      "Replace/weaken schema revisions must explicitly state how they affect the parent lineage.",
     settings_title: "Connection & Preferences",
     settings_intro: "You only need one API key and Save. Keep everything else as default first.",
     settings_section_openai: "OpenAI (Optional)",
@@ -1736,6 +1754,52 @@ function revisionTypeGuidanceText(revisionType) {
   return map[choice] || "-";
 }
 
+function parentEffectOptionsForRevisionType(revisionType) {
+  const choice = String(revisionType || "").trim().toLowerCase();
+  if (choice === "replace") {
+    return ["supersede", "keep-alongside"];
+  }
+  if (choice === "weaken") {
+    return ["narrow", "keep-alongside"];
+  }
+  return [];
+}
+
+function parentEffectGuidanceText(revisionType, parentEffect) {
+  const choice = String(revisionType || "").trim().toLowerCase();
+  const effect = String(parentEffect || "").trim().toLowerCase();
+  const zh = {
+    replace:
+      "请明确新 schema 对 parent 的效力：是 supersede，还是暂时 keep-alongside。不要把“更好”误写成默认替代。",
+    weaken:
+      "请明确旧 schema 被如何处理：是 narrow，还是暂时 keep-alongside。不要把范围收窄写成模糊保留。",
+    supersede: "supersede：新 schema 取代 parent，成为后续解释时应优先调用的主线。",
+    narrow: "narrow：parent 仍保留，但其适用边界被显式缩小。",
+    "keep-alongside": "keep-alongside：新旧 schema 暂时并存，后续要再审计是否 supersede 或 retire 旧线。",
+  };
+  const en = {
+    replace:
+      "State whether the new schema supersedes the parent or should remain alongside it for now. Do not treat 'better' as silent replacement.",
+    weaken:
+      "State whether the parent is merely narrowed or should remain alongside the new schema. Do not leave the reduction ambiguous.",
+    supersede:
+      "supersede: the new schema overtakes the parent and becomes the primary line for future interpretation.",
+    narrow: "narrow: the parent remains in force, but its scope is explicitly reduced.",
+    "keep-alongside":
+      "keep-alongside: old and new schemas coexist for now, pending later audit on supersession or retirement.",
+  };
+  const map = uiLanguage === "zh" ? zh : en;
+  if (!choice) {
+    return uiLanguage === "zh"
+      ? "只有 replace / weaken 需要显式填写 parent effect；其余 revision 类型不应写这类效力语义。"
+      : "Only replace/weaken require an explicit parent effect; other revision types should not carry that semantic.";
+  }
+  if (!effect) {
+    return map[choice] || "-";
+  }
+  return map[effect] || "-";
+}
+
 function updateLearningReviewRevisionSubmitState() {
   if (!learningReviewSubmit) {
     return;
@@ -1747,7 +1811,9 @@ function updateLearningReviewRevisionSubmitState() {
   }
   const hasParent = learningReviewParentSelect && String(learningReviewParentSelect.value || "").trim();
   const hasRevisionType = learningReviewRevisionType && String(learningReviewRevisionType.value || "").trim();
-  learningReviewSubmit.disabled = !(hasParent && hasRevisionType);
+  const requiresParentEffect = learningReviewParentEffectWrap && !learningReviewParentEffectWrap.hidden;
+  const hasParentEffect = learningReviewParentEffect && String(learningReviewParentEffect.value || "").trim();
+  learningReviewSubmit.disabled = !(hasParent && hasRevisionType && (!requiresParentEffect || hasParentEffect));
 }
 
 function renderLearningReviewGuidance(verdict) {
@@ -1864,6 +1930,71 @@ function renderLearningReviewRevisionTypeGuidance(selectedType) {
   updateLearningReviewRevisionSubmitState();
 }
 
+function populateLearningReviewParentEffectOptions(revisionType, selectedEffect = "") {
+  if (!learningReviewParentEffect) {
+    return 0;
+  }
+  learningReviewParentEffect.innerHTML = "";
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = t("learning_review_parent_effect_placeholder");
+  learningReviewParentEffect.appendChild(placeholder);
+
+  const options = parentEffectOptionsForRevisionType(revisionType);
+  for (const effect of options) {
+    const option = document.createElement("option");
+    option.value = effect;
+    option.textContent = t(`learning_review_parent_effect_${effect.replaceAll("-", "_")}`);
+    if (effect === String(selectedEffect || "").trim().toLowerCase()) {
+      option.selected = true;
+    }
+    learningReviewParentEffect.appendChild(option);
+  }
+  if (learningReviewParentEffectHint) {
+    learningReviewParentEffectHint.textContent = parentEffectGuidanceText(
+      revisionType,
+      String(selectedEffect || "").trim().toLowerCase()
+    );
+  }
+  if (!String(selectedEffect || "").trim()) {
+    learningReviewParentEffect.value = "";
+  }
+  return options.length;
+}
+
+function renderLearningReviewParentEffectGuidance(revisionType, selectedEffect) {
+  if (!learningReviewParentEffectHint) {
+    return;
+  }
+  learningReviewParentEffectHint.textContent = parentEffectGuidanceText(revisionType, selectedEffect);
+  updateLearningReviewRevisionSubmitState();
+}
+
+function syncLearningReviewParentEffectControls(revisionType, selectedEffect = "") {
+  const optionCount = parentEffectOptionsForRevisionType(revisionType).length;
+  if (!learningReviewParentEffectWrap) {
+    updateLearningReviewRevisionSubmitState();
+    return;
+  }
+  learningReviewParentEffectWrap.hidden = optionCount === 0;
+  if (optionCount === 0) {
+    if (learningReviewParentEffect) {
+      learningReviewParentEffect.innerHTML = "";
+      learningReviewParentEffect.value = "";
+    }
+    if (learningReviewParentEffectHint) {
+      learningReviewParentEffectHint.textContent = parentEffectGuidanceText(revisionType, "");
+    }
+    updateLearningReviewRevisionSubmitState();
+    return;
+  }
+  populateLearningReviewParentEffectOptions(revisionType, selectedEffect);
+  renderLearningReviewParentEffectGuidance(
+    revisionType,
+    learningReviewParentEffect ? String(learningReviewParentEffect.value || "").trim().toLowerCase() : ""
+  );
+}
+
 function configureLearningReviewCognitionControls(verdict) {
   renderLearningReviewGuidance(verdict);
   if (!learningReviewParentWrap || !learningReviewSubmit) {
@@ -1876,6 +2007,9 @@ function configureLearningReviewCognitionControls(verdict) {
   }
   if (learningReviewRevisionTypeWrap) {
     learningReviewRevisionTypeWrap.hidden = !needsRevisionControls;
+  }
+  if (learningReviewParentEffectWrap) {
+    learningReviewParentEffectWrap.hidden = !needsRevisionControls;
   }
   learningReviewSubmit.disabled = false;
   if (!needsRevisionControls) {
@@ -1903,6 +2037,13 @@ function configureLearningReviewCognitionControls(verdict) {
     if (learningReviewRevisionTypeHint) {
       learningReviewRevisionTypeHint.textContent = "-";
     }
+    if (learningReviewParentEffect) {
+      learningReviewParentEffect.innerHTML = "";
+      learningReviewParentEffect.value = "";
+    }
+    if (learningReviewParentEffectHint) {
+      learningReviewParentEffectHint.textContent = "-";
+    }
     return;
   }
 
@@ -1920,6 +2061,7 @@ function configureLearningReviewCognitionControls(verdict) {
     learningReviewLineageJustification.value = "";
   }
   populateLearningReviewRevisionTypeOptions("");
+  syncLearningReviewParentEffectControls("");
   const optionCount = populateLearningReviewParentOptions("");
   renderLearningReviewParentPreview("");
   if (optionCount === 0) {
@@ -2945,6 +3087,7 @@ function buildCandidateContext(item) {
     [t("candidate_detail_canonical_mode"), (item && item.canonicalization_mode) || "-"],
     [t("candidate_detail_revision_type"), (item && item.canonical_revision_type) || "-"],
     [t("candidate_detail_lineage_justification"), (item && item.canonical_lineage_justification) || "-"],
+    [t("candidate_detail_parent_effect"), (item && item.canonical_parent_effect) || "-"],
     [t("candidate_detail_parent_schema"), (item && item.canonical_parent_schema_version_id) || "-"],
     [t("candidate_detail_runtime_eligibility"), candidateRuntimeEligibilityLabel(item)],
     [t("candidate_detail_runtime_scope"), candidateRuntimeScopeText(item)],
@@ -3853,6 +3996,11 @@ function renderLearningSupportDetail(item, options = {}) {
     );
     appendSuggestionDetailSection(
       suggestionDetailCard,
+      "candidate_detail_parent_effect",
+      item.canonical_parent_effect || "-"
+    );
+    appendSuggestionDetailSection(
+      suggestionDetailCard,
       "candidate_detail_parent_schema",
       item.canonical_parent_schema_version_id || "-"
     );
@@ -4206,6 +4354,9 @@ function renderActionResult(data) {
   if (data.revision_type) {
     out.push(`revision_type: ${data.revision_type}`);
   }
+  if (data.parent_effect) {
+    out.push(`parent_effect: ${data.parent_effect}`);
+  }
   if (data.parent_schema_version_id) {
     out.push(`parent_schema_version_id: ${data.parent_schema_version_id}`);
   }
@@ -4547,8 +4698,8 @@ function openLearningReviewModal(item, mode) {
         : "Approve writing this cognition candidate as a new schema root into schema_versions lineage. Seed must not carry a parent and does not write accommodation semantics.",
     ratify_cognition_revision:
       uiLanguage === "zh"
-        ? "批准把该 cognition 候选作为 revision 写入 schema lineage。revision 必须显式提供 parent、说明为什么它属于该 lineage，并显式选择 revision 类型；系统不会自动降级为 seed。"
-        : "Approve writing this cognition candidate as a revision into schema lineage. Revision requires an explicit parent, lineage justification, and explicit revision type; it will not silently downgrade into seed.",
+        ? "批准把该 cognition 候选作为 revision 写入 schema lineage。revision 必须显式提供 parent、说明为什么它属于该 lineage，并显式选择 revision 类型；若类型是 replace / weaken，还必须说明它对 parent 的效力关系。系统不会自动降级为 seed。"
+        : "Approve writing this cognition candidate as a revision into schema lineage. Revision requires an explicit parent, lineage justification, and explicit revision type; replace/weaken must also state the parent effect. It will not silently downgrade into seed.",
     runtime_eligible:
       uiLanguage === "zh" ? "批准该条目进入 runtime eligibility，并接受当前边界。" : "Authorize runtime eligibility under current boundaries.",
     runtime_hold:
@@ -4607,6 +4758,16 @@ function closeLearningReviewModal() {
   if (learningReviewRevisionTypeHint) {
     learningReviewRevisionTypeHint.textContent = "-";
   }
+  if (learningReviewParentEffectWrap) {
+    learningReviewParentEffectWrap.hidden = true;
+  }
+  if (learningReviewParentEffect) {
+    learningReviewParentEffect.innerHTML = "";
+    learningReviewParentEffect.value = "";
+  }
+  if (learningReviewParentEffectHint) {
+    learningReviewParentEffectHint.textContent = "-";
+  }
   if (learningReviewSubmit) {
     learningReviewSubmit.disabled = false;
   }
@@ -4660,6 +4821,7 @@ async function submitLearningReviewModal() {
   if (verdict === "ratify_cognition_revision") {
     const parentSchemaVersionId = learningReviewParentSelect ? String(learningReviewParentSelect.value || "").trim() : "";
     const revisionType = learningReviewRevisionType ? String(learningReviewRevisionType.value || "").trim() : "";
+    const parentEffect = learningReviewParentEffect ? String(learningReviewParentEffect.value || "").trim() : "";
     const lineageJustification = learningReviewLineageJustification
       ? String(learningReviewLineageJustification.value || "").trim()
       : "";
@@ -4668,7 +4830,8 @@ async function submitLearningReviewModal() {
       ownerNote,
       parentSchemaVersionId,
       lineageJustification,
-      revisionType
+      revisionType,
+      parentEffect
     );
     if (ok) {
       closeLearningReviewModal();
@@ -4829,7 +4992,8 @@ async function ratifyCognitionRevisionCandidate(
   ratificationNote,
   parentSchemaVersionId,
   lineageJustification,
-  revisionType
+  revisionType,
+  parentEffect
 ) {
   const id = String(candidateId || "").trim();
   if (!id) {
@@ -4855,6 +5019,11 @@ async function ratifyCognitionRevisionCandidate(
     addBubble("system", t("msg_cognition_revision_type_required"));
     return false;
   }
+  const parentEffectValue = String(parentEffect || "").trim().toLowerCase();
+  if (parentEffectOptionsForRevisionType(revisionTypeValue).length > 0 && !parentEffectValue) {
+    addBubble("system", t("msg_cognition_revision_parent_effect_required"));
+    return false;
+  }
 
   try {
     const data = await postJson("/api/action", {
@@ -4865,6 +5034,7 @@ async function ratifyCognitionRevisionCandidate(
       parent_schema_version_id: parentSchemaVersion,
       lineage_justification: lineageReason,
       revision_type: revisionTypeValue,
+      parent_effect: parentEffectValue || null,
     });
     renderActionResult(data);
     addBubble("system", t("msg_cognition_revision_ratified_done", { id, schema: data.canonical_schema_version_id || "-" }));
@@ -5811,7 +5981,17 @@ if (learningReviewParentSelect) {
 }
 if (learningReviewRevisionType) {
   learningReviewRevisionType.addEventListener("change", () => {
-    renderLearningReviewRevisionTypeGuidance(learningReviewRevisionType.value || "");
+    const revisionType = learningReviewRevisionType.value || "";
+    renderLearningReviewRevisionTypeGuidance(revisionType);
+    syncLearningReviewParentEffectControls(revisionType);
+  });
+}
+if (learningReviewParentEffect) {
+  learningReviewParentEffect.addEventListener("change", () => {
+    renderLearningReviewParentEffectGuidance(
+      learningReviewRevisionType ? learningReviewRevisionType.value || "" : "",
+      learningReviewParentEffect.value || ""
+    );
   });
 }
 if (learningReviewModal) {

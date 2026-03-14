@@ -429,11 +429,15 @@ The repo now has a third explicit Class C ratification path for `cognition_revis
   - revision ratification now uses a visible parent-lineage selector with schema summary context
   - revision ratification now also requires explicit lineage justification: why the candidate belongs to that lineage rather than merely sharing a topic
   - revision ratification now also requires explicit `revision_type`; the system no longer defaults cognition revisions to `refine`
+  - `replace` and `weaken` revisions now also require explicit `parent_effect` in the audit path:
+    - `replace` must say whether the new schema `supersede`s the parent or should `keep-alongside`
+    - `weaken` must say whether the parent is `narrow`ed or should `keep-alongside`
+    - `refine`, `split`, and `merge` must not carry parent-effect semantics
   - the UI guides the owner toward the right choice, but still does not infer `seed` vs `revision`
 - what remains deferred:
   - candidate-taxonomy split between schema-seed vs schema-revision artifacts
   - broader lineage browser / graph exploration beyond the current parent selector
-  - richer operator selection beyond the current conservative default revision type
+  - richer lineage-effect ontology beyond the current narrow `parent_effect` audit field
 
 ## Near-Term Guardrails
 

@@ -1329,6 +1329,7 @@ def api_action(root: Path, payload: dict[str, Any]) -> dict:
         parent_schema_version_id = _normalize_optional_str(payload.get("parent_schema_version_id"))
         lineage_justification = _normalize_optional_str(payload.get("lineage_justification"))
         revision_type = _normalize_optional_str(payload.get("revision_type"))
+        parent_effect = _normalize_optional_str(payload.get("parent_effect"))
         result = ratify_cognition_revision_candidate(
             root,
             candidate_ref=candidate_id,
@@ -1337,6 +1338,7 @@ def api_action(root: Path, payload: dict[str, Any]) -> dict:
             parent_schema_version_id=parent_schema_version_id,
             lineage_justification=lineage_justification,
             revision_type=revision_type,
+            parent_effect=parent_effect,
         )
         return {
             "ok": True,

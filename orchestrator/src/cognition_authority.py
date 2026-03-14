@@ -10,7 +10,9 @@ from idgen import next_id_for_rel_path
 
 COGNITION_CANONICALIZATION_MODES = frozenset({"seed", "revision"})
 COGNITION_REVISION_TYPES = frozenset({"weaken", "replace", "split", "merge", "refine"})
+COGNITION_PARENT_EFFECTS = frozenset({"supersede", "narrow", "keep-alongside"})
 REVISION_SUMMARY_LINEAGE_PREFIX = "Lineage justification:"
+REVISION_SUMMARY_PARENT_EFFECT_PREFIX = "Parent effect:"
 REVISION_SUMMARY_NOTE_PREFIX = "Ratification note:"
 
 
@@ -56,24 +58,42 @@ def _optional_text(value: Any) -> str | None:
     return text or None
 
 
-def _compose_revision_summary(note: str, lineage_justification: str) -> str:
-    return "\n".join(
-        [
-            f"{REVISION_SUMMARY_LINEAGE_PREFIX} {lineage_justification}",
-            f"{REVISION_SUMMARY_NOTE_PREFIX} {note}",
-        ]
-    )
+def _compose_revision_summary(note: str, lineage_justification: str, parent_effect: str | None = None) -> str:
+    lines = [f"{REVISION_SUMMARY_LINEAGE_PREFIX} {lineage_justification}"]
+    if _optional_text(parent_effect):
+        lines.append(f"{REVISION_SUMMARY_PARENT_EFFECT_PREFIX} {parent_effect}")
+    lines.append(f"{REVISION_SUMMARY_NOTE_PREFIX} {note}")
+    return "\n".join(lines)
 
 
-def _extract_lineage_justification(summary: Any) -> str | None:
+def _extract_summary_segment(summary: Any, prefix: str, next_prefixes: list[str]) -> str | None:
     text = _optional_text(summary)
     if not text:
         return None
-    prefix = f"{REVISION_SUMMARY_LINEAGE_PREFIX} "
-    for line in text.splitlines():
-        if line.startswith(prefix):
-            return _optional_text(line[len(prefix) :])
-    return None
+    marker = f"{prefix} "
+    start = text.find(marker)
+    if start < 0:
+        return None
+    start += len(marker)
+    end = len(text)
+    for next_prefix in next_prefixes:
+        next_marker = f"{next_prefix} "
+        idx = text.find(next_marker, start)
+        if idx >= 0 and idx < end:
+            end = idx
+    return _optional_text(text[start:end])
+
+
+def _extract_lineage_justification(summary: Any) -> str | None:
+    return _extract_summary_segment(
+        summary,
+        REVISION_SUMMARY_LINEAGE_PREFIX,
+        [REVISION_SUMMARY_PARENT_EFFECT_PREFIX, REVISION_SUMMARY_NOTE_PREFIX],
+    )
+
+
+def _extract_parent_effect(summary: Any) -> str | None:
+    return _extract_summary_segment(summary, REVISION_SUMMARY_PARENT_EFFECT_PREFIX, [REVISION_SUMMARY_NOTE_PREFIX])
 
 
 def _normalize_revision_type(revision_type: str | None) -> str:
@@ -81,6 +101,14 @@ def _normalize_revision_type(revision_type: str | None) -> str:
     if normalized not in COGNITION_REVISION_TYPES:
         allowed = ", ".join(sorted(COGNITION_REVISION_TYPES))
         raise ValueError(f"revision_type must be one of: {allowed}")
+    return normalized
+
+
+def _normalize_parent_effect(parent_effect: str | None) -> str:
+    normalized = str(parent_effect or "").strip().lower()
+    if normalized not in COGNITION_PARENT_EFFECTS:
+        allowed = ", ".join(sorted(COGNITION_PARENT_EFFECTS))
+        raise ValueError(f"parent_effect must be one of: {allowed}")
     return normalized
 
 
@@ -146,6 +174,7 @@ def cognition_revision_ratification_map(repo_root: Path) -> dict[str, dict[str, 
                     "revision_type": None,
                     "canonicalization_mode": "seed",
                     "parent_schema_version_id": _optional_text(row.get("parent_schema_version_id")),
+                    "parent_effect": None,
                     "lineage_justification": None,
                 }
     for row in _active_accommodation_revisions(repo_root):
@@ -160,6 +189,7 @@ def cognition_revision_ratification_map(repo_root: Path) -> dict[str, dict[str, 
                     "revision_type": str(row.get("revision_type", "")).strip() or None,
                     "canonicalization_mode": "revision",
                     "parent_schema_version_id": _optional_text(row.get("previous_schema_version_id")),
+                    "parent_effect": _extract_parent_effect(row.get("revision_summary")),
                     "lineage_justification": _extract_lineage_justification(row.get("revision_summary")),
                 }
     return out
@@ -238,6 +268,7 @@ def ratify_cognition_revision_candidate(
     parent_schema_version_id: str | None = None,
     lineage_justification: str | None = None,
     revision_type: str | None = None,
+    parent_effect: str | None = None,
 ) -> dict[str, Any]:
     target_candidate_ref = str(candidate_ref or "").strip()
     if not target_candidate_ref:
@@ -250,6 +281,7 @@ def ratify_cognition_revision_candidate(
     parent_schema_version = str(parent_schema_version_id or "").strip() or None
     lineage_justification_text = _optional_text(lineage_justification)
     revision_type_text = _optional_text(revision_type)
+    parent_effect_text = _optional_text(parent_effect)
 
     candidate = _candidate_row_by_id(repo_root, target_candidate_ref)
     if candidate is None:
@@ -305,6 +337,21 @@ def ratify_cognition_revision_candidate(
         if revision_type_text is None:
             raise ValueError("revision_type is required when canonicalization_mode=revision")
         revision_type_text = _normalize_revision_type(revision_type_text)
+        if revision_type_text == "replace":
+            if parent_effect_text is None:
+                raise ValueError("parent_effect is required when revision_type=replace")
+            parent_effect_text = _normalize_parent_effect(parent_effect_text)
+            if parent_effect_text not in {"supersede", "keep-alongside"}:
+                raise ValueError("parent_effect for revision_type=replace must be supersede or keep-alongside")
+        elif revision_type_text == "weaken":
+            if parent_effect_text is None:
+                raise ValueError("parent_effect is required when revision_type=weaken")
+            parent_effect_text = _normalize_parent_effect(parent_effect_text)
+            if parent_effect_text not in {"narrow", "keep-alongside"}:
+                raise ValueError("parent_effect for revision_type=weaken must be narrow or keep-alongside")
+        else:
+            if parent_effect_text is not None:
+                raise ValueError("parent_effect applies only to revision_type=replace or revision_type=weaken")
     else:
         if parent_schema_version is not None:
             raise ValueError("parent_schema_version_id must be absent when canonicalization_mode=seed")
@@ -312,6 +359,8 @@ def ratify_cognition_revision_candidate(
             raise ValueError("lineage_justification applies only when canonicalization_mode=revision")
         if revision_type_text is not None:
             raise ValueError("revision_type applies only when canonicalization_mode=revision")
+        if parent_effect_text is not None:
+            raise ValueError("parent_effect applies only when canonicalization_mode=revision")
 
     accommodation_revision_id: str | None = None
     revision_type: str | None = None
@@ -326,7 +375,7 @@ def ratify_cognition_revision_candidate(
             previous_schema_version_id=parent_schema_version or "",
             revision_type=revision_type,
             failed_assumptions=evidence or [str(previous_schema.get("summary", "")).strip()],
-            revision_summary=_compose_revision_summary(note, lineage_justification_text or ""),
+            revision_summary=_compose_revision_summary(note, lineage_justification_text or "", parent_effect_text),
             new_schema_hypothesis=statement,
             create_schema_version=True,
             schema_name=title,
@@ -365,6 +414,7 @@ def ratify_cognition_revision_candidate(
         "canonicalization_mode": mode,
         "ratification_approval_ref": ratification_approval_ref,
         "parent_schema_version_id": parent_schema_version,
+        "parent_effect": parent_effect_text,
         "lineage_justification": lineage_justification_text,
         "canonical_schema_version_id": schema_version_id,
         "accommodation_revision_id": accommodation_revision_id,

@@ -66,6 +66,9 @@ It tracks how mental models (schemas) are used, where they fail, how they are re
      - if revision is chosen, the owner must explicitly pick a real parent schema lineage
      - if revision is chosen, the owner must also state why the candidate belongs to that lineage rather than merely sharing a topic
      - if revision is chosen, the owner must explicitly classify the change (`refine`, `replace`, `weaken`, `split`, `merge`)
+     - if revision type is `replace`, the owner must explicitly state whether the new schema `supersede`s the parent or should `keep-alongside`
+     - if revision type is `weaken`, the owner must explicitly state whether the parent is `narrow`ed or should `keep-alongside`
+     - `refine`, `split`, and `merge` must not carry parent-effect semantics
 5. Log equilibration
    - Record whether revision improves explanatory and predictive coherence.
 6. Weekly synthesis
@@ -90,6 +93,7 @@ It tracks how mental models (schemas) are used, where they fail, how they are re
 - `revision` requires explicit parent lineage.
 - `revision` should carry explicit lineage justification in the audit path.
 - `revision` should carry explicit revision type in the audit path.
+- `replace` / `weaken` revisions should carry explicit parent-effect semantics in the audit path.
 - `seed` must not carry parent lineage and must not write accommodation semantics.
 - Guidance may help the owner choose, but the system must not silently decide `seed` vs `revision`.
 - Preserve append-only history across all cognition logs.

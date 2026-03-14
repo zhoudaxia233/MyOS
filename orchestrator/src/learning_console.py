@@ -1422,6 +1422,12 @@ def list_recent_learning_candidates(
                 else ""
             )
             or None,
+            "canonical_parent_effect": (
+                str((cognition_revision_ratification or {}).get("parent_effect")).strip()
+                if (cognition_revision_ratification or {}).get("parent_effect") is not None
+                else ""
+            )
+            or None,
             "canonical_parent_schema_version_id": (
                 str((cognition_revision_ratification or {}).get("parent_schema_version_id")).strip()
                 if (cognition_revision_ratification or {}).get("parent_schema_version_id") is not None

@@ -219,6 +219,7 @@ def test_ratify_cognition_revision_candidate_requires_explicit_parent_for_revisi
             parent_schema_version_id="sv_20260314_001",
             lineage_justification="This candidate directly refines the existing overload-diagnosis lineage instead of starting a new root.",
             revision_type="replace",
+            parent_effect="supersede",
         )
 
         assert result["canonicalization_mode"] == "revision"
@@ -227,6 +228,7 @@ def test_ratify_cognition_revision_candidate_requires_explicit_parent_for_revisi
         assert result["parent_schema_version_id"] == "sv_20260314_001"
         assert result["lineage_justification"].startswith("This candidate directly refines")
         assert result["revision_type"] == "replace"
+        assert result["parent_effect"] == "supersede"
 
         schema_lines = (root / "modules/cognition/logs/schema_versions.jsonl").read_text(encoding="utf-8").splitlines()
         latest_schema = json.loads(schema_lines[-1])
@@ -240,6 +242,7 @@ def test_ratify_cognition_revision_candidate_requires_explicit_parent_for_revisi
         assert latest_revision["object_type"] == "cognition"
         assert latest_revision["proposal_target"] == "cognition"
         assert "Lineage justification:" in latest_revision["revision_summary"]
+        assert "Parent effect: supersede" in latest_revision["revision_summary"]
         assert "Ratification note:" in latest_revision["revision_summary"]
 
 
@@ -478,6 +481,170 @@ def test_ratify_cognition_revision_candidate_rejects_seed_with_revision_type() -
                 revision_type="refine",
             )
         assert "revision_type applies only when canonicalization_mode=revision" in str(excinfo.value)
+
+
+def test_ratify_cognition_revision_candidate_requires_parent_effect_for_replace() -> None:
+    with TemporaryDirectory() as td:
+        root = Path(td)
+        _prepare_cognition_logs(
+            root,
+            schema_rows=[
+                {
+                    "id": "sv_20260314_013",
+                    "created_at": "2026-03-14T09:00:00Z",
+                    "status": "active",
+                    "schema_id": "sm_replace_parent",
+                    "version": 1,
+                    "topic": "Replace parent",
+                    "schema_name": "Replace parent",
+                    "summary": "Baseline schema.",
+                    "assumptions": ["Baseline assumption"],
+                    "predictions": ["Baseline prediction"],
+                    "boundaries": ["Baseline boundary"],
+                    "parent_schema_version_id": None,
+                    "source_refs": [],
+                    "tags": ["baseline"],
+                    "object_type": "cognition",
+                    "proposal_target": "cognition",
+                }
+            ],
+        )
+        _prepare_promoted_cognition_candidate(
+            root,
+            candidate_id="lc_20260314_010",
+            title="Replace needs parent effect",
+            statement="Replace without parent effect should fail.",
+        )
+
+        with pytest.raises(ValueError) as excinfo:
+            ratify_cognition_revision_candidate(
+                root,
+                candidate_ref="lc_20260314_010",
+                ratification_note="replace needs parent effect",
+                canonicalization_mode="revision",
+                parent_schema_version_id="sv_20260314_013",
+                lineage_justification="This candidate supersedes the parent lineage's core explanation.",
+                revision_type="replace",
+                parent_effect=None,
+            )
+        assert "parent_effect is required when revision_type=replace" in str(excinfo.value)
+
+
+def test_ratify_cognition_revision_candidate_requires_parent_effect_for_weaken() -> None:
+    with TemporaryDirectory() as td:
+        root = Path(td)
+        _prepare_cognition_logs(
+            root,
+            schema_rows=[
+                {
+                    "id": "sv_20260314_014",
+                    "created_at": "2026-03-14T09:00:00Z",
+                    "status": "active",
+                    "schema_id": "sm_weaken_parent",
+                    "version": 1,
+                    "topic": "Weaken parent",
+                    "schema_name": "Weaken parent",
+                    "summary": "Baseline schema.",
+                    "assumptions": ["Baseline assumption"],
+                    "predictions": ["Baseline prediction"],
+                    "boundaries": ["Baseline boundary"],
+                    "parent_schema_version_id": None,
+                    "source_refs": [],
+                    "tags": ["baseline"],
+                    "object_type": "cognition",
+                    "proposal_target": "cognition",
+                }
+            ],
+        )
+        _prepare_promoted_cognition_candidate(
+            root,
+            candidate_id="lc_20260314_011",
+            title="Weaken needs parent effect",
+            statement="Weaken without parent effect should fail.",
+        )
+
+        with pytest.raises(ValueError) as excinfo:
+            ratify_cognition_revision_candidate(
+                root,
+                candidate_ref="lc_20260314_011",
+                ratification_note="weaken needs parent effect",
+                canonicalization_mode="revision",
+                parent_schema_version_id="sv_20260314_014",
+                lineage_justification="This candidate narrows the existing lineage instead of replacing it.",
+                revision_type="weaken",
+                parent_effect=None,
+            )
+        assert "parent_effect is required when revision_type=weaken" in str(excinfo.value)
+
+
+def test_ratify_cognition_revision_candidate_rejects_parent_effect_for_refine() -> None:
+    with TemporaryDirectory() as td:
+        root = Path(td)
+        _prepare_cognition_logs(
+            root,
+            schema_rows=[
+                {
+                    "id": "sv_20260314_015",
+                    "created_at": "2026-03-14T09:00:00Z",
+                    "status": "active",
+                    "schema_id": "sm_refine_parent",
+                    "version": 1,
+                    "topic": "Refine parent",
+                    "schema_name": "Refine parent",
+                    "summary": "Baseline schema.",
+                    "assumptions": ["Baseline assumption"],
+                    "predictions": ["Baseline prediction"],
+                    "boundaries": ["Baseline boundary"],
+                    "parent_schema_version_id": None,
+                    "source_refs": [],
+                    "tags": ["baseline"],
+                    "object_type": "cognition",
+                    "proposal_target": "cognition",
+                }
+            ],
+        )
+        _prepare_promoted_cognition_candidate(
+            root,
+            candidate_id="lc_20260314_012",
+            title="Refine must not carry parent effect",
+            statement="Refine with parent effect should fail.",
+        )
+
+        with pytest.raises(ValueError) as excinfo:
+            ratify_cognition_revision_candidate(
+                root,
+                candidate_ref="lc_20260314_012",
+                ratification_note="refine should not carry parent effect",
+                canonicalization_mode="revision",
+                parent_schema_version_id="sv_20260314_015",
+                lineage_justification="This candidate sharpens the selected lineage without changing its effect relation.",
+                revision_type="refine",
+                parent_effect="supersede",
+            )
+        assert "parent_effect applies only to revision_type=replace or revision_type=weaken" in str(excinfo.value)
+
+
+def test_ratify_cognition_revision_candidate_rejects_seed_with_parent_effect() -> None:
+    with TemporaryDirectory() as td:
+        root = Path(td)
+        _prepare_cognition_logs(root)
+        _prepare_promoted_cognition_candidate(
+            root,
+            candidate_id="lc_20260314_013",
+            title="Seed must not carry parent effect",
+            statement="Seed with parent effect should fail.",
+        )
+
+        with pytest.raises(ValueError) as excinfo:
+            ratify_cognition_revision_candidate(
+                root,
+                candidate_ref="lc_20260314_013",
+                ratification_note="seed must reject parent effect",
+                canonicalization_mode="seed",
+                parent_schema_version_id=None,
+                parent_effect="keep-alongside",
+            )
+        assert "parent_effect applies only when canonicalization_mode=revision" in str(excinfo.value)
 
 
 def test_list_cognition_schema_options_exposes_parent_context() -> None:
