@@ -1372,6 +1372,13 @@ body {
   font-weight: 700;
 }
 
+:root[data-theme="dark"] .queue-count-badge,
+:root[data-theme="dark"] .history-count-badge {
+  border-color: color-mix(in srgb, var(--accent) 42%, var(--border));
+  background: color-mix(in srgb, var(--accent) 22%, var(--card) 78%);
+  color: color-mix(in srgb, var(--accent-ink) 92%, white 8%);
+}
+
 .review-history-fold {
   border: 1px solid color-mix(in srgb, var(--border) 82%, white);
   border-radius: 12px;
