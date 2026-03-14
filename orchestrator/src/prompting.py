@@ -129,6 +129,20 @@ def review_object_instruction(task: str, module: str, skill: str | None = None) 
         )
         return "\n".join(lines)
 
+    if mod == "content" and skill_norm.endswith("propose_content_direction.md"):
+        lines.extend(
+            [
+                "Owner-review object contract:",
+                "- This skill is intended to produce a reviewable content-direction proposal.",
+                "- Keep supporting analysis above, and only when you reached a real direction recommendation, end with exactly one explicit section heading:",
+                "  `## Content Direction Proposal`",
+                "- Put 1-3 distilled bullets under that heading.",
+                "- Never use the task title, output path, file list, or run metadata as the proposal itself.",
+                "- If context is too thin for a stable direction, say what is missing and do not emit the proposal block.",
+            ]
+        )
+        return "\n".join(lines)
+
     return ""
 
 

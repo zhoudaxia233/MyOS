@@ -70,6 +70,34 @@ Keep rollout evolutionary: preserve existing extraction/distillation pipelines a
   - add explicit proposal blocks to the next small set of decision/report skills that genuinely need owner verdicts
   - then introduce a dedicated content-direction skill instead of overloading normal draft outputs
 
+#### Content Direction Proposal Slice (2026-03-14)
+
+- Why this slice:
+  - content still lacked a dedicated reviewable object after the weekly-review proposal emitter landed
+  - without a separate path, content direction judgment would either be missing or get stuffed into normal draft artifacts
+- Shipped in this iteration:
+  - added dedicated content-strategy skill:
+    - `modules/content/skills/propose_content_direction.md`
+  - added dedicated template:
+    - `modules/content/data/templates/content_direction_proposal.md`
+  - added manifest routing + planning for explicit direction tasks:
+    - `content direction`
+    - `content angle`
+    - `content framing`
+    - `editorial angle`
+  - prompt contract now treats this skill as proposal-producing:
+    - support analysis stays above
+    - final review object must use `## Content Direction Proposal`
+  - normal content drafting remains output-only:
+    - `write_after_meal_story` still must not append proposal-review sections
+- Kept intentionally minimal:
+  - no new publishing workflow
+  - no automatic carry-forward from accepted direction proposal into draft generation
+  - no broader UI shell changes
+- Next continuation slice:
+  - add a workspace starter for content direction proposals
+  - then let draft-generation tasks optionally consume accepted direction proposals as context
+
 #### Runtime Eligibility + Influence Visibility Slice (2026-03-14)
 
 - Why this slice:

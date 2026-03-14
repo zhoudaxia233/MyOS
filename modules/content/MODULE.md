@@ -17,6 +17,7 @@ This module handles the content creation pipeline for short-form writing, thread
 
 - `modules/content/MODULE.md`: Module purpose, workflows, loading rules, and behavioral instructions
 - `modules/content/module.manifest.yaml`: Routing keywords and planning defaults for orchestrator auto-discovery
+- `modules/content/skills/propose_content_direction.md`: Produce a reviewable content direction / framing proposal before drafting
 - `modules/content/skills/write_after_meal_story.md`: Task-specific skill for producing a short-form "after-meal story"
 
 ### Canonical data (SSOT)
@@ -24,6 +25,7 @@ This module handles the content creation pipeline for short-form writing, thread
 - `modules/content/data/voice.yaml`: Voice profile and numeric style targets
 - `modules/content/data/anti_patterns.md`: Banned openings, banned phrases, and structural traps
 - `modules/content/data/templates/after_meal_story.md`: Required output structure for after-meal stories
+- `modules/content/data/templates/content_direction_proposal.md`: Support + proposal structure for content direction judgment
 - `modules/content/data/templates/x_thread.md`: X/Twitter thread skeleton template
 
 ### Logs (append-only JSONL)
@@ -40,20 +42,24 @@ This module handles the content creation pipeline for short-form writing, thread
 1. Idea
    - Read `ideas.jsonl` only if sourcing from backlog.
    - Select idea by ID when possible.
-2. Outline
-   - Load the relevant template only (`after_meal_story.md` or `x_thread.md`).
-3. Draft
+2. Direction
+   - When the task is about framing, angle, or emphasis judgment, use `propose_content_direction.md`.
+   - Emit a reviewable `## Content Direction Proposal` only from that dedicated skill, not from normal draft skills.
+3. Outline
+   - Load the relevant template only (`after_meal_story.md`, `content_direction_proposal.md`, or `x_thread.md`).
+4. Draft
    - Load `voice.yaml` and write into the chosen template structure.
-4. Edit
+5. Edit
    - Load `anti_patterns.md` and run quality gates.
-5. Publish
+6. Publish
    - Finalize copy for target platform.
-6. Post-log
+7. Post-log
    - Append a record to `posts.jsonl` (never overwrite existing records).
 
 ## Progressive Loading Rules (Required)
 
 - Default load for writing tasks: `voice.yaml` + `anti_patterns.md` + one relevant template.
+- Default load for content-direction tasks: `voice.yaml` + `anti_patterns.md` + `content_direction_proposal.md`.
 - Do not load both templates unless the user explicitly asks to compare formats.
 - Only load `ideas.jsonl` if the task requires idea selection or linkage.
 - Only load `posts.jsonl` if the task requires publication logging or performance lookup.
@@ -70,6 +76,7 @@ This module handles the content creation pipeline for short-form writing, thread
 - Avoid all banned openings, banned phrases, and structural traps in `modules/content/data/anti_patterns.md`.
 - Keep output in the exact section structure required by the selected template.
 - Treat generated drafts as output artifacts, not owner-review objects. Do not append proposal-review sections to normal drafting skills.
+- Use `## Content Direction Proposal` only from the dedicated content-direction skill; keep it as a true review object, not a draft add-on.
 - Flag unsourced or uncertain claims with `[NEEDS SOURCE]`.
 - Prefer precise nouns and verbs over hype language.
 - If the user asks for a platform-specific variant, adapt wording but keep the template structure unless explicitly told otherwise.

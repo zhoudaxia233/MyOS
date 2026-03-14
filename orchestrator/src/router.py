@@ -13,7 +13,20 @@ DEFAULT_RULES = {
     "routes": [
         {
             "module": "content",
-            "keywords": ["write", "publish", "thread", "tone", "edit", "post", "draft", "message"],
+            "keywords": [
+                "write",
+                "publish",
+                "thread",
+                "tone",
+                "edit",
+                "post",
+                "draft",
+                "message",
+                "content direction",
+                "content angle",
+                "content framing",
+                "editorial angle",
+            ],
         },
         {
             "module": "decision",

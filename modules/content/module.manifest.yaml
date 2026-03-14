@@ -10,6 +10,10 @@
       "post",
       "draft",
       "message",
+      "content direction",
+      "content angle",
+      "content framing",
+      "editorial angle",
       "after-meal story",
       "after meal story",
       "fahou"
@@ -17,6 +21,10 @@
     "negative_keywords": ["postmortem", "post-mortem"],
     "keyword_weights": {
       "post": 1,
+      "content direction": 3,
+      "content angle": 3,
+      "content framing": 3,
+      "editorial angle": 3,
       "after-meal story": 3,
       "after meal story": 3,
       "fahou": 3
@@ -26,6 +34,17 @@
     "default_skill": "MODULE",
     "default_output_prefix": "task",
     "rules": [
+      {
+        "id": "content_direction",
+        "match_any": [
+          "content direction",
+          "content angle",
+          "content framing",
+          "editorial angle"
+        ],
+        "skill": "propose_content_direction",
+        "output_prefix": "content_direction"
+      },
       {
         "id": "after_meal_story",
         "match_any": ["after-meal story", "after meal story", "fahou"],

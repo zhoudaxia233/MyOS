@@ -9,6 +9,10 @@ def test_route_decision() -> None:
     assert route_task("run decision audit") == "decision"
 
 
+def test_route_content_direction_to_content() -> None:
+    assert route_task("propose a content direction for BTC market regime") == "content"
+
+
 def test_route_trace_forced_module() -> None:
     trace = route_trace("anything", forced_module="memory")
     assert trace["module"] == "memory"

@@ -49,3 +49,14 @@ def test_review_object_instruction_marks_after_meal_story_as_output_only() -> No
     assert "Review-object boundary" in text
     assert "draft artifact" in text
     assert "Do not append any `## Content Direction Proposal`" in text
+
+
+def test_review_object_instruction_requires_content_direction_proposal_for_strategy_skill() -> None:
+    text = review_object_instruction(
+        "propose a content direction for BTC market regime",
+        "content",
+        "modules/content/skills/propose_content_direction.md",
+    )
+    assert "Owner-review object contract" in text
+    assert "## Content Direction Proposal" in text
+    assert "1-3 distilled bullets" in text

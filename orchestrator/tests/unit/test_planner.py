@@ -24,3 +24,14 @@ def test_plan_task_uses_manifest_rules() -> None:
     )
     assert plan["skill"] == "modules/decision/skills/weekly_review.md"
     assert "weekly_review_" in plan["output_path"]
+
+
+def test_plan_task_uses_content_direction_rule() -> None:
+    repo_root = Path(__file__).resolve().parents[3]
+    plan = plan_task(
+        task="propose a content direction for BTC market regime",
+        module="content",
+        repo_root=repo_root,
+    )
+    assert plan["skill"] == "modules/content/skills/propose_content_direction.md"
+    assert "content_direction_" in plan["output_path"]
