@@ -319,7 +319,10 @@ def log_schema_version(
         "assumptions": _normalize_list(assumptions),
         "predictions": _normalize_list(predictions),
         "boundaries": _normalize_list(boundaries),
-        "parent_schema_version_id": str(parent_schema_version_id).strip() or None,
+        "parent_schema_version_id": (
+            str(parent_schema_version_id).strip() if parent_schema_version_id is not None else ""
+        )
+        or None,
         "source_refs": _normalize_list(source_refs),
         "tags": _normalize_list(tags),
         "object_type": "cognition",

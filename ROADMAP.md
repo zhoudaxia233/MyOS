@@ -159,19 +159,20 @@ Keep rollout evolutionary: preserve existing extraction/distillation pipelines a
   - the cognition module already had the right append-only substrate: `schema_versions.jsonl` and `accommodation_revisions.jsonl`
 - Shipped in this iteration:
   - promoted `cognition_revision` candidates can now be explicitly ratified through a dedicated action
-  - ratification always appends one canonical schema version to `modules/cognition/logs/schema_versions.jsonl`
-  - when prior matching schema lineage exists, ratification also appends one accommodation revision to `modules/cognition/logs/accommodation_revisions.jsonl`
-  - Audit now shows `Canonicalized` state and a dedicated `Ratify Cognition Revision` action for promoted cognition revision candidates
+  - ratification now requires explicit mode selection: `seed` or `revision`
+  - `seed` writes a new canonical schema root to `modules/cognition/logs/schema_versions.jsonl`
+  - `revision` requires explicit `parent_schema_version_id`, writes a new canonical schema version, and appends `modules/cognition/logs/accommodation_revisions.jsonl`
+  - Audit now exposes separate `Ratify Schema Seed` and `Ratify Schema Revision` actions for promoted cognition revision candidates
   - after canonicalization, `cognition_revision` may now be explicitly marked runtime-eligible through the existing runtime release path
 - Kept intentionally minimal:
   - only `cognition_revision`
   - no generic cognition canonicalization engine
-  - no operator-selection UX yet; current path uses conservative `refine` when accommodation is needed
-  - no mandatory parent-schema requirement yet
+  - no candidate-taxonomy split yet
+  - no broader operator-selection UX yet; current revision path uses conservative `refine`
   - no automatic runtime eligibility expansion for Class C artifacts
 - Next continuation slice:
-  - decide whether cognition ratification should always require an explicit parent schema version instead of allowing seed schema creation
-  - then return to tightening typed edit/supersession paths rather than adding new generic abstractions
+  - tighten typed edit/supersession paths for already-canonical cognition lineage
+  - then decide whether to introduce a separate upstream candidate taxonomy for schema seed vs schema revision
 
 #### Immediate Priority - Perceivable MVP Flow (2026-03-09)
 

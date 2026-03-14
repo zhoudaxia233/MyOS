@@ -9,6 +9,7 @@ from cognition import log_accommodation_revision, log_schema_version
 from idgen import next_id_for_rel_path
 
 DEFAULT_COGNITION_REVISION_TYPE = "refine"
+COGNITION_CANONICALIZATION_MODES = frozenset({"seed", "revision"})
 
 
 def _utc_now() -> str:
@@ -44,6 +45,13 @@ def _ordered_unique(items: list[str]) -> list[str]:
         seen.add(text)
         out.append(text)
     return out
+
+
+def _optional_text(value: Any) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
 
 
 def _candidate_row_by_id(repo_root: Path, candidate_ref: str) -> dict[str, Any] | None:
@@ -106,6 +114,8 @@ def cognition_revision_ratification_map(repo_root: Path) -> dict[str, dict[str, 
                     "schema_version_id": str(row.get("id", "")).strip() or None,
                     "accommodation_revision_id": None,
                     "revision_type": None,
+                    "canonicalization_mode": "seed",
+                    "parent_schema_version_id": _optional_text(row.get("parent_schema_version_id")),
                 }
     for row in _active_accommodation_revisions(repo_root):
         refs = [str(item).strip() for item in row.get("source_refs", []) if str(item).strip()]
@@ -117,25 +127,27 @@ def cognition_revision_ratification_map(repo_root: Path) -> dict[str, dict[str, 
                     "schema_version_id": str(row.get("new_schema_version_id", "")).strip() or None,
                     "accommodation_revision_id": str(row.get("id", "")).strip() or None,
                     "revision_type": str(row.get("revision_type", "")).strip() or None,
+                    "canonicalization_mode": "revision",
+                    "parent_schema_version_id": _optional_text(row.get("previous_schema_version_id")),
                 }
     return out
 
 
-def _latest_matching_schema_version(
-    repo_root: Path,
-    *,
-    topic: str,
-    schema_name: str,
-) -> dict[str, Any] | None:
-    latest: dict[str, Any] | None = None
-    target_topic = str(topic or "").strip().lower()
-    target_name = str(schema_name or "").strip().lower()
+def _schema_version_by_id(repo_root: Path, schema_version_id: str | None) -> dict[str, Any] | None:
+    target_schema_version_id = str(schema_version_id or "").strip()
+    if not target_schema_version_id:
+        return None
     for row in _active_schema_versions(repo_root):
-        row_topic = str(row.get("topic", "")).strip().lower()
-        row_name = str(row.get("schema_name", "")).strip().lower()
-        if row_name == target_name or row_topic == target_topic:
-            latest = row
-    return latest
+        if str(row.get("id", "")).strip() == target_schema_version_id:
+            return row
+    return None
+
+
+def _normalize_canonicalization_mode(mode: str | None) -> str:
+    normalized = str(mode or "").strip().lower()
+    if normalized not in COGNITION_CANONICALIZATION_MODES:
+        raise ValueError("canonicalization_mode must be one of: seed, revision")
+    return normalized
 
 
 def _derive_schema_assumptions(statement: str, evidence: list[str]) -> list[str]:
@@ -157,6 +169,8 @@ def ratify_cognition_revision_candidate(
     *,
     candidate_ref: str,
     ratification_note: str,
+    canonicalization_mode: str,
+    parent_schema_version_id: str | None = None,
 ) -> dict[str, Any]:
     target_candidate_ref = str(candidate_ref or "").strip()
     if not target_candidate_ref:
@@ -165,6 +179,8 @@ def ratify_cognition_revision_candidate(
     note = str(ratification_note or "").strip()
     if not note:
         raise ValueError("ratification_note is required")
+    mode = _normalize_canonicalization_mode(canonicalization_mode)
+    parent_schema_version = str(parent_schema_version_id or "").strip() or None
 
     candidate = _candidate_row_by_id(repo_root, target_candidate_ref)
     if candidate is None:
@@ -208,19 +224,28 @@ def ratify_cognition_revision_candidate(
     assumptions = _derive_schema_assumptions(statement, evidence)
     predictions = _derive_schema_predictions(title, rationale)
     boundaries = _derive_schema_boundaries(topic)
-    previous_schema = _latest_matching_schema_version(repo_root, topic=topic, schema_name=title)
+    previous_schema = _schema_version_by_id(repo_root, parent_schema_version)
+
+    if mode == "revision":
+        if parent_schema_version is None:
+            raise ValueError("parent_schema_version_id is required when canonicalization_mode=revision")
+        if previous_schema is None:
+            raise ValueError(f"parent_schema_version_id not found: {parent_schema_version}")
+    else:
+        if parent_schema_version is not None:
+            raise ValueError("parent_schema_version_id must be absent when canonicalization_mode=seed")
 
     accommodation_revision_id: str | None = None
     revision_type: str | None = None
     schema_record: dict[str, Any]
     canonicalized_at = _utc_now()
 
-    if previous_schema is not None:
+    if mode == "revision":
         revision_type = DEFAULT_COGNITION_REVISION_TYPE
         result = log_accommodation_revision(
             repo_root,
             topic=topic,
-            previous_schema_version_id=str(previous_schema.get("id", "")).strip(),
+            previous_schema_version_id=parent_schema_version or "",
             revision_type=revision_type,
             failed_assumptions=evidence or [str(previous_schema.get("summary", "")).strip()],
             revision_summary=note,
@@ -259,7 +284,9 @@ def ratify_cognition_revision_candidate(
     return {
         "candidate_ref": target_candidate_ref,
         "canonicalization_ref": accommodation_revision_id or schema_version_id,
+        "canonicalization_mode": mode,
         "ratification_approval_ref": ratification_approval_ref,
+        "parent_schema_version_id": parent_schema_version,
         "canonical_schema_version_id": schema_version_id,
         "accommodation_revision_id": accommodation_revision_id,
         "revision_type": revision_type,

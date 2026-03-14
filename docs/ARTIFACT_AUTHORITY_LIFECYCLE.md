@@ -276,8 +276,9 @@ This includes direct `memory_events` and `memory_insights` created by ingest flo
 - Canonical SSOT update:
   - No by default.
   - Canonicalization requires explicit cognition lineage write:
-    - current implemented path always creates a new `schema_versions.jsonl` record
-    - and appends `accommodation_revisions.jsonl` when a matching prior schema lineage already exists
+    - `canonicalization_mode=seed` creates a new canonical root in `schema_versions.jsonl`
+    - `canonicalization_mode=revision` requires explicit `parent_schema_version_id`
+    - revision mode may append `accommodation_revisions.jsonl`
 - Runtime eligibility:
   - Must not be granted merely from promotion.
   - Current implemented contract: remain `holding` until explicit schema-ratification path is completed.
@@ -409,21 +410,23 @@ The repo now has a third explicit Class C ratification path for `cognition_revis
 
 - scope is intentionally narrow:
   - only promoted `cognition_revision` candidates
-  - always create a canonical schema version entry
-  - append accommodation lineage only when prior matching schema lineage exists
+  - explicit `canonicalization_mode` is now required at ratification time
+  - `seed` creates a new canonical schema root
+  - `revision` requires explicit `parent_schema_version_id`
 - the path writes:
-  - one new canonical record in `modules/cognition/logs/schema_versions.jsonl`
-  - and, when applicable, one append-only revision record in `modules/cognition/logs/accommodation_revisions.jsonl`
+  - `seed` writes one new canonical record in `modules/cognition/logs/schema_versions.jsonl`
+  - `revision` writes one new canonical schema version and one append-only revision record in `modules/cognition/logs/accommodation_revisions.jsonl`
 - this means:
   - `cognition_revision` can now move from `promoted_ledger` to `canonicalized` through an explicit owner action
   - cognition authority comes from schema lineage logs, not from generic promoted candidate sinks
+  - the system no longer silently infers `seed` vs `revision`
 - follow-up guard now in code:
   - a canonicalized `cognition_revision` may be explicitly marked runtime-eligible
   - but that release still does not happen automatically at ratification time
   - runtime authority therefore remains a separate owner action after canonical schema lineage exists
 - what remains deferred:
-  - typed operator selection beyond the current conservative default
-  - mandatory parent-lineage requirement instead of seed schema creation
+  - candidate-taxonomy split between schema-seed vs schema-revision artifacts
+  - richer operator selection beyond the current conservative default revision type
   - richer cognition-specific ratification UI beyond the generic audit modal
 
 ## Near-Term Guardrails

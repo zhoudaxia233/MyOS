@@ -422,6 +422,7 @@ const I18N = {
     btn_promote: "晋升",
     btn_ratify_principle: "宪制确认",
     btn_ratify_profile_trait: "确认 trait 入档",
+    btn_ratify_cognition_seed: "确认 schema 种子",
     btn_ratify_cognition_revision: "确认 schema 修订",
     btn_runtime_eligible: "设为可用",
     btn_runtime_hold: "运行保留",
@@ -461,6 +462,8 @@ const I18N = {
     candidate_detail_canonical_clause: "Canonical clause",
     candidate_detail_canonical_trait: "Canonical trait",
     candidate_detail_canonical_schema: "Canonical schema",
+    candidate_detail_canonical_mode: "Canonical 模式",
+    candidate_detail_parent_schema: "父 schema",
     candidate_detail_runtime: "运行时状态",
     candidate_detail_runtime_eligibility: "运行资格",
     candidate_detail_runtime_scope: "运行范围",
@@ -490,8 +493,12 @@ const I18N = {
       "下一步：把这条 principle 候选写入 amendment log，并显式更新 constitution.yaml，完成 canonicalization。",
     candidate_next_ratify_profile_trait:
       "下一步：把这条 profile trait 候选写入 profile_changes log，并显式更新 psych_profile.yaml，完成 canonicalization。",
+    candidate_next_choose_cognition_mode:
+      "下一步：显式选择这是 schema seed 还是 schema revision。系统不再替你自动判断。",
+    candidate_next_ratify_cognition_seed:
+      "下一步：把这条 cognition 候选作为新的 schema root 写入 schema_versions lineage；seed 不得带 parent，也不会写 accommodation。",
     candidate_next_ratify_cognition_revision:
-      "下一步：把这条 cognition revision 候选写入 schema lineage；必要时追加 accommodation revision，并显式生成 canonical schema version。",
+      "下一步：把这条 cognition 候选作为 revision 写入 schema lineage；revision 必须显式提供 parent schema，并会写 revision/accommodation 语义。",
     candidate_next_canonicalized:
       "已写入模块 SSOT。若要进入 runtime authority，仍需显式授权；如要改动内容，应走对应的 typed change/update 路径。",
     candidate_next_revoked: "运行资格已撤销；如需恢复，必须重新显式授权。",
@@ -503,6 +510,7 @@ const I18N = {
     learning_review_modal_title_promote: "晋升候选",
     learning_review_modal_title_ratify_principle: "确认 principle 入宪",
     learning_review_modal_title_ratify_profile_trait: "确认 profile trait 入档",
+    learning_review_modal_title_ratify_cognition_seed: "确认 schema seed 入档",
     learning_review_modal_title_ratify_cognition_revision: "确认 cognition 修订入档",
     learning_review_modal_title_runtime_eligible: "授权运行资格",
     learning_review_modal_title_runtime_hold: "保留运行资格",
@@ -605,8 +613,11 @@ const I18N = {
     msg_principle_ratify_failed: "Principle canonicalization 失败：{error}",
     msg_profile_trait_ratified_done: "Profile trait 已完成 canonicalization：{id} -> {trait}",
     msg_profile_trait_ratify_failed: "Profile trait canonicalization 失败：{error}",
+    msg_cognition_seed_ratified_done: "Schema seed 已完成 canonicalization：{id} -> {schema}",
+    msg_cognition_seed_ratify_failed: "Schema seed canonicalization 失败：{error}",
     msg_cognition_revision_ratified_done: "Cognition revision 已完成 canonicalization：{id} -> {schema}",
     msg_cognition_revision_ratify_failed: "Cognition revision canonicalization 失败：{error}",
+    msg_cognition_revision_parent_required: "Schema revision 必须提供 parent schema version ID。",
     msg_runtime_eligibility_done: "运行资格已更新：{id} -> {status}",
     msg_runtime_eligibility_failed: "运行资格更新失败：{error}",
     msg_no_runtime_influence_history: "暂无可展示的 runtime influence 历史。",
@@ -874,7 +885,8 @@ const I18N = {
     btn_promote: "Promote",
     btn_ratify_principle: "Ratify Principle",
     btn_ratify_profile_trait: "Ratify Profile Trait",
-    btn_ratify_cognition_revision: "Ratify Cognition Revision",
+    btn_ratify_cognition_seed: "Ratify Schema Seed",
+    btn_ratify_cognition_revision: "Ratify Schema Revision",
     btn_runtime_eligible: "Mark Eligible",
     btn_runtime_hold: "Hold Runtime",
     btn_runtime_revoke: "Revoke Runtime",
@@ -913,6 +925,8 @@ const I18N = {
     candidate_detail_canonical_clause: "Canonical Clause",
     candidate_detail_canonical_trait: "Canonical Trait",
     candidate_detail_canonical_schema: "Canonical Schema",
+    candidate_detail_canonical_mode: "Canonical Mode",
+    candidate_detail_parent_schema: "Parent Schema",
     candidate_detail_runtime: "Runtime Status",
     candidate_detail_runtime_eligibility: "Runtime Eligibility",
     candidate_detail_runtime_scope: "Runtime Scope",
@@ -942,8 +956,12 @@ const I18N = {
       "Next: write this principle candidate into the amendment log and constitution SSOT through an explicit canonicalization step.",
     candidate_next_ratify_profile_trait:
       "Next: write this profile trait candidate into profile_changes and psych_profile SSOT through an explicit canonicalization step.",
+    candidate_next_choose_cognition_mode:
+      "Next: explicitly choose whether this is a schema seed or a schema revision. The system no longer infers it for you.",
+    candidate_next_ratify_cognition_seed:
+      "Next: write this cognition candidate as a new schema root into schema_versions lineage; seed must not carry a parent and must not write accommodation semantics.",
     candidate_next_ratify_cognition_revision:
-      "Next: write this cognition revision into schema lineage, optionally append accommodation, and create an explicit canonical schema version.",
+      "Next: write this cognition candidate as a revision into schema lineage; revision requires an explicit parent schema and writes revision/accommodation semantics.",
     candidate_next_canonicalized:
       "Canonicalized into module SSOT. Runtime authority still needs an explicit release; further content changes should go through the matching typed update path.",
     candidate_next_revoked: "Runtime eligibility is revoked; explicit re-authorization is required before reuse.",
@@ -955,6 +973,7 @@ const I18N = {
     learning_review_modal_title_promote: "Promote Candidate",
     learning_review_modal_title_ratify_principle: "Ratify Principle",
     learning_review_modal_title_ratify_profile_trait: "Ratify Profile Trait",
+    learning_review_modal_title_ratify_cognition_seed: "Ratify Schema Seed",
     learning_review_modal_title_ratify_cognition_revision: "Ratify Cognition Revision",
     learning_review_modal_title_runtime_eligible: "Authorize Runtime Eligibility",
     learning_review_modal_title_runtime_hold: "Hold Runtime Eligibility",
@@ -1055,8 +1074,11 @@ const I18N = {
     msg_principle_ratify_failed: "Principle canonicalization failed: {error}",
     msg_profile_trait_ratified_done: "Profile trait canonicalized: {id} -> {trait}",
     msg_profile_trait_ratify_failed: "Profile trait canonicalization failed: {error}",
+    msg_cognition_seed_ratified_done: "Schema seed canonicalized: {id} -> {schema}",
+    msg_cognition_seed_ratify_failed: "Schema seed canonicalization failed: {error}",
     msg_cognition_revision_ratified_done: "Cognition revision canonicalized: {id} -> {schema}",
     msg_cognition_revision_ratify_failed: "Cognition revision canonicalization failed: {error}",
+    msg_cognition_revision_parent_required: "Schema revision requires a parent schema version ID.",
     msg_runtime_eligibility_done: "Runtime eligibility updated: {id} -> {status}",
     msg_runtime_eligibility_failed: "Runtime eligibility update failed: {error}",
     msg_no_runtime_influence_history: "No recent runtime influence history is available yet.",
@@ -2499,7 +2521,7 @@ function lifecycleNextAction(item) {
         return t("candidate_next_ratify_profile_trait");
       }
       if (String(item.candidate_type || "").trim() === "cognition_revision") {
-        return t("candidate_next_ratify_cognition_revision");
+        return t("candidate_next_choose_cognition_mode");
       }
       return t("candidate_next_ratify_principle");
     }
@@ -2606,6 +2628,8 @@ function buildCandidateContext(item) {
     [t("candidate_detail_canonical_clause"), (item && item.canonical_clause_id) || "-"],
     [t("candidate_detail_canonical_trait"), (item && item.canonical_profile_trait_id) || "-"],
     [t("candidate_detail_canonical_schema"), (item && item.canonical_schema_version_id) || "-"],
+    [t("candidate_detail_canonical_mode"), (item && item.canonicalization_mode) || "-"],
+    [t("candidate_detail_parent_schema"), (item && item.canonical_parent_schema_version_id) || "-"],
     [t("candidate_detail_runtime_eligibility"), candidateRuntimeEligibilityLabel(item)],
     [t("candidate_detail_runtime_scope"), candidateRuntimeScopeText(item)],
     [t("candidate_detail_runtime_autonomy"), (item && item.runtime_autonomy_ceiling) || "-"],
@@ -2733,26 +2757,35 @@ function renderCandidateCards(container, items, emptyKey) {
 
       if (item.can_ratify) {
         const candidateType = String(item.candidate_type || "").trim().toLowerCase();
-        const ratifyMode =
-          candidateType === "profile_trait"
-            ? "ratify_profile_trait"
-            : candidateType === "cognition_revision"
-              ? "ratify_cognition_revision"
-              : "ratify_principle";
-        const ratifyLabel =
-          candidateType === "profile_trait"
-            ? t("btn_ratify_profile_trait")
-            : candidateType === "cognition_revision"
-              ? t("btn_ratify_cognition_revision")
-              : t("btn_ratify_principle");
-        const ratifyBtn = document.createElement("button");
-        ratifyBtn.className = "todo-resolve-btn";
-        ratifyBtn.type = "button";
-        ratifyBtn.textContent = ratifyLabel;
-        ratifyBtn.addEventListener("click", () => {
-          openLearningReviewModal(item, ratifyMode);
-        });
-        actions.appendChild(ratifyBtn);
+        if (candidateType === "cognition_revision") {
+          const seedBtn = document.createElement("button");
+          seedBtn.className = "todo-resolve-btn";
+          seedBtn.type = "button";
+          seedBtn.textContent = t("btn_ratify_cognition_seed");
+          seedBtn.addEventListener("click", () => {
+            openLearningReviewModal(item, "ratify_cognition_seed");
+          });
+          const revisionBtn = document.createElement("button");
+          revisionBtn.className = "todo-resolve-btn";
+          revisionBtn.type = "button";
+          revisionBtn.textContent = t("btn_ratify_cognition_revision");
+          revisionBtn.addEventListener("click", () => {
+            openLearningReviewModal(item, "ratify_cognition_revision");
+          });
+          actions.appendChild(seedBtn);
+          actions.appendChild(revisionBtn);
+        } else {
+          const ratifyMode = candidateType === "profile_trait" ? "ratify_profile_trait" : "ratify_principle";
+          const ratifyLabel = candidateType === "profile_trait" ? t("btn_ratify_profile_trait") : t("btn_ratify_principle");
+          const ratifyBtn = document.createElement("button");
+          ratifyBtn.className = "todo-resolve-btn";
+          ratifyBtn.type = "button";
+          ratifyBtn.textContent = ratifyLabel;
+          ratifyBtn.addEventListener("click", () => {
+            openLearningReviewModal(item, ratifyMode);
+          });
+          actions.appendChild(ratifyBtn);
+        }
       }
 
       if (eligibilityStatus !== "eligible" && !runtimeReleaseBlocked) {
@@ -3489,6 +3522,16 @@ function renderLearningSupportDetail(item, options = {}) {
     );
     appendSuggestionDetailSection(
       suggestionDetailCard,
+      "candidate_detail_canonical_mode",
+      item.canonicalization_mode || "-"
+    );
+    appendSuggestionDetailSection(
+      suggestionDetailCard,
+      "candidate_detail_parent_schema",
+      item.canonical_parent_schema_version_id || "-"
+    );
+    appendSuggestionDetailSection(
+      suggestionDetailCard,
       "candidate_detail_runtime_eligibility",
       candidateRuntimeEligibilityLabel(item)
     );
@@ -3828,6 +3871,12 @@ function renderActionResult(data) {
   if (data.canonical_profile_trait_id) {
     out.push(`canonical_profile_trait_id: ${data.canonical_profile_trait_id}`);
   }
+  if (data.canonicalization_mode) {
+    out.push(`canonicalization_mode: ${data.canonicalization_mode}`);
+  }
+  if (data.parent_schema_version_id) {
+    out.push(`parent_schema_version_id: ${data.parent_schema_version_id}`);
+  }
   if (data.canonical_schema_version_id) {
     out.push(`canonical_schema_version_id: ${data.canonical_schema_version_id}`);
   }
@@ -4111,6 +4160,7 @@ function openLearningReviewModal(item, mode) {
       "promote",
       "ratify_principle",
       "ratify_profile_trait",
+      "ratify_cognition_seed",
       "ratify_cognition_revision",
       "runtime_eligible",
       "runtime_hold",
@@ -4136,6 +4186,7 @@ function openLearningReviewModal(item, mode) {
     promote: "learning_review_modal_title_promote",
     ratify_principle: "learning_review_modal_title_ratify_principle",
     ratify_profile_trait: "learning_review_modal_title_ratify_profile_trait",
+    ratify_cognition_seed: "learning_review_modal_title_ratify_cognition_seed",
     ratify_cognition_revision: "learning_review_modal_title_ratify_cognition_revision",
     runtime_eligible: "learning_review_modal_title_runtime_eligible",
     runtime_hold: "learning_review_modal_title_runtime_hold",
@@ -4158,10 +4209,14 @@ function openLearningReviewModal(item, mode) {
       uiLanguage === "zh"
         ? "批准把该 profile trait 写入 profile_changes log，并更新 psych_profile.yaml。"
         : "Approve writing this profile trait into profile_changes and psych_profile.yaml.",
+    ratify_cognition_seed:
+      uiLanguage === "zh"
+        ? "批准把该 cognition 候选作为新的 schema root 写入 schema_versions lineage。seed 不能带 parent，也不会写 accommodation。"
+        : "Approve writing this cognition candidate as a new schema root into schema_versions lineage. Seed must not carry a parent and does not write accommodation semantics.",
     ratify_cognition_revision:
       uiLanguage === "zh"
-        ? "批准把该 cognition revision 写入 schema lineage；如有现有版本则追加 accommodation revision，并生成新的 schema version。"
-        : "Approve writing this cognition revision into schema lineage; append accommodation when prior lineage exists and create a new schema version.",
+        ? "批准把该 cognition 候选作为 revision 写入 schema lineage。revision 必须显式提供 parent schema version，且不会自动降级为 seed。"
+        : "Approve writing this cognition candidate as a revision into schema lineage. Revision requires an explicit parent schema version and will not silently downgrade into seed.",
     runtime_eligible:
       uiLanguage === "zh" ? "批准该条目进入 runtime eligibility，并接受当前边界。" : "Authorize runtime eligibility under current boundaries.",
     runtime_hold:
@@ -4219,6 +4274,11 @@ async function submitLearningReviewModal() {
   }
   if (verdict === "ratify_profile_trait") {
     await ratifyProfileTraitCandidate(id, ownerNote);
+    closeLearningReviewModal();
+    return;
+  }
+  if (verdict === "ratify_cognition_seed") {
+    await ratifyCognitionSeedCandidate(id, ownerNote);
     closeLearningReviewModal();
     return;
   }
@@ -4348,7 +4408,7 @@ async function ratifyProfileTraitCandidate(candidateId, ratificationNote) {
   }
 }
 
-async function ratifyCognitionRevisionCandidate(candidateId, ratificationNote) {
+async function ratifyCognitionSeedCandidate(candidateId, ratificationNote) {
   const id = String(candidateId || "").trim();
   if (!id) {
     return;
@@ -4364,6 +4424,47 @@ async function ratifyCognitionRevisionCandidate(candidateId, ratificationNote) {
       action: "ratify_cognition_revision_candidate",
       candidate_id: id,
       ratification_note: note,
+      canonicalization_mode: "seed",
+      parent_schema_version_id: null,
+    });
+    renderActionResult(data);
+    addBubble("system", t("msg_cognition_seed_ratified_done", { id, schema: data.canonical_schema_version_id || "-" }));
+  } catch (err) {
+    addBubble("system", t("msg_cognition_seed_ratify_failed", { error: err.message }));
+  }
+}
+
+async function ratifyCognitionRevisionCandidate(candidateId, ratificationNote) {
+  const id = String(candidateId || "").trim();
+  if (!id) {
+    return;
+  }
+  const note = String(ratificationNote || "").trim();
+  if (!note) {
+    addBubble("system", t("msg_review_note_required"));
+    return;
+  }
+  const parentPrompt =
+    uiLanguage === "zh"
+      ? "请输入 parent schema version ID（必填，例如 sv_20260314_001）："
+      : "Enter parent schema version ID (required, e.g. sv_20260314_001):";
+  const parent = window.prompt(parentPrompt, "");
+  if (parent === null) {
+    return;
+  }
+  const parentSchemaVersionId = String(parent || "").trim();
+  if (!parentSchemaVersionId) {
+    addBubble("system", t("msg_cognition_revision_parent_required"));
+    return;
+  }
+
+  try {
+    const data = await postJson("/api/action", {
+      action: "ratify_cognition_revision_candidate",
+      candidate_id: id,
+      ratification_note: note,
+      canonicalization_mode: "revision",
+      parent_schema_version_id: parentSchemaVersionId,
     });
     renderActionResult(data);
     addBubble("system", t("msg_cognition_revision_ratified_done", { id, schema: data.canonical_schema_version_id || "-" }));

@@ -18,31 +18,172 @@ def _write_jsonl(path: Path, schema_name: str, fields: list[str], rows: list[dic
             handle.write(json.dumps(row) + "\n")
 
 
-def test_ratify_cognition_revision_candidate_appends_schema_lineage() -> None:
+def _prepare_cognition_logs(root: Path, schema_rows: list[dict] | None = None) -> None:
+    _write_jsonl(
+        root / "modules/cognition/logs/schema_versions.jsonl",
+        "schema_versions",
+        [
+            "id",
+            "created_at",
+            "status",
+            "schema_id",
+            "version",
+            "topic",
+            "schema_name",
+            "summary",
+            "assumptions",
+            "predictions",
+            "boundaries",
+            "parent_schema_version_id",
+            "source_refs",
+            "tags",
+            "object_type",
+            "proposal_target",
+        ],
+        schema_rows or [],
+    )
+    _write_jsonl(
+        root / "modules/cognition/logs/accommodation_revisions.jsonl",
+        "accommodation_revisions",
+        [
+            "id",
+            "created_at",
+            "status",
+            "topic",
+            "previous_schema_version_id",
+            "new_schema_version_id",
+            "revision_type",
+            "failed_assumptions",
+            "revision_summary",
+            "new_schema_hypothesis",
+            "source_refs",
+            "tags",
+            "object_type",
+            "proposal_target",
+        ],
+        [],
+    )
+
+
+def _prepare_promoted_cognition_candidate(
+    root: Path,
+    *,
+    candidate_id: str,
+    title: str,
+    statement: str,
+    evidence: list[str] | None = None,
+) -> None:
+    _write_jsonl(
+        root / "orchestrator/logs/learning_candidates.jsonl",
+        "learning_candidates",
+        [
+            "id",
+            "created_at",
+            "status",
+            "candidate_type",
+            "title",
+            "statement",
+            "rationale",
+            "evidence",
+            "source_refs",
+            "proposal_target",
+        ],
+        [
+            {
+                "id": candidate_id,
+                "created_at": "2026-03-14T09:00:00Z",
+                "status": "active",
+                "candidate_type": "cognition_revision",
+                "title": title,
+                "statement": statement,
+                "rationale": "Refines cognition schema interpretation.",
+                "evidence": evidence or ["Repeated overload events"],
+                "source_refs": ["li_20260314_001"],
+                "proposal_target": "cognition",
+            }
+        ],
+    )
+    _write_jsonl(
+        root / "modules/decision/logs/learning_candidate_promotions.jsonl",
+        "learning_candidate_promotions",
+        ["id", "created_at", "status", "candidate_ref", "candidate_type", "promotion_target", "approval_ref"],
+        [
+            {
+                "id": "lp_20260314_001",
+                "created_at": "2026-03-14T09:10:00Z",
+                "status": "active",
+                "candidate_ref": candidate_id,
+                "candidate_type": "cognition_revision",
+                "promotion_target": "cognition",
+                "approval_ref": "la_20260314_001",
+            }
+        ],
+    )
+    _write_jsonl(
+        root / "modules/cognition/logs/schema_candidates.jsonl",
+        "schema_candidates",
+        ["id", "created_at", "status", "candidate_ref", "candidate_type", "title", "statement", "source_refs", "approval_ref", "promotion_ref"],
+        [
+            {
+                "id": "cc_20260314_001",
+                "created_at": "2026-03-14T09:10:00Z",
+                "status": "active",
+                "candidate_ref": candidate_id,
+                "candidate_type": "cognition_revision",
+                "title": title,
+                "statement": statement,
+                "source_refs": [candidate_id, "la_20260314_001", "lp_20260314_001"],
+                "approval_ref": "la_20260314_001",
+                "promotion_ref": "lp_20260314_001",
+            }
+        ],
+    )
+
+
+def test_ratify_cognition_revision_candidate_allows_explicit_seed_without_parent() -> None:
     with TemporaryDirectory() as td:
         root = Path(td)
-        _write_jsonl(
-            root / "modules/cognition/logs/schema_versions.jsonl",
-            "schema_versions",
-            [
-                "id",
-                "created_at",
-                "status",
-                "schema_id",
-                "version",
-                "topic",
-                "schema_name",
-                "summary",
-                "assumptions",
-                "predictions",
-                "boundaries",
-                "parent_schema_version_id",
-                "source_refs",
-                "tags",
-                "object_type",
-                "proposal_target",
-            ],
-            [
+        _prepare_cognition_logs(root)
+        _prepare_promoted_cognition_candidate(
+            root,
+            candidate_id="lc_20260314_001",
+            title="Treat repeated overload as schema failure, not motive failure.",
+            statement="Treat repeated overload as schema failure, not motive failure.",
+        )
+
+        result = ratify_cognition_revision_candidate(
+            root,
+            candidate_ref="lc_20260314_001",
+            ratification_note="Approve a new canonical schema root.",
+            canonicalization_mode="seed",
+            parent_schema_version_id=None,
+        )
+
+        assert result["candidate_ref"] == "lc_20260314_001"
+        assert result["canonicalization_mode"] == "seed"
+        assert result["canonical_schema_version_id"].startswith("sv_")
+        assert result["parent_schema_version_id"] is None
+        assert result["accommodation_revision_id"] is None
+        assert result["revision_type"] is None
+        assert result["schema_updated"] is True
+
+        schema_lines = (root / "modules/cognition/logs/schema_versions.jsonl").read_text(encoding="utf-8").splitlines()
+        latest_schema = json.loads(schema_lines[-1])
+        assert latest_schema["parent_schema_version_id"] is None
+        assert latest_schema["object_type"] == "cognition"
+        assert latest_schema["proposal_target"] == "cognition"
+        assert "lc_20260314_001" in latest_schema["source_refs"]
+
+        revision_lines = (root / "modules/cognition/logs/accommodation_revisions.jsonl").read_text(encoding="utf-8").splitlines()
+        assert len(revision_lines) == 1
+
+
+def test_ratify_cognition_revision_candidate_requires_explicit_parent_for_revision() -> None:
+    with TemporaryDirectory() as td:
+        root = Path(td)
+        _prepare_cognition_logs(
+            root,
+            schema_rows=[
                 {
                     "id": "sv_20260314_001",
                     "created_at": "2026-03-14T09:00:00Z",
@@ -63,100 +204,30 @@ def test_ratify_cognition_revision_candidate_appends_schema_lineage() -> None:
                 }
             ],
         )
-        _write_jsonl(
-            root / "modules/cognition/logs/accommodation_revisions.jsonl",
-            "accommodation_revisions",
-            [
-                "id",
-                "created_at",
-                "status",
-                "topic",
-                "previous_schema_version_id",
-                "new_schema_version_id",
-                "revision_type",
-                "failed_assumptions",
-                "revision_summary",
-                "new_schema_hypothesis",
-                "source_refs",
-                "tags",
-                "object_type",
-                "proposal_target",
-            ],
-            [],
-        )
-        _write_jsonl(
-            root / "orchestrator/logs/learning_candidates.jsonl",
-            "learning_candidates",
-            ["id", "created_at", "status", "candidate_type", "title", "statement", "rationale", "evidence", "source_refs", "proposal_target"],
-            [
-                {
-                    "id": "lc_20260314_001",
-                    "created_at": "2026-03-14T09:00:00Z",
-                    "status": "active",
-                    "candidate_type": "cognition_revision",
-                    "title": "Treat repeated overload as schema failure, not motive failure.",
-                    "statement": "Treat repeated overload as schema failure, not motive failure.",
-                    "rationale": "This improves schema-level diagnosis under repeated overload.",
-                    "evidence": ["Repeated overload events"],
-                    "source_refs": ["li_20260314_001"],
-                    "proposal_target": "cognition",
-                }
-            ],
-        )
-        _write_jsonl(
-            root / "modules/decision/logs/learning_candidate_promotions.jsonl",
-            "learning_candidate_promotions",
-            ["id", "created_at", "status", "candidate_ref", "candidate_type", "promotion_target", "approval_ref"],
-            [
-                {
-                    "id": "lp_20260314_001",
-                    "created_at": "2026-03-14T09:10:00Z",
-                    "status": "active",
-                    "candidate_ref": "lc_20260314_001",
-                    "candidate_type": "cognition_revision",
-                    "promotion_target": "cognition",
-                    "approval_ref": "la_20260314_001",
-                }
-            ],
-        )
-        _write_jsonl(
-            root / "modules/cognition/logs/schema_candidates.jsonl",
-            "schema_candidates",
-            ["id", "created_at", "status", "candidate_ref", "candidate_type", "title", "statement", "source_refs", "approval_ref", "promotion_ref"],
-            [
-                {
-                    "id": "cc_20260314_001",
-                    "created_at": "2026-03-14T09:10:00Z",
-                    "status": "active",
-                    "candidate_ref": "lc_20260314_001",
-                    "candidate_type": "cognition_revision",
-                    "title": "Treat repeated overload as schema failure, not motive failure.",
-                    "statement": "Treat repeated overload as schema failure, not motive failure.",
-                    "source_refs": ["lc_20260314_001", "la_20260314_001", "lp_20260314_001"],
-                    "approval_ref": "la_20260314_001",
-                    "promotion_ref": "lp_20260314_001",
-                }
-            ],
+        _prepare_promoted_cognition_candidate(
+            root,
+            candidate_id="lc_20260314_002",
+            title="Treat repeated overload as schema failure, not motive failure.",
+            statement="Treat repeated overload as schema failure, not motive failure.",
         )
 
         result = ratify_cognition_revision_candidate(
             root,
-            candidate_ref="lc_20260314_001",
+            candidate_ref="lc_20260314_002",
             ratification_note="Approved as an explicit schema-lineage refinement.",
+            canonicalization_mode="revision",
+            parent_schema_version_id="sv_20260314_001",
         )
 
-        assert result["candidate_ref"] == "lc_20260314_001"
+        assert result["canonicalization_mode"] == "revision"
         assert result["canonical_schema_version_id"].startswith("sv_")
         assert result["accommodation_revision_id"].startswith("ar_")
+        assert result["parent_schema_version_id"] == "sv_20260314_001"
         assert result["revision_type"] == "refine"
-        assert result["schema_updated"] is True
 
         schema_lines = (root / "modules/cognition/logs/schema_versions.jsonl").read_text(encoding="utf-8").splitlines()
         latest_schema = json.loads(schema_lines[-1])
         assert latest_schema["parent_schema_version_id"] == "sv_20260314_001"
-        assert latest_schema["object_type"] == "cognition"
-        assert latest_schema["proposal_target"] == "cognition"
-        assert "lc_20260314_001" in latest_schema["source_refs"]
 
         revision_lines = (root / "modules/cognition/logs/accommodation_revisions.jsonl").read_text(encoding="utf-8").splitlines()
         latest_revision = json.loads(revision_lines[-1])
@@ -170,57 +241,14 @@ def test_ratify_cognition_revision_candidate_appends_schema_lineage() -> None:
 def test_ratify_cognition_revision_candidate_requires_promoted_candidate() -> None:
     with TemporaryDirectory() as td:
         root = Path(td)
-        _write_jsonl(
-            root / "modules/cognition/logs/schema_versions.jsonl",
-            "schema_versions",
-            [
-                "id",
-                "created_at",
-                "status",
-                "schema_id",
-                "version",
-                "topic",
-                "schema_name",
-                "summary",
-                "assumptions",
-                "predictions",
-                "boundaries",
-                "parent_schema_version_id",
-                "source_refs",
-                "tags",
-                "object_type",
-                "proposal_target",
-            ],
-            [],
-        )
-        _write_jsonl(
-            root / "modules/cognition/logs/accommodation_revisions.jsonl",
-            "accommodation_revisions",
-            [
-                "id",
-                "created_at",
-                "status",
-                "topic",
-                "previous_schema_version_id",
-                "new_schema_version_id",
-                "revision_type",
-                "failed_assumptions",
-                "revision_summary",
-                "new_schema_hypothesis",
-                "source_refs",
-                "tags",
-                "object_type",
-                "proposal_target",
-            ],
-            [],
-        )
+        _prepare_cognition_logs(root)
         _write_jsonl(
             root / "orchestrator/logs/learning_candidates.jsonl",
             "learning_candidates",
             ["id", "created_at", "status", "candidate_type", "title", "statement", "source_refs", "proposal_target"],
             [
                 {
-                    "id": "lc_20260314_002",
+                    "id": "lc_20260314_003",
                     "created_at": "2026-03-14T09:00:00Z",
                     "status": "active",
                     "candidate_type": "cognition_revision",
@@ -235,7 +263,96 @@ def test_ratify_cognition_revision_candidate_requires_promoted_candidate() -> No
         with pytest.raises(ValueError) as excinfo:
             ratify_cognition_revision_candidate(
                 root,
-                candidate_ref="lc_20260314_002",
+                candidate_ref="lc_20260314_003",
                 ratification_note="try ratify too early",
+                canonicalization_mode="seed",
             )
         assert "promoted before ratification" in str(excinfo.value)
+
+
+def test_ratify_cognition_revision_candidate_rejects_revision_without_parent() -> None:
+    with TemporaryDirectory() as td:
+        root = Path(td)
+        _prepare_cognition_logs(root)
+        _prepare_promoted_cognition_candidate(
+            root,
+            candidate_id="lc_20260314_004",
+            title="Need an explicit parent",
+            statement="Revision without parent should fail.",
+        )
+
+        with pytest.raises(ValueError) as excinfo:
+            ratify_cognition_revision_candidate(
+                root,
+                candidate_ref="lc_20260314_004",
+                ratification_note="should fail without parent",
+                canonicalization_mode="revision",
+                parent_schema_version_id=None,
+            )
+        assert "parent_schema_version_id is required" in str(excinfo.value)
+
+
+def test_ratify_cognition_revision_candidate_rejects_revision_with_missing_parent() -> None:
+    with TemporaryDirectory() as td:
+        root = Path(td)
+        _prepare_cognition_logs(root)
+        _prepare_promoted_cognition_candidate(
+            root,
+            candidate_id="lc_20260314_005",
+            title="Need an existing parent",
+            statement="Revision with missing parent should fail.",
+        )
+
+        with pytest.raises(ValueError) as excinfo:
+            ratify_cognition_revision_candidate(
+                root,
+                candidate_ref="lc_20260314_005",
+                ratification_note="should fail with unknown parent",
+                canonicalization_mode="revision",
+                parent_schema_version_id="sv_missing",
+            )
+        assert "parent_schema_version_id not found" in str(excinfo.value)
+
+
+def test_ratify_cognition_revision_candidate_rejects_seed_with_parent() -> None:
+    with TemporaryDirectory() as td:
+        root = Path(td)
+        _prepare_cognition_logs(
+            root,
+            schema_rows=[
+                {
+                    "id": "sv_20260314_010",
+                    "created_at": "2026-03-14T09:00:00Z",
+                    "status": "active",
+                    "schema_id": "sm_existing",
+                    "version": 1,
+                    "topic": "Existing schema",
+                    "schema_name": "Existing schema",
+                    "summary": "Baseline schema.",
+                    "assumptions": ["Baseline assumption"],
+                    "predictions": ["Baseline prediction"],
+                    "boundaries": ["Baseline boundary"],
+                    "parent_schema_version_id": None,
+                    "source_refs": [],
+                    "tags": ["baseline"],
+                    "object_type": "cognition",
+                    "proposal_target": "cognition",
+                }
+            ],
+        )
+        _prepare_promoted_cognition_candidate(
+            root,
+            candidate_id="lc_20260314_006",
+            title="Seed must not carry a parent",
+            statement="Seed with parent should fail.",
+        )
+
+        with pytest.raises(ValueError) as excinfo:
+            ratify_cognition_revision_candidate(
+                root,
+                candidate_ref="lc_20260314_006",
+                ratification_note="seed must reject parent lineage",
+                canonicalization_mode="seed",
+                parent_schema_version_id="sv_20260314_010",
+            )
+        assert "must be absent when canonicalization_mode=seed" in str(excinfo.value)

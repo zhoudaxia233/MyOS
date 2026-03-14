@@ -1408,6 +1408,14 @@ def list_recent_learning_candidates(
                 (cognition_revision_ratification or {}).get("accommodation_revision_id", "")
             ).strip()
             or None,
+            "canonicalization_mode": str((cognition_revision_ratification or {}).get("canonicalization_mode", "")).strip()
+            or None,
+            "canonical_parent_schema_version_id": (
+                str((cognition_revision_ratification or {}).get("parent_schema_version_id")).strip()
+                if (cognition_revision_ratification or {}).get("parent_schema_version_id") is not None
+                else ""
+            )
+            or None,
             "runtime_active": lifecycle_stage == "active_runtime",
             "runtime_eligible": bool(runtime_row and str(runtime_row.get("eligibility_status", "")).strip() == "eligible"),
             "runtime_eligibility_ref": str((runtime_row or {}).get("eligibility_ref", "")).strip() or None,

@@ -829,8 +829,11 @@ def test_cognition_revision_can_be_runtime_eligible_after_canonicalization() -> 
             root,
             candidate_ref=candidate_id,
             ratification_note="Approve schema lineage write.",
+            canonicalization_mode="seed",
+            parent_schema_version_id=None,
         )
         assert ratified["canonical_schema_version_id"].startswith("sv_")
+        assert ratified["canonicalization_mode"] == "seed"
 
         updated = set_runtime_eligibility(
             root,
@@ -846,6 +849,8 @@ def test_cognition_revision_can_be_runtime_eligible_after_canonicalization() -> 
         assert matched["runtime_eligibility_status"] == "eligible"
         assert matched["canonicalized_at"]
         assert matched["canonical_schema_version_id"]
+        assert matched["canonicalization_mode"] == "seed"
+        assert matched["canonical_parent_schema_version_id"] is None
 
 
 def test_summarize_learning_pipeline_includes_promotion_readiness() -> None:

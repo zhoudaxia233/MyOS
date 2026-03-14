@@ -850,7 +850,7 @@ def test_api_action_ratifies_promoted_profile_trait_candidate_into_psych_profile
             )
 
 
-def test_api_action_ratifies_promoted_cognition_revision_into_schema_lineage() -> None:
+def test_api_action_ratifies_promoted_cognition_revision_into_schema_seed() -> None:
     with TemporaryDirectory() as td:
         root = _copy_repo_subset(Path(td))
         import_result = api_action(
@@ -896,18 +896,24 @@ def test_api_action_ratifies_promoted_cognition_revision_into_schema_lineage() -
                 "action": "ratify_cognition_revision_candidate",
                 "candidate_id": candidate_id,
                 "ratification_note": "Approved as a durable schema-lineage update.",
+                "canonicalization_mode": "seed",
+                "parent_schema_version_id": None,
             },
         )
         assert ratify_result["ok"] is True
         assert ratify_result["action"] == "ratify_cognition_revision_candidate"
         assert ratify_result["candidate_ref"] == candidate_id
+        assert ratify_result["canonicalization_mode"] == "seed"
         assert ratify_result["canonical_schema_version_id"].startswith("sv_")
+        assert ratify_result["accommodation_revision_id"] is None
         assert ratify_result["schema_updated"] is True
 
         matched = next(item for item in ratify_result["learning_candidates"] if item["id"] == candidate_id)
         assert matched["lifecycle_stage"] == "canonicalized"
         assert matched["canonicalization_ref"] == ratify_result["canonicalization_ref"]
         assert matched["canonical_schema_version_id"] == ratify_result["canonical_schema_version_id"]
+        assert matched["canonicalization_mode"] == "seed"
+        assert matched["canonical_parent_schema_version_id"] is None
         assert matched["can_ratify"] is False
 
         schema_text = (root / "modules/cognition/logs/schema_versions.jsonl").read_text(encoding="utf-8")
@@ -936,8 +942,176 @@ def test_api_action_ratifies_promoted_cognition_revision_into_schema_lineage() -
                     "action": "ratify_cognition_revision_candidate",
                     "candidate_id": candidate_id,
                     "ratification_note": "second ratification should fail",
+                    "canonicalization_mode": "seed",
+                    "parent_schema_version_id": None,
                 },
             )
+
+
+def test_api_action_ratifies_promoted_cognition_revision_into_explicit_revision() -> None:
+    with TemporaryDirectory() as td:
+        root = _copy_repo_subset(Path(td))
+
+        seed_import = api_action(
+            root,
+            {
+                "action": "learning_handoff_import",
+                "response_text": json.dumps(
+                    {
+                        "source": {"title": "P1", "url": "u1", "source_type": "video"},
+                        "summary": "s1",
+                        "key_points": ["p1"],
+                        "candidate_artifacts": {
+                            "cognition_revisions": [
+                                {"statement": "Treat repeated overload as schema failure, not motive failure."}
+                            ]
+                        },
+                    }
+                ),
+            },
+        )
+        seed_candidate_id = seed_import["candidate_record_ids"][0]
+        api_action(
+            root,
+            {
+                "action": "review_learning_candidate",
+                "candidate_id": seed_candidate_id,
+                "verdict": "accept",
+                "owner_note": "accept seed first",
+            },
+        )
+        api_action(
+            root,
+            {
+                "action": "promote_learning_candidate",
+                "candidate_id": seed_candidate_id,
+                "approval_note": "approved for seed promotion",
+            },
+        )
+        seed_result = api_action(
+            root,
+            {
+                "action": "ratify_cognition_revision_candidate",
+                "candidate_id": seed_candidate_id,
+                "ratification_note": "Create the canonical schema root first.",
+                "canonicalization_mode": "seed",
+                "parent_schema_version_id": None,
+            },
+        )
+        parent_schema_version_id = seed_result["canonical_schema_version_id"]
+
+        import_result = api_action(
+            root,
+            {
+                "action": "learning_handoff_import",
+                "response_text": json.dumps(
+                    {
+                        "source": {"title": "P2", "url": "u2", "source_type": "video"},
+                        "summary": "s2",
+                        "key_points": ["p2"],
+                        "candidate_artifacts": {
+                            "cognition_revisions": [
+                                {"statement": "Treat repeated overload as schema failure before motive failure in recurring patterns."}
+                            ]
+                        },
+                    }
+                ),
+            },
+        )
+        candidate_id = import_result["candidate_record_ids"][0]
+        api_action(
+            root,
+            {
+                "action": "review_learning_candidate",
+                "candidate_id": candidate_id,
+                "verdict": "accept",
+                "owner_note": "accept revision",
+            },
+        )
+        api_action(
+            root,
+            {
+                "action": "promote_learning_candidate",
+                "candidate_id": candidate_id,
+                "approval_note": "approved for revision promotion",
+            },
+        )
+
+        ratify_result = api_action(
+            root,
+            {
+                "action": "ratify_cognition_revision_candidate",
+                "candidate_id": candidate_id,
+                "ratification_note": "Approved as a parent-bound schema revision.",
+                "canonicalization_mode": "revision",
+                "parent_schema_version_id": parent_schema_version_id,
+            },
+        )
+        assert ratify_result["ok"] is True
+        assert ratify_result["canonicalization_mode"] == "revision"
+        assert ratify_result["parent_schema_version_id"] == parent_schema_version_id
+        assert ratify_result["canonical_schema_version_id"].startswith("sv_")
+        assert ratify_result["accommodation_revision_id"].startswith("ar_")
+
+        matched = next(item for item in ratify_result["learning_candidates"] if item["id"] == candidate_id)
+        assert matched["lifecycle_stage"] == "canonicalized"
+        assert matched["canonicalization_mode"] == "revision"
+        assert matched["canonical_parent_schema_version_id"] == parent_schema_version_id
+        assert matched["canonical_schema_version_id"] == ratify_result["canonical_schema_version_id"]
+
+
+def test_api_action_rejects_cognition_revision_without_parent_in_revision_mode() -> None:
+    with TemporaryDirectory() as td:
+        root = _copy_repo_subset(Path(td))
+        import_result = api_action(
+            root,
+            {
+                "action": "learning_handoff_import",
+                "response_text": json.dumps(
+                    {
+                        "source": {"title": "P", "url": "u", "source_type": "video"},
+                        "summary": "s",
+                        "key_points": ["p"],
+                        "candidate_artifacts": {
+                            "cognition_revisions": [
+                                {"statement": "Treat repeated overload as schema failure, not motive failure."}
+                            ]
+                        },
+                    }
+                ),
+            },
+        )
+        candidate_id = import_result["candidate_record_ids"][0]
+        api_action(
+            root,
+            {
+                "action": "review_learning_candidate",
+                "candidate_id": candidate_id,
+                "verdict": "accept",
+                "owner_note": "accept first",
+            },
+        )
+        api_action(
+            root,
+            {
+                "action": "promote_learning_candidate",
+                "candidate_id": candidate_id,
+                "approval_note": "approved for promotion",
+            },
+        )
+
+        with pytest.raises(ValueError) as excinfo:
+            api_action(
+                root,
+                {
+                    "action": "ratify_cognition_revision_candidate",
+                    "candidate_id": candidate_id,
+                    "ratification_note": "Revision mode must require explicit parent.",
+                    "canonicalization_mode": "revision",
+                    "parent_schema_version_id": None,
+                },
+            )
+        assert "parent_schema_version_id is required" in str(excinfo.value)
 
 
 def test_api_action_validate_metrics_and_schedule() -> None:

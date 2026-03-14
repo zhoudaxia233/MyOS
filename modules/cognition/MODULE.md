@@ -56,6 +56,10 @@ It tracks how mental models (schemas) are used, where they fail, how they are re
    - Aggregate mismatch signals across decision/memory/profile logs.
 4. Log accommodation
    - Record what failed and how the schema is being revised.
+4a. Canonicalize learning candidate
+   - `seed`: create a new canonical schema root with no parent lineage.
+   - `revision`: extend an existing canonical schema lineage and require explicit `parent_schema_version_id`.
+   - Never silently infer `seed` vs `revision` at ratification time.
 5. Log equilibration
    - Record whether revision improves explanatory and predictive coherence.
 6. Weekly synthesis
@@ -77,5 +81,7 @@ It tracks how mental models (schemas) are used, where they fail, how they are re
 - Separate observations from interpretations in every record.
 - Every inference-level record should include `source_refs`.
 - Keep schema revisions explicit: what failed, what changed, what improved.
+- `revision` requires explicit parent lineage.
+- `seed` must not carry parent lineage and must not write accommodation semantics.
 - Preserve append-only history across all cognition logs.
 </instructions>
