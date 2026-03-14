@@ -152,6 +152,27 @@ Keep rollout evolutionary: preserve existing extraction/distillation pipelines a
   - decide whether canonical profile traits should remain psych-profile-only for now or branch into typed destinations (`identity` vs `operating_preferences`)
   - then implement the first explicit ratification path for `cognition_revision`
 
+#### Cognition Revision Canonicalization Slice (2026-03-14)
+
+- Why this slice:
+  - after `principle` and `profile_trait`, the remaining Class C authority gap was cognition lineage
+  - the cognition module already had the right append-only substrate: `schema_versions.jsonl` and `accommodation_revisions.jsonl`
+- Shipped in this iteration:
+  - promoted `cognition_revision` candidates can now be explicitly ratified through a dedicated action
+  - ratification always appends one canonical schema version to `modules/cognition/logs/schema_versions.jsonl`
+  - when prior matching schema lineage exists, ratification also appends one accommodation revision to `modules/cognition/logs/accommodation_revisions.jsonl`
+  - Audit now shows `Canonicalized` state and a dedicated `Ratify Cognition Revision` action for promoted cognition revision candidates
+  - after canonicalization, `cognition_revision` may now be explicitly marked runtime-eligible through the existing runtime release path
+- Kept intentionally minimal:
+  - only `cognition_revision`
+  - no generic cognition canonicalization engine
+  - no operator-selection UX yet; current path uses conservative `refine` when accommodation is needed
+  - no mandatory parent-schema requirement yet
+  - no automatic runtime eligibility expansion for Class C artifacts
+- Next continuation slice:
+  - decide whether cognition ratification should always require an explicit parent schema version instead of allowing seed schema creation
+  - then return to tightening typed edit/supersession paths rather than adding new generic abstractions
+
 #### Immediate Priority - Perceivable MVP Flow (2026-03-09)
 
 - Principle:

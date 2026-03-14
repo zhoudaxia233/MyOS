@@ -422,6 +422,7 @@ const I18N = {
     btn_promote: "晋升",
     btn_ratify_principle: "宪制确认",
     btn_ratify_profile_trait: "确认 trait 入档",
+    btn_ratify_cognition_revision: "确认 schema 修订",
     btn_runtime_eligible: "设为可用",
     btn_runtime_hold: "运行保留",
     btn_runtime_revoke: "撤销运行",
@@ -459,6 +460,7 @@ const I18N = {
     candidate_detail_canonical_ref: "Canonical 记录",
     candidate_detail_canonical_clause: "Canonical clause",
     candidate_detail_canonical_trait: "Canonical trait",
+    candidate_detail_canonical_schema: "Canonical schema",
     candidate_detail_runtime: "运行时状态",
     candidate_detail_runtime_eligibility: "运行资格",
     candidate_detail_runtime_scope: "运行范围",
@@ -488,6 +490,8 @@ const I18N = {
       "下一步：把这条 principle 候选写入 amendment log，并显式更新 constitution.yaml，完成 canonicalization。",
     candidate_next_ratify_profile_trait:
       "下一步：把这条 profile trait 候选写入 profile_changes log，并显式更新 psych_profile.yaml，完成 canonicalization。",
+    candidate_next_ratify_cognition_revision:
+      "下一步：把这条 cognition revision 候选写入 schema lineage；必要时追加 accommodation revision，并显式生成 canonical schema version。",
     candidate_next_canonicalized:
       "已写入模块 SSOT。若要进入 runtime authority，仍需显式授权；如要改动内容，应走对应的 typed change/update 路径。",
     candidate_next_revoked: "运行资格已撤销；如需恢复，必须重新显式授权。",
@@ -499,6 +503,7 @@ const I18N = {
     learning_review_modal_title_promote: "晋升候选",
     learning_review_modal_title_ratify_principle: "确认 principle 入宪",
     learning_review_modal_title_ratify_profile_trait: "确认 profile trait 入档",
+    learning_review_modal_title_ratify_cognition_revision: "确认 cognition 修订入档",
     learning_review_modal_title_runtime_eligible: "授权运行资格",
     learning_review_modal_title_runtime_hold: "保留运行资格",
     learning_review_modal_title_runtime_revoke: "撤销运行资格",
@@ -600,6 +605,8 @@ const I18N = {
     msg_principle_ratify_failed: "Principle canonicalization 失败：{error}",
     msg_profile_trait_ratified_done: "Profile trait 已完成 canonicalization：{id} -> {trait}",
     msg_profile_trait_ratify_failed: "Profile trait canonicalization 失败：{error}",
+    msg_cognition_revision_ratified_done: "Cognition revision 已完成 canonicalization：{id} -> {schema}",
+    msg_cognition_revision_ratify_failed: "Cognition revision canonicalization 失败：{error}",
     msg_runtime_eligibility_done: "运行资格已更新：{id} -> {status}",
     msg_runtime_eligibility_failed: "运行资格更新失败：{error}",
     msg_no_runtime_influence_history: "暂无可展示的 runtime influence 历史。",
@@ -867,6 +874,7 @@ const I18N = {
     btn_promote: "Promote",
     btn_ratify_principle: "Ratify Principle",
     btn_ratify_profile_trait: "Ratify Profile Trait",
+    btn_ratify_cognition_revision: "Ratify Cognition Revision",
     btn_runtime_eligible: "Mark Eligible",
     btn_runtime_hold: "Hold Runtime",
     btn_runtime_revoke: "Revoke Runtime",
@@ -904,6 +912,7 @@ const I18N = {
     candidate_detail_canonical_ref: "Canonical Record",
     candidate_detail_canonical_clause: "Canonical Clause",
     candidate_detail_canonical_trait: "Canonical Trait",
+    candidate_detail_canonical_schema: "Canonical Schema",
     candidate_detail_runtime: "Runtime Status",
     candidate_detail_runtime_eligibility: "Runtime Eligibility",
     candidate_detail_runtime_scope: "Runtime Scope",
@@ -933,6 +942,8 @@ const I18N = {
       "Next: write this principle candidate into the amendment log and constitution SSOT through an explicit canonicalization step.",
     candidate_next_ratify_profile_trait:
       "Next: write this profile trait candidate into profile_changes and psych_profile SSOT through an explicit canonicalization step.",
+    candidate_next_ratify_cognition_revision:
+      "Next: write this cognition revision into schema lineage, optionally append accommodation, and create an explicit canonical schema version.",
     candidate_next_canonicalized:
       "Canonicalized into module SSOT. Runtime authority still needs an explicit release; further content changes should go through the matching typed update path.",
     candidate_next_revoked: "Runtime eligibility is revoked; explicit re-authorization is required before reuse.",
@@ -944,6 +955,7 @@ const I18N = {
     learning_review_modal_title_promote: "Promote Candidate",
     learning_review_modal_title_ratify_principle: "Ratify Principle",
     learning_review_modal_title_ratify_profile_trait: "Ratify Profile Trait",
+    learning_review_modal_title_ratify_cognition_revision: "Ratify Cognition Revision",
     learning_review_modal_title_runtime_eligible: "Authorize Runtime Eligibility",
     learning_review_modal_title_runtime_hold: "Hold Runtime Eligibility",
     learning_review_modal_title_runtime_revoke: "Revoke Runtime Eligibility",
@@ -1043,6 +1055,8 @@ const I18N = {
     msg_principle_ratify_failed: "Principle canonicalization failed: {error}",
     msg_profile_trait_ratified_done: "Profile trait canonicalized: {id} -> {trait}",
     msg_profile_trait_ratify_failed: "Profile trait canonicalization failed: {error}",
+    msg_cognition_revision_ratified_done: "Cognition revision canonicalized: {id} -> {schema}",
+    msg_cognition_revision_ratify_failed: "Cognition revision canonicalization failed: {error}",
     msg_runtime_eligibility_done: "Runtime eligibility updated: {id} -> {status}",
     msg_runtime_eligibility_failed: "Runtime eligibility update failed: {error}",
     msg_no_runtime_influence_history: "No recent runtime influence history is available yet.",
@@ -1962,7 +1976,10 @@ const RUNTIME_RATIFICATION_REQUIRED_TYPES = new Set(["profile_trait", "principle
 
 function candidateRequiresRuntimeRatification(item) {
   const type = String(((item && item.candidate_type) || (item && item.artifact_type) || "")).trim().toLowerCase();
-  if ((type === "principle" || type === "profile_trait") && String((item && item.canonicalized_at) || "").trim()) {
+  if (
+    (type === "principle" || type === "profile_trait" || type === "cognition_revision") &&
+    String((item && item.canonicalized_at) || "").trim()
+  ) {
     return false;
   }
   return RUNTIME_RATIFICATION_REQUIRED_TYPES.has(type);
@@ -2481,6 +2498,9 @@ function lifecycleNextAction(item) {
       if (String(item.candidate_type || "").trim() === "profile_trait") {
         return t("candidate_next_ratify_profile_trait");
       }
+      if (String(item.candidate_type || "").trim() === "cognition_revision") {
+        return t("candidate_next_ratify_cognition_revision");
+      }
       return t("candidate_next_ratify_principle");
     }
     if (String(item.runtime_state || "").trim().toLowerCase() === "holding") {
@@ -2585,6 +2605,7 @@ function buildCandidateContext(item) {
     [t("candidate_detail_canonical_ref"), (item && item.canonicalization_ref) || "-"],
     [t("candidate_detail_canonical_clause"), (item && item.canonical_clause_id) || "-"],
     [t("candidate_detail_canonical_trait"), (item && item.canonical_profile_trait_id) || "-"],
+    [t("candidate_detail_canonical_schema"), (item && item.canonical_schema_version_id) || "-"],
     [t("candidate_detail_runtime_eligibility"), candidateRuntimeEligibilityLabel(item)],
     [t("candidate_detail_runtime_scope"), candidateRuntimeScopeText(item)],
     [t("candidate_detail_runtime_autonomy"), (item && item.runtime_autonomy_ceiling) || "-"],
@@ -2712,9 +2733,18 @@ function renderCandidateCards(container, items, emptyKey) {
 
       if (item.can_ratify) {
         const candidateType = String(item.candidate_type || "").trim().toLowerCase();
-        const ratifyMode = candidateType === "profile_trait" ? "ratify_profile_trait" : "ratify_principle";
+        const ratifyMode =
+          candidateType === "profile_trait"
+            ? "ratify_profile_trait"
+            : candidateType === "cognition_revision"
+              ? "ratify_cognition_revision"
+              : "ratify_principle";
         const ratifyLabel =
-          candidateType === "profile_trait" ? t("btn_ratify_profile_trait") : t("btn_ratify_principle");
+          candidateType === "profile_trait"
+            ? t("btn_ratify_profile_trait")
+            : candidateType === "cognition_revision"
+              ? t("btn_ratify_cognition_revision")
+              : t("btn_ratify_principle");
         const ratifyBtn = document.createElement("button");
         ratifyBtn.className = "todo-resolve-btn";
         ratifyBtn.type = "button";
@@ -3454,6 +3484,11 @@ function renderLearningSupportDetail(item, options = {}) {
     );
     appendSuggestionDetailSection(
       suggestionDetailCard,
+      "candidate_detail_canonical_schema",
+      item.canonical_schema_version_id || "-"
+    );
+    appendSuggestionDetailSection(
+      suggestionDetailCard,
       "candidate_detail_runtime_eligibility",
       candidateRuntimeEligibilityLabel(item)
     );
@@ -3793,11 +3828,23 @@ function renderActionResult(data) {
   if (data.canonical_profile_trait_id) {
     out.push(`canonical_profile_trait_id: ${data.canonical_profile_trait_id}`);
   }
+  if (data.canonical_schema_version_id) {
+    out.push(`canonical_schema_version_id: ${data.canonical_schema_version_id}`);
+  }
+  if (data.accommodation_revision_id) {
+    out.push(`accommodation_revision_id: ${data.accommodation_revision_id}`);
+  }
   if (data.canonicalized_at) {
     out.push(`canonicalized_at: ${data.canonicalized_at}`);
   }
   if (data.psych_profile_path) {
     out.push(`psych_profile_path: ${data.psych_profile_path}`);
+  }
+  if (data.schema_versions_path) {
+    out.push(`schema_versions_path: ${data.schema_versions_path}`);
+  }
+  if (data.accommodation_path) {
+    out.push(`accommodation_path: ${data.accommodation_path}`);
   }
   if (data.promotion_target) {
     out.push(`promotion_target: ${data.promotion_target}`);
@@ -4064,6 +4111,7 @@ function openLearningReviewModal(item, mode) {
       "promote",
       "ratify_principle",
       "ratify_profile_trait",
+      "ratify_cognition_revision",
       "runtime_eligible",
       "runtime_hold",
       "runtime_revoke",
@@ -4088,6 +4136,7 @@ function openLearningReviewModal(item, mode) {
     promote: "learning_review_modal_title_promote",
     ratify_principle: "learning_review_modal_title_ratify_principle",
     ratify_profile_trait: "learning_review_modal_title_ratify_profile_trait",
+    ratify_cognition_revision: "learning_review_modal_title_ratify_cognition_revision",
     runtime_eligible: "learning_review_modal_title_runtime_eligible",
     runtime_hold: "learning_review_modal_title_runtime_hold",
     runtime_revoke: "learning_review_modal_title_runtime_revoke",
@@ -4109,6 +4158,10 @@ function openLearningReviewModal(item, mode) {
       uiLanguage === "zh"
         ? "批准把该 profile trait 写入 profile_changes log，并更新 psych_profile.yaml。"
         : "Approve writing this profile trait into profile_changes and psych_profile.yaml.",
+    ratify_cognition_revision:
+      uiLanguage === "zh"
+        ? "批准把该 cognition revision 写入 schema lineage；如有现有版本则追加 accommodation revision，并生成新的 schema version。"
+        : "Approve writing this cognition revision into schema lineage; append accommodation when prior lineage exists and create a new schema version.",
     runtime_eligible:
       uiLanguage === "zh" ? "批准该条目进入 runtime eligibility，并接受当前边界。" : "Authorize runtime eligibility under current boundaries.",
     runtime_hold:
@@ -4166,6 +4219,11 @@ async function submitLearningReviewModal() {
   }
   if (verdict === "ratify_profile_trait") {
     await ratifyProfileTraitCandidate(id, ownerNote);
+    closeLearningReviewModal();
+    return;
+  }
+  if (verdict === "ratify_cognition_revision") {
+    await ratifyCognitionRevisionCandidate(id, ownerNote);
     closeLearningReviewModal();
     return;
   }
@@ -4287,6 +4345,30 @@ async function ratifyProfileTraitCandidate(candidateId, ratificationNote) {
     addBubble("system", t("msg_profile_trait_ratified_done", { id, trait: data.canonical_profile_trait_id || "-" }));
   } catch (err) {
     addBubble("system", t("msg_profile_trait_ratify_failed", { error: err.message }));
+  }
+}
+
+async function ratifyCognitionRevisionCandidate(candidateId, ratificationNote) {
+  const id = String(candidateId || "").trim();
+  if (!id) {
+    return;
+  }
+  const note = String(ratificationNote || "").trim();
+  if (!note) {
+    addBubble("system", t("msg_review_note_required"));
+    return;
+  }
+
+  try {
+    const data = await postJson("/api/action", {
+      action: "ratify_cognition_revision_candidate",
+      candidate_id: id,
+      ratification_note: note,
+    });
+    renderActionResult(data);
+    addBubble("system", t("msg_cognition_revision_ratified_done", { id, schema: data.canonical_schema_version_id || "-" }));
+  } catch (err) {
+    addBubble("system", t("msg_cognition_revision_ratify_failed", { error: err.message }));
   }
 }
 

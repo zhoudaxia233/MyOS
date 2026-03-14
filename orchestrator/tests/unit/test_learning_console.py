@@ -14,6 +14,7 @@ from learning_console import (
     summarize_learning_pipeline,
     summarize_learning_pipeline_trend,
 )
+from cognition_authority import ratify_cognition_revision_candidate
 from profile_authority import ratify_profile_trait_candidate
 from principles_authority import ratify_principle_candidate
 from runtime_eligibility import set_runtime_eligibility
@@ -135,6 +136,53 @@ def _prepare_profile_foundation(root: Path) -> None:
             "reason",
             "expected_effect",
             "source_refs",
+            "object_type",
+            "proposal_target",
+        ],
+        [],
+    )
+
+
+def _prepare_cognition_foundation(root: Path) -> None:
+    _write_jsonl(
+        root / "modules/cognition/logs/schema_versions.jsonl",
+        "schema_versions",
+        [
+            "id",
+            "created_at",
+            "status",
+            "schema_id",
+            "version",
+            "topic",
+            "schema_name",
+            "summary",
+            "assumptions",
+            "predictions",
+            "boundaries",
+            "parent_schema_version_id",
+            "source_refs",
+            "tags",
+            "object_type",
+            "proposal_target",
+        ],
+        [],
+    )
+    _write_jsonl(
+        root / "modules/cognition/logs/accommodation_revisions.jsonl",
+        "accommodation_revisions",
+        [
+            "id",
+            "created_at",
+            "status",
+            "topic",
+            "previous_schema_version_id",
+            "new_schema_version_id",
+            "revision_type",
+            "failed_assumptions",
+            "revision_summary",
+            "new_schema_hypothesis",
+            "source_refs",
+            "tags",
             "object_type",
             "proposal_target",
         ],
@@ -740,6 +788,64 @@ def test_profile_trait_can_be_runtime_eligible_after_canonicalization() -> None:
         assert matched["runtime_eligibility_status"] == "eligible"
         assert matched["canonicalized_at"]
         assert matched["canonical_profile_trait_id"]
+
+
+def test_cognition_revision_can_be_runtime_eligible_after_canonicalization() -> None:
+    with TemporaryDirectory() as td:
+        root = Path(td)
+        _prepare_memory_logs(root)
+        _prepare_cognition_foundation(root)
+
+        result = ingest_learning_handoff_response(
+            root,
+            json.dumps(
+                {
+                    "source": {"title": "P", "url": "u-cognition", "source_type": "video"},
+                    "summary": "cognition revision candidate",
+                    "key_points": ["typed seriousness"],
+                    "candidate_artifacts": {
+                        "cognition_revisions": [
+                            {"statement": "Treat repeated overload as schema failure, not motive failure."}
+                        ]
+                    },
+                }
+            ),
+        )
+        candidate_id = result["candidate_record_ids"][0]
+        apply_learning_candidate_verdict(
+            root,
+            candidate_id=candidate_id,
+            verdict="accept",
+            owner_note="accept for ledger",
+        )
+        promotion = promote_learning_candidate(
+            root,
+            candidate_id=candidate_id,
+            approval_note="approve ledger promotion",
+        )
+        assert promotion["runtime_eligibility_status"] == "holding"
+
+        ratified = ratify_cognition_revision_candidate(
+            root,
+            candidate_ref=candidate_id,
+            ratification_note="Approve schema lineage write.",
+        )
+        assert ratified["canonical_schema_version_id"].startswith("sv_")
+
+        updated = set_runtime_eligibility(
+            root,
+            candidate_ref=candidate_id,
+            eligibility_status="eligible",
+            change_note="release runtime authority after canonicalization",
+        )
+        assert updated["runtime_eligibility_status"] == "eligible"
+
+        recent = list_recent_learning_candidates(root, include_resolved=True)
+        matched = next(item for item in recent if item["id"] == candidate_id)
+        assert matched["lifecycle_stage"] == "canonicalized"
+        assert matched["runtime_eligibility_status"] == "eligible"
+        assert matched["canonicalized_at"]
+        assert matched["canonical_schema_version_id"]
 
 
 def test_summarize_learning_pipeline_includes_promotion_readiness() -> None:

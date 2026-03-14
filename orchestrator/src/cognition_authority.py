@@ -1,0 +1,270 @@
+from __future__ import annotations
+
+import json
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+
+from cognition import log_accommodation_revision, log_schema_version
+from idgen import next_id_for_rel_path
+
+DEFAULT_COGNITION_REVISION_TYPE = "refine"
+
+
+def _utc_now() -> str:
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def _read_jsonl(path: Path) -> list[dict[str, Any]]:
+    if not path.exists() or not path.is_file():
+        return []
+    rows: list[dict[str, Any]] = []
+    for i, raw in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+        line = raw.strip()
+        if not line:
+            continue
+        if i == 1 and '"_schema"' in line:
+            continue
+        try:
+            payload = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(payload, dict):
+            rows.append(payload)
+    return rows
+
+
+def _ordered_unique(items: list[str]) -> list[str]:
+    out: list[str] = []
+    seen: set[str] = set()
+    for item in items:
+        text = str(item or "").strip()
+        if not text or text in seen:
+            continue
+        seen.add(text)
+        out.append(text)
+    return out
+
+
+def _candidate_row_by_id(repo_root: Path, candidate_ref: str) -> dict[str, Any] | None:
+    path = repo_root / "orchestrator" / "logs" / "learning_candidates.jsonl"
+    for row in _read_jsonl(path):
+        if str(row.get("status", "")).strip().lower() != "active":
+            continue
+        if str(row.get("id", "")).strip() == candidate_ref:
+            return row
+    return None
+
+
+def _promotion_row_by_candidate(repo_root: Path, candidate_ref: str) -> dict[str, Any] | None:
+    path = repo_root / "modules" / "decision" / "logs" / "learning_candidate_promotions.jsonl"
+    for row in _read_jsonl(path):
+        if str(row.get("status", "")).strip().lower() != "active":
+            continue
+        if str(row.get("candidate_ref", "")).strip() == candidate_ref:
+            return row
+    return None
+
+
+def _cognition_sink_row_by_candidate(repo_root: Path, candidate_ref: str) -> dict[str, Any] | None:
+    path = repo_root / "modules" / "cognition" / "logs" / "schema_candidates.jsonl"
+    for row in _read_jsonl(path):
+        if str(row.get("status", "")).strip().lower() != "active":
+            continue
+        if str(row.get("candidate_ref", "")).strip() == candidate_ref:
+            return row
+    return None
+
+
+def _active_schema_versions(repo_root: Path) -> list[dict[str, Any]]:
+    path = repo_root / "modules" / "cognition" / "logs" / "schema_versions.jsonl"
+    return [
+        row
+        for row in _read_jsonl(path)
+        if str(row.get("status", "")).strip().lower() == "active"
+    ]
+
+
+def _active_accommodation_revisions(repo_root: Path) -> list[dict[str, Any]]:
+    path = repo_root / "modules" / "cognition" / "logs" / "accommodation_revisions.jsonl"
+    return [
+        row
+        for row in _read_jsonl(path)
+        if str(row.get("status", "")).strip().lower() == "active"
+    ]
+
+
+def cognition_revision_ratification_map(repo_root: Path) -> dict[str, dict[str, Any]]:
+    out: dict[str, dict[str, Any]] = {}
+    for row in _active_schema_versions(repo_root):
+        refs = [str(item).strip() for item in row.get("source_refs", []) if str(item).strip()]
+        for ref in refs:
+            if ref.startswith("lc_"):
+                out[ref] = {
+                    "id": str(row.get("id", "")).strip() or None,
+                    "created_at": str(row.get("created_at", "")).strip() or None,
+                    "schema_version_id": str(row.get("id", "")).strip() or None,
+                    "accommodation_revision_id": None,
+                    "revision_type": None,
+                }
+    for row in _active_accommodation_revisions(repo_root):
+        refs = [str(item).strip() for item in row.get("source_refs", []) if str(item).strip()]
+        for ref in refs:
+            if ref.startswith("lc_"):
+                out[ref] = {
+                    "id": str(row.get("id", "")).strip() or None,
+                    "created_at": str(row.get("created_at", "")).strip() or None,
+                    "schema_version_id": str(row.get("new_schema_version_id", "")).strip() or None,
+                    "accommodation_revision_id": str(row.get("id", "")).strip() or None,
+                    "revision_type": str(row.get("revision_type", "")).strip() or None,
+                }
+    return out
+
+
+def _latest_matching_schema_version(
+    repo_root: Path,
+    *,
+    topic: str,
+    schema_name: str,
+) -> dict[str, Any] | None:
+    latest: dict[str, Any] | None = None
+    target_topic = str(topic or "").strip().lower()
+    target_name = str(schema_name or "").strip().lower()
+    for row in _active_schema_versions(repo_root):
+        row_topic = str(row.get("topic", "")).strip().lower()
+        row_name = str(row.get("schema_name", "")).strip().lower()
+        if row_name == target_name or row_topic == target_topic:
+            latest = row
+    return latest
+
+
+def _derive_schema_assumptions(statement: str, evidence: list[str]) -> list[str]:
+    return _ordered_unique([statement, *evidence[:2]])
+
+
+def _derive_schema_predictions(title: str, rationale: str | None) -> list[str]:
+    if str(rationale or "").strip():
+        return [str(rationale).strip()]
+    return [f"Applying {title} should reduce repeated cognition mismatch in future review cycles."]
+
+
+def _derive_schema_boundaries(topic: str) -> list[str]:
+    return [f"Use this schema only when evaluating the cognition topic '{topic}' in owner-reviewed context."]
+
+
+def ratify_cognition_revision_candidate(
+    repo_root: Path,
+    *,
+    candidate_ref: str,
+    ratification_note: str,
+) -> dict[str, Any]:
+    target_candidate_ref = str(candidate_ref or "").strip()
+    if not target_candidate_ref:
+        raise ValueError("candidate_ref is required")
+
+    note = str(ratification_note or "").strip()
+    if not note:
+        raise ValueError("ratification_note is required")
+
+    candidate = _candidate_row_by_id(repo_root, target_candidate_ref)
+    if candidate is None:
+        raise ValueError(f"candidate not found: {target_candidate_ref}")
+    if str(candidate.get("candidate_type", "")).strip() != "cognition_revision":
+        raise ValueError("only promoted cognition_revision candidates can be ratified through this path")
+
+    promotion = _promotion_row_by_candidate(repo_root, target_candidate_ref)
+    if promotion is None:
+        raise ValueError("cognition revision candidate must be promoted before ratification")
+
+    sink_row = _cognition_sink_row_by_candidate(repo_root, target_candidate_ref)
+    if sink_row is None:
+        raise ValueError("promoted cognition revision candidate is missing cognition sink record")
+
+    existing = cognition_revision_ratification_map(repo_root).get(target_candidate_ref)
+    if existing is not None:
+        raise ValueError(f"cognition revision candidate already ratified: {target_candidate_ref}")
+
+    title = str(sink_row.get("title", "")).strip() or str(candidate.get("title", "")).strip() or "Cognition Revision"
+    statement = str(sink_row.get("statement", "")).strip() or str(candidate.get("statement", "")).strip()
+    if not statement:
+        raise ValueError("cognition revision candidate is missing statement")
+
+    rationale = str(candidate.get("rationale", "")).strip() or None
+    evidence = [str(item).strip() for item in candidate.get("evidence", []) if str(item).strip()]
+    topic = title
+    source_refs = _ordered_unique(
+        [
+            target_candidate_ref,
+            str(sink_row.get("id", "")).strip(),
+            str(sink_row.get("approval_ref", "")).strip(),
+            str(sink_row.get("promotion_ref", "")).strip(),
+            str(promotion.get("id", "")).strip(),
+            next_id_for_rel_path(repo_root, "ap", "modules/cognition/logs/schema_versions.jsonl"),
+        ]
+    )
+    ratification_approval_ref = source_refs[-1]
+    tags = ["canonicalized_learning_candidate", "cognition_revision"]
+
+    assumptions = _derive_schema_assumptions(statement, evidence)
+    predictions = _derive_schema_predictions(title, rationale)
+    boundaries = _derive_schema_boundaries(topic)
+    previous_schema = _latest_matching_schema_version(repo_root, topic=topic, schema_name=title)
+
+    accommodation_revision_id: str | None = None
+    revision_type: str | None = None
+    schema_record: dict[str, Any]
+    canonicalized_at = _utc_now()
+
+    if previous_schema is not None:
+        revision_type = DEFAULT_COGNITION_REVISION_TYPE
+        result = log_accommodation_revision(
+            repo_root,
+            topic=topic,
+            previous_schema_version_id=str(previous_schema.get("id", "")).strip(),
+            revision_type=revision_type,
+            failed_assumptions=evidence or [str(previous_schema.get("summary", "")).strip()],
+            revision_summary=note,
+            new_schema_hypothesis=statement,
+            create_schema_version=True,
+            schema_name=title,
+            schema_summary=statement,
+            assumptions=assumptions,
+            predictions=predictions,
+            boundaries=boundaries,
+            source_refs=source_refs,
+            tags=tags,
+        )
+        revision = result["revision"]
+        schema_record = result["new_schema"]
+        accommodation_revision_id = str(revision.get("id", "")).strip() or None
+        canonicalized_at = str(revision.get("created_at", "")).strip() or canonicalized_at
+    else:
+        schema_record = log_schema_version(
+            repo_root,
+            topic=topic,
+            schema_name=title,
+            summary=statement,
+            assumptions=assumptions,
+            predictions=predictions,
+            boundaries=boundaries,
+            source_refs=source_refs,
+            tags=tags,
+        )
+        canonicalized_at = str(schema_record.get("created_at", "")).strip() or canonicalized_at
+
+    schema_version_id = str(schema_record.get("id", "")).strip() or None
+    if not schema_version_id:
+        raise ValueError("cognition revision ratification did not create a schema version")
+
+    return {
+        "candidate_ref": target_candidate_ref,
+        "canonicalization_ref": accommodation_revision_id or schema_version_id,
+        "ratification_approval_ref": ratification_approval_ref,
+        "canonical_schema_version_id": schema_version_id,
+        "accommodation_revision_id": accommodation_revision_id,
+        "revision_type": revision_type,
+        "canonicalized_at": canonicalized_at,
+        "schema_versions_path": str(repo_root / "modules" / "cognition" / "logs" / "schema_versions.jsonl"),
+        "accommodation_path": str(repo_root / "modules" / "cognition" / "logs" / "accommodation_revisions.jsonl"),
+        "schema_updated": True,
+    }

@@ -276,11 +276,12 @@ This includes direct `memory_events` and `memory_insights` created by ingest flo
 - Canonical SSOT update:
   - No by default.
   - Canonicalization requires explicit cognition lineage write:
-    - `accommodation_revisions.jsonl`
-    - and usually a new `schema_versions.jsonl` record
+    - current implemented path always creates a new `schema_versions.jsonl` record
+    - and appends `accommodation_revisions.jsonl` when a matching prior schema lineage already exists
 - Runtime eligibility:
   - Must not be granted merely from promotion.
-  - Desired contract: remain `holding` until explicit schema-ratification path exists.
+  - Current implemented contract: remain `holding` until explicit schema-ratification path is completed.
+  - After canonicalization, runtime release may be granted only through a separate explicit eligibility action.
 - Separate ratification required:
   - Yes, always.
 - Runtime-active use without explicit eligibility:
@@ -402,6 +403,29 @@ The repo now has a second explicit Class C ratification path for `profile_trait`
   - typed supersession/edit flows for already-canonical profile traits
   - equivalent ratification path for `cognition_revision`
 
+## Implementation Note: First Cognition Revision Canonicalization Path (2026-03-14)
+
+The repo now has a third explicit Class C ratification path for `cognition_revision`:
+
+- scope is intentionally narrow:
+  - only promoted `cognition_revision` candidates
+  - always create a canonical schema version entry
+  - append accommodation lineage only when prior matching schema lineage exists
+- the path writes:
+  - one new canonical record in `modules/cognition/logs/schema_versions.jsonl`
+  - and, when applicable, one append-only revision record in `modules/cognition/logs/accommodation_revisions.jsonl`
+- this means:
+  - `cognition_revision` can now move from `promoted_ledger` to `canonicalized` through an explicit owner action
+  - cognition authority comes from schema lineage logs, not from generic promoted candidate sinks
+- follow-up guard now in code:
+  - a canonicalized `cognition_revision` may be explicitly marked runtime-eligible
+  - but that release still does not happen automatically at ratification time
+  - runtime authority therefore remains a separate owner action after canonical schema lineage exists
+- what remains deferred:
+  - typed operator selection beyond the current conservative default
+  - mandatory parent-lineage requirement instead of seed schema creation
+  - richer cognition-specific ratification UI beyond the generic audit modal
+
 ## Near-Term Guardrails
 
 Until a dedicated canonicalization layer exists:
@@ -410,7 +434,6 @@ Until a dedicated canonicalization layer exists:
 - do not interpret runtime-active injection as canonical truth
 - do not treat `candidate_state` inside `learning_candidates.jsonl` as the full lifecycle source of truth
 - derive lifecycle from verdict + promotion + runtime eligibility logs
-- treat `cognition_revision` promotions as ledger-only unless a typed ratification path is completed
 
 ## Decision Rule For Future Changes
 

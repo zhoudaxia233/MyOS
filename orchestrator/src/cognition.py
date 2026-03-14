@@ -13,7 +13,7 @@ from validators import append_jsonl
 SCHEMA_VERSIONS_SCHEMA = {
     "_schema": {
         "name": "schema_versions",
-        "version": "1.0",
+        "version": "1.1",
         "fields": [
             "id",
             "created_at",
@@ -29,6 +29,8 @@ SCHEMA_VERSIONS_SCHEMA = {
             "parent_schema_version_id",
             "source_refs",
             "tags",
+            "object_type",
+            "proposal_target",
         ],
         "notes": "append-only",
     }
@@ -79,7 +81,7 @@ DISEQUILIBRIUM_EVENTS_SCHEMA = {
 ACCOMMODATION_REVISIONS_SCHEMA = {
     "_schema": {
         "name": "accommodation_revisions",
-        "version": "1.0",
+        "version": "1.1",
         "fields": [
             "id",
             "created_at",
@@ -93,6 +95,8 @@ ACCOMMODATION_REVISIONS_SCHEMA = {
             "new_schema_hypothesis",
             "source_refs",
             "tags",
+            "object_type",
+            "proposal_target",
         ],
         "notes": "append-only",
     }
@@ -318,6 +322,8 @@ def log_schema_version(
         "parent_schema_version_id": str(parent_schema_version_id).strip() or None,
         "source_refs": _normalize_list(source_refs),
         "tags": _normalize_list(tags),
+        "object_type": "cognition",
+        "proposal_target": "cognition",
     }
     append_jsonl(path, record, schema_header=SCHEMA_VERSIONS_SCHEMA)
     return record
@@ -695,6 +701,8 @@ def log_accommodation_revision(
         "new_schema_hypothesis": _clip(hypothesis_text, 320),
         "source_refs": _normalize_list(source_refs),
         "tags": _normalize_list(tags),
+        "object_type": "cognition",
+        "proposal_target": "cognition",
     }
     append_jsonl(path, record, schema_header=ACCOMMODATION_REVISIONS_SCHEMA)
     return {"revision": record, "new_schema": new_schema_record}

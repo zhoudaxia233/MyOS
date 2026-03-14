@@ -16,6 +16,7 @@ from cognition import (
     render_cognitive_timeline,
     render_disequilibrium_report,
 )
+from cognition_authority import ratify_cognition_revision_candidate
 from config import load_runtime_config
 from idgen import next_id_for_rel_path
 from learning_console import (
@@ -1303,6 +1304,23 @@ def api_action(root: Path, payload: dict[str, Any]) -> dict:
         candidate_id = str(payload.get("candidate_id", "")).strip()
         ratification_note = str(payload.get("ratification_note", "")).strip()
         result = ratify_profile_trait_candidate(
+            root,
+            candidate_ref=candidate_id,
+            ratification_note=ratification_note,
+        )
+        return {
+            "ok": True,
+            "action": action,
+            **result,
+            "learning_candidates": list_recent_learning_candidates(root, limit=12, include_resolved=True),
+            "candidate_pipeline_summary": summarize_learning_pipeline(root, window_days=30),
+            "candidate_pipeline_trend": summarize_learning_pipeline_trend(root),
+        }
+
+    if action == "ratify_cognition_revision_candidate":
+        candidate_id = str(payload.get("candidate_id", "")).strip()
+        ratification_note = str(payload.get("ratification_note", "")).strip()
+        result = ratify_cognition_revision_candidate(
             root,
             candidate_ref=candidate_id,
             ratification_note=ratification_note,
