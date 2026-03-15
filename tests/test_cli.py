@@ -61,3 +61,20 @@ def test_cli_heuristic_mode_and_logging(monkeypatch, tmp_path: Path, capsys) -> 
     assert event["detected_mode"] == "explore"
     assert event["mode_source"] == "heuristic"
     assert "normalized_request" in event
+
+
+def test_cli_reads_tty_stdin_when_no_argv(monkeypatch, tmp_path: Path, capsys) -> None:
+    log_path = tmp_path / "sessions.jsonl"
+    monkeypatch.setenv("MYOS_LOG_PATH", str(log_path))
+    monkeypatch.setattr("sys.stdin", FakeStdin("First line.\nSecond line.", True))
+
+    exit_code = main([])
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert "Paste content below. Press Ctrl-D when finished." in captured.err
+    assert "[explore]" in captured.out
+
+    event = json.loads(log_path.read_text(encoding="utf-8").splitlines()[0])
+    assert event["raw_input"] == "First line.\nSecond line."
+    assert event["normalized_request"]["source"] == "tty"

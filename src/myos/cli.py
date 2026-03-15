@@ -31,7 +31,10 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
-    raw_input, source = collect_input(args.text, sys.stdin)
+    read_tty = not args.text and _stdin_is_tty(sys.stdin)
+    if read_tty:
+        print("Paste content below. Press Ctrl-D when finished.", file=sys.stderr)
+    raw_input, source = collect_input(args.text, sys.stdin, allow_tty=read_tty)
     if not raw_input:
         print(
             'myos expects text or stdin. Example: myos "..." or cat file.md | myos --mode learn.',
@@ -52,21 +55,29 @@ def main(argv: Sequence[str] | None = None) -> int:
     return 0
 
 
-def collect_input(argv_text: Sequence[str], stdin: object) -> tuple[str, str]:
+def collect_input(
+    argv_text: Sequence[str],
+    stdin: object,
+    allow_tty: bool = False,
+) -> tuple[str, str]:
     argv_content = " ".join(argv_text).strip()
-    stdin_content = _read_stdin(stdin).strip()
+    stdin_content = _read_stdin(stdin, allow_tty=allow_tty).strip()
     if argv_content and stdin_content:
         return f"{argv_content}\n\n{stdin_content}", "argv+stdin"
     if argv_content:
         return argv_content, "argv"
     if stdin_content:
-        return stdin_content, "stdin"
+        return stdin_content, "tty" if allow_tty else "stdin"
     return "", "none"
 
 
-def _read_stdin(stdin: object) -> str:
-    is_tty = getattr(stdin, "isatty", lambda: True)
-    if is_tty():
+def _read_stdin(stdin: object, allow_tty: bool = False) -> str:
+    if _stdin_is_tty(stdin) and not allow_tty:
         return ""
     reader = getattr(stdin, "read")
     return reader()
+
+
+def _stdin_is_tty(stdin: object) -> bool:
+    is_tty = getattr(stdin, "isatty", lambda: True)
+    return is_tty()
