@@ -1,15 +1,30 @@
-# CLAUDE.md — MyOS Repo Maintenance
+# CLAUDE.md — MyOS
 
-MyOS is a governance-first personal OS for AI agents. For MyOS tasks, start from `core/ROUTER.md`.
+MyOS is a governance-first personal OS for AI agents. Start from `core/ROUTER.md` for task routing.
 
-## After Code Changes
+## Commands
 
-After modifying any code file:
+```bash
+# Tests
+poetry run pytest -q orchestrator/tests/
 
-1. Run `poetry run pytest -q orchestrator/tests/` — all tests must pass.
-2. Run `poetry run python orchestrator/src/main.py validate --strict` — must pass.
-3. If both pass: commit all changes with a clear English commit message, then push to remote.
-4. If tests fail: fix the issue before committing.
+# Validate module contracts
+poetry run python orchestrator/src/main.py validate --strict
+
+# Web UI
+./start
+```
+
+Tests must pass before committing. Fix failures before pushing.
+
+## Architecture
+
+- `core/` — Kernel: ROUTER, RULES, SCHEMAS, ONTOLOGY
+- `orchestrator/` — Execution engine (CLI + web UI)
+- `modules/` — Domain plugins, each with `module.manifest.yaml`
+- `src/myos/` — Thin terminal CLI (`myos "..."`)
+
+Routing is plugin-driven, two-hop max: ROUTER → module → data. Records are append-only JSONL; never overwrite.
 
 ## MCP Tools
 
@@ -17,7 +32,7 @@ Available when `myos` server is running:
 
 | Tool | Purpose |
 |------|---------|
-| `myos_append_log` | Append validated record to a JSONL log (auto ID + timestamp) |
+| `myos_append_log` | Append validated record to a JSONL log |
 | `myos_search` | Search retrieval index |
 | `myos_validate` | Plugin contract validation |
 | `myos_metrics` | Drift metrics report |
@@ -33,13 +48,3 @@ When compressing context, preserve in priority order:
 3. Current verification status (pass/fail)
 4. Open TODOs and rollback notes
 5. Tool outputs (can delete, keep pass/fail only)
-
-## CLI Fallback
-
-```bash
-python3 orchestrator/src/main.py log-decision --domain <name> --decision "..." --option "A" --option "B" --confidence <1-10>
-python3 orchestrator/src/main.py metrics --window [7|30]
-python3 orchestrator/src/main.py validate --strict
-python3 orchestrator/src/main.py index
-python3 orchestrator/src/main.py search --query "..."
-```
