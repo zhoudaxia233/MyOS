@@ -41,8 +41,8 @@ def test_cli_supports_explicit_mode_from_stdin(
     event = json.loads(log_path.read_text(encoding="utf-8").splitlines()[0])
     assert event["detected_mode"] == "learn"
     assert event["mode_source"] == "explicit"
-    assert event["handler_used"] == "guided_fallback_learn"
-    assert event["response_kind"] == "guided_fallback"
+    assert event["handler_used"] == "guided_learn"
+    assert event["response_kind"] == "guided_response"
 
 
 def test_cli_heuristic_mode_and_logging(monkeypatch, tmp_path: Path, capsys) -> None:

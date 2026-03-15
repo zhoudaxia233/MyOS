@@ -21,9 +21,9 @@ def test_routes_explore_to_guided_flow() -> None:
 
 def test_routes_learn_to_guided_fallback() -> None:
     result = route_request(_request_for("learn", "I read an article today."))
-    assert result.handler_used == "guided_fallback_learn"
-    assert result.response_kind == "guided_fallback"
-    assert "MyOS reads this as learning input." in result.text
+    assert result.handler_used == "guided_learn"
+    assert result.response_kind == "guided_response"
+    assert "Input shape:" in result.text
 
 
 def test_routes_create_to_guided_fallback() -> None:
