@@ -975,6 +975,53 @@ Explicit non-goals for this capability:
    - Added kernel ontology and boundary standards (`core/ONTOLOGY.md`, `core/BOUNDARY_RULES.md`)
    - Updated routing/docs/checklists/scripts to include `principles` as first-class module
 
+## v0.9-protocol-first (Shipped 2026-03-15)
+
+### Protocol-First LLM Integration
+
+MyOS transforms from "app that calls LLM" to "protocol layer natively consumed by LLM".
+
+Design principle: **protocol embedding > tool exposure**. Governance rules, routing logic, and skill directory are written into protocol files (CLAUDE.md, ROUTER.md, skill files). The LLM internalizes governance by reading these files, not by calling a large set of tools. MCP only handles essential write-side operations.
+
+1. **CLAUDE.md as operational protocol**
+   - Added full interaction loop: ROUTER → MODULE → Skill → Execute → Write-back
+   - Added skill directory: 28 skills across 6 modules, each with one-line purpose
+   - Added embedded governance constraints (enforced rules, not soft guidelines)
+   - Added MCP tools declaration and CLI fallback protocol
+
+2. **MCP Server (thin tool layer)**
+   - Added `orchestrator/src/mcp_server.py` with 6 focused tools:
+     - `myos_append_log` — validated JSONL append with auto ID + timestamp
+     - `myos_search` — retrieval index search across all log history
+     - `myos_validate` — plugin contract validation
+     - `myos_metrics` — drift metrics computation and report
+     - `myos_guardrail_check` — domain guardrail policy evaluation
+     - `myos_build_index` — retrieval index rebuild
+   - Routing and context loading remain protocol-internalized (not MCP tools)
+   - Read operations always use Claude Code native file tools (no MCP needed)
+
+3. **main.py refactor**
+   - Extracted `log_decision_core()` as callable, argparse-free business logic
+   - `cmd_log_decision()` now delegates to `log_decision_core()` — no logic duplication
+   - MCP server imports and calls `log_decision_core()` directly
+
+4. **Claude Code custom commands**
+   - Added `.claude/commands/myos-task.md` — full loop execution for any task
+   - Added `.claude/commands/myos-decide.md` — decision recording with guardrail checks
+   - Added `.claude/commands/myos-review.md` — pending proposal and owner todo review
+   - Added `.claude/commands/myos-metrics.md` — drift metrics report generation
+
+5. **Model-agnostic protocol layer**
+   - `ROUTER.md` + `MODULE.md` + skills = platform-agnostic operating protocol
+   - `CLAUDE.md` = Claude Code entry point (references universal protocol)
+   - Future: `CHATGPT_INSTRUCTIONS.md`, `AGENTS.md` = other platform entries pointing to the same protocol — zero duplication
+
+- Kept intentionally minimal:
+  - no new modules or skills
+  - no UI changes
+  - MCP tools are the minimum set — routing, loading, governance remain in the protocol layer
+  - Web UI preserved as auxiliary visualization (unchanged)
+
 ## Existing Alignment (Already Present)
 
 - Chat pattern extraction is already implemented in `modules/memory/skills/extract_chat_patterns.md`

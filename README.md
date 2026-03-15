@@ -153,6 +153,43 @@ Actionable stage-by-stage plan:
 - Logs: principle amendments and principle exceptions
 - Owner-facing output: constitutional audit report
 
+## Claude Code Integration (Protocol-First)
+
+MyOS is designed to be natively consumed by Claude Code as an operating protocol, not just as a toolbox.
+
+### How it works
+
+1. `CLAUDE.md` defines the full interaction loop: ROUTER → MODULE → Skill → Execute → Write-back
+2. Claude Code reads governance files directly (`core/ROUTER.md`, `MODULE.md`, skill files)
+3. The MCP server provides only 6 essential write-side tools (schema validation, ID generation, aggregation)
+4. Routing, context selection, and governance judgment happen through protocol internalization — not tool calls
+
+### MCP Server
+
+```bash
+# Start the MCP server for Claude Code integration
+poetry run python orchestrator/src/mcp_server.py
+```
+
+Or configure `.claude/settings.local.json` for automatic startup (already set up in this repo).
+
+Available MCP tools: `myos_append_log`, `myos_search`, `myos_validate`, `myos_metrics`, `myos_guardrail_check`, `myos_build_index`
+
+### Custom Slash Commands
+
+In Claude Code, use these slash commands:
+
+- `/myos-task <description>` — execute any task through the full governance loop
+- `/myos-decide <decision>` — record a decision with guardrail checks
+- `/myos-review` — review pending proposals and owner todos
+- `/myos-metrics [7|30]` — generate drift metrics report
+
+### Model-Agnostic Protocol Layer
+
+`ROUTER.md` + `MODULE.md` + skills = platform-agnostic operating protocol.
+`CLAUDE.md` = Claude Code entry point (references the universal protocol).
+Future platforms will use their own entry files (`CHATGPT_INSTRUCTIONS.md`, `AGENTS.md`) pointing to the same protocol — zero protocol duplication.
+
 ## Runtime Model
 
 This repository is executed by an agent runtime (not by a monolithic app server):
@@ -389,3 +426,4 @@ Includes integration chain coverage for `validate`, `inspect`, `run`, `ingest-ch
 - v0.6-next: Added plugin contract validator command (`validate`) and CI validation gate
 - v0.6-next: Added integration tests for end-to-end command chain reliability
 - v1-ui: Added local web control center (`orchestrator/src/main.py web`) with chat-style task entry and execution trace visibility
+- v0.9-protocol-first: Transformed to protocol-first LLM integration — CLAUDE.md as operational protocol, MCP server (6 tools), Claude Code custom commands, extracted `log_decision_core()` for MCP-safe business logic

@@ -662,40 +662,59 @@ def cmd_guardrail_check(args: argparse.Namespace) -> int:
     return 0
 
 
-def cmd_log_decision(args: argparse.Namespace) -> int:
-    root = repo_root()
-    domain = str(args.domain).strip().lower()
-    decision_text = str(args.decision).strip()
-    options = [str(item).strip() for item in (args.option or []) if str(item).strip()]
-    confidence = int(args.confidence)
-
+def log_decision_core(
+    root: Path,
+    domain: str,
+    decision_text: str,
+    options: list[str],
+    confidence: int,
+    guardrail_check_id: str | None = None,
+    downside: str | None = None,
+    invalidation_condition: str | None = None,
+    max_loss: str | None = None,
+    disconfirming_signal: str | None = None,
+    emotional_weight: int = 0,
+    cooldown_applied: bool = False,
+    cooldown_hours: int = 0,
+    override_requested: bool = False,
+    override_reason: str | None = None,
+    owner_confirmation: str | None = None,
+    principle_refs: list[str] | None = None,
+    exception_ref: str | None = None,
+    reasoning: str | None = None,
+    risks: list[str] | None = None,
+    expected_outcome: str | None = None,
+    time_horizon: str | None = None,
+    follow_up_date: str | None = None,
+    outcome: str | None = None,
+    provider: str = "cli",
+    notes: str | None = None,
+) -> dict:
+    """Core decision logging logic. Returns result dict with decision_id and gate info."""
     if not domain:
         raise ValueError("domain is required")
     if not decision_text:
         raise ValueError("decision is required")
     if not options:
-        raise ValueError("at least one --option is required")
+        raise ValueError("at least one option is required")
     if confidence < 1 or confidence > 10:
         raise ValueError("confidence must be in range 1..10")
 
-    guardrail_check_id = _normalize_optional_str(args.guardrail_check_id)
-    principle_refs = [str(item).strip() for item in (getattr(args, "principle_ref", []) or []) if str(item).strip()]
-    exception_ref = _normalize_optional_str(getattr(args, "exception_ref", None))
     gate = evaluate_decision_entry_gate(
         root,
         domain=domain,
         guardrail_check_id=guardrail_check_id,
-        downside=_normalize_optional_str(args.downside),
-        invalidation_condition=_normalize_optional_str(args.invalidation_condition),
-        max_loss=_normalize_optional_str(args.max_loss),
-        disconfirming_signal=_normalize_optional_str(args.disconfirming_signal),
-        emotional_weight=int(args.emotional_weight),
-        cooldown_applied=bool(args.cooldown_applied),
-        cooldown_hours=int(args.cooldown_hours),
-        override_requested=bool(args.override_requested),
-        override_reason=_normalize_optional_str(args.override_reason),
-        owner_confirmation=_normalize_optional_str(args.owner_confirmation),
-        principle_refs=principle_refs,
+        downside=downside,
+        invalidation_condition=invalidation_condition,
+        max_loss=max_loss,
+        disconfirming_signal=disconfirming_signal,
+        emotional_weight=emotional_weight,
+        cooldown_applied=cooldown_applied,
+        cooldown_hours=cooldown_hours,
+        override_requested=override_requested,
+        override_reason=override_reason,
+        owner_confirmation=owner_confirmation,
+        principle_refs=principle_refs or [],
         exception_ref=exception_ref,
     )
 
@@ -744,14 +763,14 @@ def cmd_log_decision(args: argparse.Namespace) -> int:
         "domain": gate["domain"],
         "decision": decision_text,
         "options": options,
-        "reasoning": _normalize_optional_str(args.reasoning),
-        "risks": [str(item).strip() for item in (args.risk or []) if str(item).strip()],
-        "expected_outcome": _normalize_optional_str(args.expected_outcome),
-        "time_horizon": _normalize_optional_str(args.time_horizon),
+        "reasoning": reasoning,
+        "risks": risks or [],
+        "expected_outcome": expected_outcome,
+        "time_horizon": time_horizon,
         "confidence": confidence,
         "guardrail_check_id": guardrail_check_id,
-        "follow_up_date": _normalize_optional_str(args.follow_up_date),
-        "outcome": _normalize_optional_str(args.outcome),
+        "follow_up_date": follow_up_date,
+        "outcome": outcome,
     }
     log_decision(root, decision_record)
 
@@ -766,18 +785,57 @@ def cmd_log_decision(args: argparse.Namespace) -> int:
             "domain": gate["domain"],
             "decision_ref": decision_id,
             "violations": gate["violations"],
-            "override_reason": _normalize_optional_str(args.override_reason),
-            "owner_confirmation": _normalize_optional_str(args.owner_confirmation),
-            "provider": args.provider,
-            "notes": _normalize_optional_str(args.notes),
+            "override_reason": override_reason,
+            "owner_confirmation": owner_confirmation,
+            "provider": provider,
+            "notes": notes,
         }
         log_guardrail_override(root, override_record)
 
-    print(f"Decision ID: {decision_id}")
-    print(f"Gate status: {gate['gate_status']}")
-    print(f"Precommit status: {gate['precommit_status']}")
-    print(f"Guardrail status: {gate['guardrail_status']}")
-    print(f"Principle context: {gate['principle_context_status']}")
+    return {
+        "decision_id": decision_id,
+        "gate_status": gate["gate_status"],
+        "precommit_status": gate["precommit_status"],
+        "guardrail_status": gate["guardrail_status"],
+        "principle_context_status": gate["principle_context_status"],
+    }
+
+
+def cmd_log_decision(args: argparse.Namespace) -> int:
+    root = repo_root()
+    result = log_decision_core(
+        root=root,
+        domain=str(args.domain).strip().lower(),
+        decision_text=str(args.decision).strip(),
+        options=[str(item).strip() for item in (args.option or []) if str(item).strip()],
+        confidence=int(args.confidence),
+        guardrail_check_id=_normalize_optional_str(args.guardrail_check_id),
+        downside=_normalize_optional_str(args.downside),
+        invalidation_condition=_normalize_optional_str(args.invalidation_condition),
+        max_loss=_normalize_optional_str(args.max_loss),
+        disconfirming_signal=_normalize_optional_str(args.disconfirming_signal),
+        emotional_weight=int(args.emotional_weight),
+        cooldown_applied=bool(args.cooldown_applied),
+        cooldown_hours=int(args.cooldown_hours),
+        override_requested=bool(args.override_requested),
+        override_reason=_normalize_optional_str(args.override_reason),
+        owner_confirmation=_normalize_optional_str(args.owner_confirmation),
+        principle_refs=[str(item).strip() for item in (getattr(args, "principle_ref", []) or []) if str(item).strip()],
+        exception_ref=_normalize_optional_str(getattr(args, "exception_ref", None)),
+        reasoning=_normalize_optional_str(args.reasoning),
+        risks=[str(item).strip() for item in (args.risk or []) if str(item).strip()],
+        expected_outcome=_normalize_optional_str(args.expected_outcome),
+        time_horizon=_normalize_optional_str(args.time_horizon),
+        follow_up_date=_normalize_optional_str(args.follow_up_date),
+        outcome=_normalize_optional_str(args.outcome),
+        provider=args.provider,
+        notes=_normalize_optional_str(args.notes),
+    )
+    print(f"Decision ID: {result['decision_id']}")
+    print(f"Gate status: {result['gate_status']}")
+    print(f"Precommit status: {result['precommit_status']}")
+    print(f"Guardrail status: {result['guardrail_status']}")
+    print(f"Principle context: {result['principle_context_status']}")
     return 0
 
 
