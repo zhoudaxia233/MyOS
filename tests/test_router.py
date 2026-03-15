@@ -38,3 +38,10 @@ def test_routes_decide_to_guided_fallback() -> None:
     assert result.handler_used == "guided_fallback_decide"
     assert result.response_kind == "guided_fallback"
     assert "Next grounding step:" in result.text
+
+
+def test_routes_review_to_mode_notice() -> None:
+    result = route_request(_request_for("review", "Review this diff."))
+    assert result.handler_used == "mode_notice_review"
+    assert result.response_kind == "mode_notice"
+    assert "MyOS detected review mode." in result.text

@@ -2,14 +2,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from myos.flows.fallbacks import (
-    render_create_fallback,
-    render_decide_fallback,
-    render_learn_fallback,
-    render_mode_notice,
-)
+from myos.flows.fallbacks import render_fallback
 from myos.flows.guided_explore import render_explore_response
 from myos.protocol import SessionRequest
+
+_REAL_FLOW_RENDERERS = {
+    "explore": render_explore_response,
+}
 
 
 @dataclass(slots=True)
@@ -20,32 +19,28 @@ class RouteResult:
 
 
 def route_request(request: SessionRequest) -> RouteResult:
-    if request.mode == "explore":
+    renderer = _REAL_FLOW_RENDERERS.get(request.mode)
+    if renderer is not None:
         return RouteResult(
-            text=render_explore_response(request),
-            handler_used="guided_explore",
+            text=renderer(request),
+            handler_used=f"guided_{request.mode}",
             response_kind="guided_response",
         )
-    if request.mode == "learn":
-        return RouteResult(
-            text=render_learn_fallback(),
-            handler_used="guided_fallback_learn",
-            response_kind="guided_fallback",
-        )
-    if request.mode == "create":
-        return RouteResult(
-            text=render_create_fallback(),
-            handler_used="guided_fallback_create",
-            response_kind="guided_fallback",
-        )
-    if request.mode == "decide":
-        return RouteResult(
-            text=render_decide_fallback(),
-            handler_used="guided_fallback_decide",
-            response_kind="guided_fallback",
-        )
+
     return RouteResult(
-        text=render_mode_notice(request.mode),
-        handler_used=f"mode_notice_{request.mode}",
-        response_kind="mode_notice",
+        text=render_fallback(request.mode),
+        handler_used=_fallback_handler_used(request.mode),
+        response_kind=_fallback_response_kind(request.mode),
     )
+
+
+def _fallback_handler_used(mode: str) -> str:
+    if mode in {"learn", "create", "decide"}:
+        return f"guided_fallback_{mode}"
+    return f"mode_notice_{mode}"
+
+
+def _fallback_response_kind(mode: str) -> str:
+    if mode in {"learn", "create", "decide"}:
+        return "guided_fallback"
+    return "mode_notice"

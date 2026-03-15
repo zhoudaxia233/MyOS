@@ -1,6 +1,17 @@
 from __future__ import annotations
 
 
+def render_fallback(mode: str) -> str:
+    renderer = {
+        "learn": render_learn_fallback,
+        "create": render_create_fallback,
+        "decide": render_decide_fallback,
+    }.get(mode)
+    if renderer is not None:
+        return renderer()
+    return render_mode_notice(mode)
+
+
 def render_learn_fallback() -> str:
     return "\n".join(
         [
