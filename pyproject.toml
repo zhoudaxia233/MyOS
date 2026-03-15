@@ -27,6 +27,9 @@ packages = [
 pytest = "^9.0.2"
 
 [tool.pytest.ini_options]
+addopts = [
+    "--import-mode=importlib"
+]
 pythonpath = [
     "src",
     "orchestrator/src"

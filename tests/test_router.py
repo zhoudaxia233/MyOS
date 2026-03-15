@@ -33,11 +33,11 @@ def test_routes_create_to_guided_fallback() -> None:
     assert "Next structuring step:" in result.text
 
 
-def test_routes_decide_to_guided_fallback() -> None:
+def test_routes_decide_to_guided_flow() -> None:
     result = route_request(_request_for("decide", "Should I move out?"))
-    assert result.handler_used == "guided_fallback_decide"
-    assert result.response_kind == "guided_fallback"
-    assert "Next grounding step:" in result.text
+    assert result.handler_used == "guided_decide"
+    assert result.response_kind == "guided_response"
+    assert "Situation type:" in result.text
 
 
 def test_routes_review_to_mode_notice() -> None:
