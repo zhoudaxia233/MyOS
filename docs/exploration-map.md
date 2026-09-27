@@ -1,7 +1,7 @@
 # MyOS exploration map
 
-Draft for review, prepared on 2026-09-27 for a possible new public repository.
-This is project history and proposed guidance, not a new roadmap or an
+Prepared on 2026-09-27, when MyOS moved to this repository with a fresh Git
+history. This is project history and contributor guidance, not a roadmap or an
 authorization to change the product. Current behavior is defined by the
 [README](../README.md) and [usage contract](usage-contract.md).
 
@@ -344,7 +344,7 @@ a retired capability, consult the matching entry and state:
 2. Which old assumption has changed, or which old conclusion is being challenged.
 3. What small comparison would justify continuing, and what result would stop it.
 
-This is proposed contributor guidance, not a new gate for ordinary fixes. Where
+This is contributor guidance, not a new gate for ordinary fixes. Where
 the old outcome is unverified, say so instead of treating it as a veto. When a
 new result contradicts a lesson, retain the old result and add the changed
 conditions rather than rewriting the past as inevitable.
@@ -358,7 +358,6 @@ conditions rather than rewriting the past as inevitable.
 - Does always-loaded personal context prevent omissions without creating
   irrelevant influence or avoidable disclosure?
 - Which private historical lessons are still missing from this first map?
-- Which exact current files and metadata are suitable for public distribution?
 
 This document is an initial synthesis, not a privacy clearance, independent
-review, fresh product-value evaluation or instruction to publish.
+review or fresh product-value evaluation.
