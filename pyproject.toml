@@ -1,0 +1,41 @@
+[project]
+name = "personal-core-os"
+version = "0.1.0"
+description = "The owner's self-model for AI assistants: boundaries, principles, methods and patterns"
+authors = [
+    {name = "zhoudaxia233"}
+]
+readme = "README.md"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "mcp[cli]>=1.0.0",
+    "pyyaml (>=6.0.3,<7.0.0)",
+]
+
+[project.scripts]
+myos = "myos.cli:main"
+myos-mcp = "myos.personal.mcp:main"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+packages = [
+    { include = "myos", from = "src" }
+]
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^9.0.2"
+
+[tool.pytest.ini_options]
+addopts = [
+    "--import-mode=importlib"
+]
+testpaths = [
+    "tests",
+]
+pythonpath = [
+    "src",
+    "."
+]

@@ -1,0 +1,52 @@
+# Python and test/build output
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.coverage
+htmlcov/
+build/
+dist/
+*.egg-info/
+
+# Local configuration and private stores
+.env
+.env.*
+!.env.example
+*.sqlite3
+*.sqlite3-journal
+*.sqlite3-wal
+*.sqlite3-shm
+/.myos/
+/runtime/
+
+# Private outputs if a data/trace root is accidentally placed in the checkout.
+/evals/
+/traces/
+/originals/
+/sync-backups/
+/references.json
+/migration.json
+/myos-view.html
+/pipeline.html
+
+# Preserve protection for old untracked local data after code cleanup.
+/modules/
+/core/
+/orchestrator/
+/var/
+/routines/
+/inbox/
+
+# The archive was removed after migration; keep private sources from returning.
+/archive/
+
+# Local editor/OS/debug scratch
+.DS_Store
+/.superpowers/brainstorm/
+/.tmp-jsrepl-playwright/
+/.tmp-playwright/
+/test-results/
+/node_modules/
+/uv.lock
+.claude/scheduled_tasks.lock
