@@ -296,3 +296,157 @@ def test_damaged_cache_files_are_redone_and_retired_cases_are_skipped(tmp_path, 
     case = json.loads((suite / 'cases' / 'n1.json').read_text())
     (suite / 'cases' / 'n1.json').write_text(json.dumps(dict(case, retired=True)))
     assert evaluate(store, suite, 'r2', models=['m1'], skill=skill, host=str(host))['cases'] == 1
+
+
+@pytest.mark.parametrize('daily', [False, True])
+def test_codex_isolates_config_auth_tools_and_snapshot(tmp_path, monkeypatch, daily):
+    from myos.personal.evaluate import codex_call, prepare
+    from pathlib import Path
+    import tomllib
+    store, suite, _, skill = setup(tmp_path)
+    frozen = prepare(store, suite / 'run', skill)
+    owner_home = tmp_path / 'owner-codex'
+    owner_home.mkdir()
+    (owner_home / 'auth.json').write_text('synthetic authentication')
+    (owner_home / 'config.toml').write_text('unrelated private configuration')
+    (owner_home / 'AGENTS.md').write_text('GLOBAL CANARY MUST NOT LEAK')
+    monkeypatch.setenv('CODEX_HOME', str(owner_home))
+    monkeypatch.setenv('CODEX_THREAD_ID', 'parent-thread')
+    monkeypatch.setenv('MYOS_SYNC_TARGETS', '/do-not-touch')
+    homes = []
+
+    def fake_run(cmd, **kwargs):
+        env, wd = kwargs['env'], Path(kwargs['cwd'])
+        home = Path(env['CODEX_HOME'])
+        homes.append(home)
+        assert home != owner_home and home.parent == wd.parent
+        assert sorted(p.name for p in home.iterdir()) == ['auth.json']
+        assert (home / 'auth.json').read_text() == 'synthetic authentication'
+        assert (home / 'auth.json').stat().st_mode & 0o777 == 0o600
+        assert not any(k.startswith('MYOS_') or k == 'CODEX_THREAD_ID' for k in env)
+        if cmd[1:3] == ['debug', 'models']:
+            return subprocess.CompletedProcess(cmd, 0, json.dumps({'models': [{'slug': 'test-model', 'base_instructions': 'native'}]}), '')
+        cfg = tomllib.loads('\n'.join(cmd[i + 1] for i, arg in enumerate(cmd) if arg == '-c'))
+        catalog = json.loads(Path(cfg['model_catalog_json']).read_text())['models'][0]
+        assert catalog['base_instructions'] == 'native'
+        assert catalog['tool_mode'] == 'disabled' and catalog['multi_agent_version'] is None
+        assert catalog['apply_patch_tool_type'] is None and catalog['experimental_supported_tools'] == []
+        assert cfg['features']['shell_tool'] is False and cfg['features']['skip_host_skill_discovery'] is True
+        assert cfg['skills']['bundled']['enabled'] is False and cfg['skills']['include_instructions'] is False
+        assert cfg['tools']['experimental_request_user_input']['enabled'] is False
+        assert cfg['tools']['update_plan']['enabled'] is False
+        assert cfg['model_reasoning_effort'] == 'high' and cfg['web_search'] == 'disabled'
+        assert all(flag in cmd for flag in ['--ephemeral', '--ignore-user-config', '--ignore-rules', '--skip-git-repo-check'])
+        assert cmd[cmd.index('-s') + 1] == 'read-only'
+        assert cmd[cmd.index('-C') + 1] == str(wd)
+        if daily:
+            assert (wd / 'AGENTS.md').read_bytes() == (frozen / 'CLAUDE.md').read_bytes()
+            assert (wd / '.agents/skills/myos/SKILL.md').read_bytes() == (skill / 'SKILL.md').read_bytes()
+            assert (skill / 'SKILL.md').read_text() in cfg['developer_instructions']
+            server = cfg['mcp_servers']['myos']
+            assert server['enabled_tools'] == ['myos_catalog', 'myos_read'] and server['required']
+            assert server['env']['MYOS_DATA_DIR'] == str(frozen / 'store')
+        else:
+            assert 'mcp_servers' not in cfg and not list(wd.iterdir())
+            assert cfg['developer_instructions'] == 'System'
+        Path(cmd[cmd.index('-o') + 1]).write_text('Synthetic answer')
+        return subprocess.CompletedProcess(cmd, 0, '{"type":"turn.completed"}\n', '')
+
+    monkeypatch.setattr(subprocess, 'run', fake_run)
+    result = codex_call('codex', 'test-model', 'high', 'Question', 'System', frozen if daily else None)
+    assert result['result'] == 'Synthetic answer' and result['num_turns'] == 1
+    assert result['total_cost_usd'] is None and result['duration_ms'] >= 0
+    assert all(not home.exists() for home in homes)
+    assert (owner_home / 'auth.json').read_text() == 'synthetic authentication'
+    assert sorted(p.name for p in owner_home.iterdir()) == ['AGENTS.md', 'auth.json', 'config.toml']
+
+
+@pytest.mark.parametrize('failure', ['usage_limit_reached', 'malformed output', 'empty'])
+def test_codex_failures_do_not_become_answers_and_cleanup_auth(tmp_path, monkeypatch, failure):
+    from pathlib import Path
+    from myos.personal.evaluate import codex_call, LimitReached
+    (tmp_path / 'auth.json').write_text('synthetic')
+    monkeypatch.setenv('CODEX_HOME', str(tmp_path))
+    homes = []
+    def fake_run(cmd, **kwargs):
+        homes.append(Path(kwargs['env']['CODEX_HOME']))
+        if cmd[1] == 'debug':
+            return subprocess.CompletedProcess(cmd, 0, '{"models":[{"slug":"m"}]}', '')
+        if failure == 'empty':
+            return subprocess.CompletedProcess(cmd, 0, '{"type":"turn.completed"}', '')
+        return subprocess.CompletedProcess(cmd, 1, json.dumps({'type': 'turn.failed', 'error': {'message': failure}}), '')
+    monkeypatch.setattr(subprocess, 'run', fake_run)
+    with pytest.raises(LimitReached if failure == 'usage_limit_reached' else RuntimeError):
+        codex_call('codex', 'm', 'medium', 'Question', 'System')
+    assert all(not p.exists() for p in homes)
+
+
+def test_host_kind_invalidates_answers_and_reviews():
+    from myos.personal.evaluate import answer_key, review_meta
+    case = {'date': '2026-01-01', 'prompt': 'Synthetic prompt'}
+    assert answer_key(case, 'bare', 'm', 'high') != answer_key(case, 'bare', 'm', 'high', 'codex')
+    assert review_meta('m', 'high') != review_meta('m', 'high', 'codex')
+
+
+def test_unknown_codex_cost_is_reported_as_unavailable(tmp_path, monkeypatch):
+    store, suite, host, skill = setup(tmp_path)
+    monkeypatch.setenv('FAKE_LOG', str(tmp_path / 'log'))
+    evaluate(store, suite, 'r', models=['m'], skill=skill, host=str(host))
+    for path in (suite / 'runs/r/answers').glob('*.json'):
+        answer = json.loads(path.read_text())
+        answer['total_cost_usd'] = None
+        path.write_text(json.dumps(answer))
+    evaluate(store, suite, 'r', models=['m'], skill=skill, host=str(host))
+    report = (suite / 'runs/r/report.md').read_text()
+    assert report.count('| unavailable |') == 2
+
+
+
+def test_codex_snapshot_server_has_only_two_read_tools_and_no_resources():
+    from mcp.server.lowlevel import NotificationOptions
+    from myos.personal.eval_mcp import mcp as read_server
+    tools = asyncio.run(read_server.list_tools())
+    assert {tool.name for tool in tools} == {'myos_catalog', 'myos_read'}
+    assert all(tool.annotations.readOnlyHint for tool in tools)
+    capabilities = read_server._mcp_server.get_capabilities(NotificationOptions(), {})
+    assert capabilities.resources is None and capabilities.prompts is None
+    assert capabilities.tools is not None
+    from mcp.server.fastmcp.exceptions import ToolError
+    with pytest.raises(ToolError, match='Unknown tool'):
+        asyncio.run(read_server.call_tool('myos_put', {}))
+
+
+
+def test_codex_run_stops_resumes_and_reviews_without_tools(tmp_path, monkeypatch):
+    from myos.personal import evaluate as evaluation
+    store, suite, _, skill = setup(tmp_path)
+    calls = []
+    limited = True
+    def fake_call(host, model, effort, prompt, system, setup=None):
+        calls.append((model, effort, setup))
+        if limited:
+            raise evaluation.LimitReached('synthetic limit')
+        if prompt.startswith(evaluation.REVIEW_INSTRUCTIONS):
+            assert setup is None and model == 'review-model' and effort == 'high'
+            items = json.loads(prompt[len(evaluation.REVIEW_INSTRUCTIONS):])['items']
+            result = json.dumps({
+                'reviews': [{'id': i['id'], 'full_answer_checked': True, 'support': [],
+                             'no_material_claims_reason': 'No material claims.',
+                             'coverage': [{'id': n['id'], 'status': 'covered', 'answer_quote': 'Answer', 'reason': 'Covered.'}
+                                          for n in i['needs']]} for i in items],
+                'flags': [{'id': i['id'], **{flag: {'value': False, 'quote': '', 'reason': 'None.'}
+                                           for flag in evaluation.FLAGS}} for i in items],
+            })
+        else:
+            result = 'Answer'
+        return {'result': result, 'num_turns': 1, 'total_cost_usd': None, 'duration_ms': 10}
+    monkeypatch.setattr(evaluation, 'codex_call', fake_call)
+    kwargs = dict(models=['answer-model'], reviewer='review-model', host_kind='codex', skill=skill, jobs=1)
+    stopped = evaluate(store, suite, 'codex', **kwargs)
+    assert stopped['stopped'] and stopped['reviewed'] == '0/2' and len(calls) == 1
+    limited = False
+    result = evaluate(store, suite, 'codex', **kwargs)
+    assert not result['stopped'] and result['errors'] == [] and result['reviewed'] == '2/2'
+    assert len(calls) == 7
+    assert evaluate(store, suite, 'codex', **kwargs)['reviewed'] == '2/2'
+    assert len(calls) == 7

@@ -118,13 +118,14 @@ Put `--data PATH` before the command. Output is JSON unless noted.
 
 ## Evaluate entries
 
-`myos eval` answers each test case twice through Claude Code (`claude -p`):
+`myos eval` answers each test case in two setups through Claude Code (`claude -p`,
+the default) or Codex (`codex exec`):
 `bare`, the model with no personal context, and `daily`, the compiled block as
 the project instructions plus the Skill and the read-only tools on a snapshot of
 the store. A reviewer model (default `claude-opus-5-5`) grades both answers
 blind in the [answer review](answer-review.md) format, and code validates every
-quotation. It never writes the store. Evaluation invokes the configured Claude
-Code model service: case prompts, review sources and answers, and self-model
+quotation. It never writes the store. Evaluation invokes the selected host
+model service: case prompts, review sources and answers, and self-model
 context can leave the computer through that service. Inspect selected cases
 before running an evaluation; local storage does not make evaluation offline.
 
@@ -162,13 +163,45 @@ answer.
 
 | Option | Effect |
 | --- | --- |
-| `--name NAME` | Run name (default: today). Rerunning a name resumes it with the same snapshot: an answer is reused only while its file is complete and the case's date and prompt, the model and the effort are unchanged, and a review only for the same packet (which includes the date), reviewer, effort and review instructions, with its review, flags and mapping files valid. |
+| `--name NAME` | Run name (default: today). Rerunning a name resumes it with the same snapshot: an answer is reused only while its file is complete and the case's date and prompt, the host kind, model and effort are unchanged, and a review only for the same packet (which includes the date), reviewer, effort and review instructions, with its review, flags and mapping files valid. |
 | `--model ID` | Answering model, repeatable (default `claude-sonnet-5`). |
 | `--repeat N` | Answers per case, setup and model; use 2 or more before retiring an entry. |
 | `--case ID`, `--asset ID` | Only these cases, or only cases testing these entries plus negative controls. |
 | `--effort LEVEL`, `--review-effort LEVEL` | Reasoning effort for answers (default `medium`) and for the reviewer (default `high`): `low`, `medium`, `high`, `xhigh` or `max`. Each answer records its effort. |
 | `--jobs N` | Concurrent host calls (default 3; reviews use at most 2). The run stops at the first usage-limit message. |
-| `--reviewer ID`, `--skill DIR`, `--host PATH` | Reviewer model, Skill for the daily setup (default: this checkout's), Claude Code executable. |
+| `--reviewer ID`, `--skill DIR`, `--host PATH` | Reviewer model, Skill for the daily setup (default: this checkout's), host executable (defaults to the selected host kind). |
+| `--host-kind claude\|codex` | Host for both answers and reviews (default `claude`). Codex requires explicit `--model` and `--reviewer`. |
+
+For Codex, pass the installed executable when it is not on `PATH`:
+
+```sh
+poetry run myos eval --host-kind codex --host /path/to/codex \
+  --model MODEL --reviewer MODEL --repeat 2 --jobs 3
+```
+
+The Codex adapter runs `exec` with `--ephemeral`, `--ignore-user-config` and
+`--ignore-rules`. Each call gets a temporary `CODEX_HOME` containing only a
+private copy of `auth.json`; file-based login is required. It never copies back
+credentials, config or sessions. The home is removed even when a call fails.
+The installed CLI must support these flags and `debug models --bundled`, and
+its bundled catalog must contain the requested model. Feature switches and a
+temporary copy of that model's catalog entry disable built-in tools, including
+model-specific Code Mode and multi-agent defaults; the model's instructions
+are retained. Host skill discovery and bundled skills are disabled.
+
+`bare` and reviews have no MyOS instructions or tools. `daily` gets the frozen
+compiled block as `AGENTS.md`, a copy of the frozen Skill, and its full
+`SKILL.md` in developer instructions (there is no file-reading tool to open it).
+Only `myos_catalog` and `myos_read` are enabled on the tools-only snapshot MCP server (no resource or prompt handlers);
+startup failure is fatal. Codex costs are recorded as `null` and reported as
+`unavailable`; duration is elapsed call time and turns count completed CLI turn
+events, not individual tool calls. Effort maps to `model_reasoning_effort`.
+The tested CLI also unconditionally exposes `list_mcp_resources`,
+`list_mcp_resource_templates` and `read_mcp_resource` when MCP is configured,
+even though this server has no resources. A strict two-tools-only canary therefore
+fails on that CLI; do not begin an evaluation requiring that isolation.
+Before trusting a new CLI version, run both arms with an instruction/skill/tool
+inventory probe and check that no new files appear in `~/.codex/sessions`.
 
 ## MCP tools
 

@@ -15,6 +15,7 @@ import sqlite3
 import sys
 import tempfile
 import threading
+import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 import subprocess
@@ -120,13 +121,106 @@ def call(cmd, prompt, cwd, max_tokens):
     return out
 
 
+# Model-catalog tool defaults can override feature switches (notably GPT-6 Code Mode).
+# Both layers must be disabled; daily adds only the explicit MCP allowlist below.
+CODEX_DISABLED_FEATURES = (
+    'shell_tool', 'unified_exec', 'view_image', 'sleep_tool', 'apps', 'plugins', 'remote_plugin',
+    'browser_use', 'computer_use', 'image_generation', 'multi_agent', 'multi_agent_v2', 'goals',
+    'hooks', 'memories', 'shell_snapshot', 'skill_search', 'skill_mcp_dependency_install',
+    'tool_suggest', 'code_mode_host', 'workspace_dependencies', 'in_app_browser', 'in_app_chat',
+    'in_app_local_automation', 'in_app_updates',
+)
+
+
+def codex_call(host, model, effort, prompt, system, setup=None):
+    """One ephemeral call; never load or write the owner's Codex configuration or history.
+
+    Only a private copy of file-based authentication crosses into the temporary home.
+    The frozen Skill is supplied in full because no filesystem-reading tool is exposed.
+    """
+    auth = Path(os.environ.get('CODEX_HOME', Path.home() / '.codex')) / 'auth.json'
+    if not auth.is_file():
+        raise ValueError('Codex eval requires file-based authentication in CODEX_HOME/auth.json')
+    with tempfile.TemporaryDirectory(prefix='eval-codex-') as temporary:
+        root = Path(temporary)
+        home, wd = root / 'home', root / 'work'
+        home.mkdir()
+        wd.mkdir()
+        shutil.copyfile(auth, home / 'auth.json')
+        (home / 'auth.json').chmod(0o600)
+        env = {k: v for k, v in os.environ.items() if not k.startswith(('MYOS_', 'CODEX_'))}
+        env['CODEX_HOME'] = str(home)
+        # Keep the installed host's model instructions and capabilities except tools.
+        catalog_result = subprocess.run([host, 'debug', 'models', '--bundled'], cwd=wd, env=env,
+                                        capture_output=True, text=True, timeout=60)
+        if catalog_result.returncode:
+            raise RuntimeError(f'Codex model catalog failed: {catalog_result.stderr[-300:]}')
+        catalog = json.loads(catalog_result.stdout)
+        selected = [m for m in catalog['models'] if m['slug'] == model]
+        if len(selected) != 1:
+            raise ValueError(f'Codex bundled catalog does not contain model {model}')
+        selected[0].update(tool_mode='disabled', node_repl_disabled=True, multi_agent_version=None,
+                           apply_patch_tool_type=None, experimental_supported_tools=[], supports_search_tool=False)
+        (root / 'models.json').write_text(json.dumps({'models': selected}))
+        config = {
+            'model_catalog_json': str(root / 'models.json'), 'model_reasoning_effort': effort,
+            'approval_policy': 'never', 'web_search': 'disabled',
+            'skills.bundled.enabled': False, 'features.skip_host_skill_discovery': True,
+            'skills.include_instructions': False, 'tools.update_plan.enabled': False,
+            'tools.experimental_request_user_input.enabled': False,
+            **{f'features.{f}': False for f in CODEX_DISABLED_FEATURES},
+        }
+        if setup is not None:
+            shutil.copy(setup / 'CLAUDE.md', wd / 'AGENTS.md')
+            shutil.copytree(setup / 'skill', wd / '.agents' / 'skills' / 'myos')
+            system += '\n\nFrozen MyOS Skill (SKILL.md):\n' + (setup / 'skill' / 'SKILL.md').read_text()
+            config.update({
+                'mcp_servers.myos.command': sys.executable,
+                'mcp_servers.myos.args': ['-m', 'myos.personal.eval_mcp'],
+                'mcp_servers.myos.env': {'MYOS_DATA_DIR': str(setup / 'store'),
+                                         'PYTHONPATH': str(Path(__file__).resolve().parents[2])},
+                'mcp_servers.myos.required': True,
+                'mcp_servers.myos.enabled_tools': ['myos_catalog', 'myos_read'],
+            })
+        config['developer_instructions'] = system
+        output = root / 'answer.txt'
+        cmd = [host, 'exec', '--ephemeral', '--ignore-user-config', '--ignore-rules', '--skip-git-repo-check',
+               '-C', str(wd), '-m', model, '-s', 'read-only', '--json', '-o', str(output)]
+        # JSON scalar/array syntax is also TOML; inline tables require TOML's equals sign.
+        for key, value in config.items():
+            encoded = ('{' + ', '.join(f'{json.dumps(k)} = {json.dumps(v)}' for k, v in value.items()) + '}'
+                       if isinstance(value, dict) else json.dumps(value))
+            cmd += ['-c', f'{key}={encoded}']
+        started = time.monotonic()
+        p = subprocess.run(cmd, input=prompt, capture_output=True, text=True, cwd=wd, env=env, timeout=2400)
+        events = []
+        for line in p.stdout.splitlines():
+            try:
+                event = json.loads(line)
+            except ValueError:
+                continue
+            if isinstance(event, dict):
+                events.append(event)
+        failed = p.returncode or any(e.get('type') in ('turn.failed', 'error') for e in events)
+        if failed:
+            message = p.stderr + '\n' + p.stdout
+            if any(signal in message.lower() for signal in (*LIMIT_SIGNALS, 'usage_limit', 'rate_limit', 'quota exceeded', 'credits depleted')):
+                raise LimitReached('Codex usage limit; rerun the same command after the limit resets')
+            raise RuntimeError(f'Codex failed (exit {p.returncode}): {message[-1000:]}')
+        if not any(e.get('type') == 'turn.completed' for e in events) or not output.is_file() or not output.read_text().strip():
+            raise RuntimeError('Codex did not produce a completed, nonempty answer')
+        return {'result': output.read_text(), 'num_turns': sum(e.get('type') == 'turn.completed' for e in events),
+                'total_cost_usd': None, 'duration_ms': round((time.monotonic() - started) * 1000)}
+
+
 def fingerprint(value):
     return hashlib.sha256(json.dumps(value, ensure_ascii=False, sort_keys=True).encode()).hexdigest()
 
 
-def answer_key(case, arm, model, effort):
+def answer_key(case, arm, model, effort, host_kind='claude'):
     """What an answer depends on; a stored answer is reused only when this still matches."""
-    return fingerprint({'date': case['date'], 'prompt': case['prompt'], 'arm': arm, 'model': model, 'effort': effort})
+    return fingerprint({'date': case['date'], 'prompt': case['prompt'], 'arm': arm, 'model': model, 'effort': effort,
+                        **({'host_kind': host_kind} if host_kind != 'claude' else {})})
 
 
 def current_answer(path, key):
@@ -153,30 +247,33 @@ def write_atomic(path, text):
         raise
 
 
-def answer(host, case, arm, model, setup, path, effort):
-    key = answer_key(case, arm, model, effort)
+def answer(host, case, arm, model, setup, path, effort, host_kind='claude'):
+    key = answer_key(case, arm, model, effort, host_kind)
     if current_answer(path, key):
         return
     system = (f"Today's date is {case['date']}. This is a single-turn conversation: answer the user's message now. "
               'You cannot read files, browse, run commands, or send anything on the user\'s behalf.')
-    cmd = [host, '-p', '--model', model, '--effort', effort, '--no-session-persistence', '--output-format', 'json', '--strict-mcp-config']
-    with tempfile.TemporaryDirectory(prefix='myos-eval-') as wd:
-        wd = Path(wd)
-        if arm == 'bare':
-            system += ' You have no tools in this session; do not write tool calls.'
-            cmd += ['--setting-sources', '', '--tools', '', '--disable-slash-commands']
-        else:
-            system += ' Your only tools are the ones listed in this session.'
-            shutil.copy(setup / 'CLAUDE.md', wd / 'CLAUDE.md')
-            shutil.copytree(setup / 'skill', wd / '.claude' / 'skills' / 'myos')
-            server = {'type': 'stdio', 'command': sys.executable, 'args': ['-m', 'myos.personal.mcp'],
-                      'env': {'MYOS_DATA_DIR': str(setup / 'store')}}
-            (wd / 'mcp.json').write_text(json.dumps({'mcpServers': {'myos': server}}))
-            cmd += ['--setting-sources', 'project', '--mcp-config', str(wd / 'mcp.json'), '--tools', 'Skill',
-                    '--allowedTools', f'Skill,{READ_TOOLS}',
-                    '--disallowedTools', 'mcp__myos__myos_put,mcp__myos__myos_references']
-        out = call(cmd + ['--append-system-prompt', system], case['prompt'], wd, 12000)
-    record = {'case': case['id'], 'arm': arm, 'model': model, 'effort': effort, 'fingerprint': key, **{k: out.get(k) for k in ('result', 'num_turns', 'total_cost_usd', 'duration_ms')}}
+    if host_kind == 'codex':
+        out = codex_call(host, model, effort, case['prompt'], system, setup if arm == 'daily' else None)
+    else:
+        cmd = [host, '-p', '--model', model, '--effort', effort, '--no-session-persistence', '--output-format', 'json', '--strict-mcp-config']
+        with tempfile.TemporaryDirectory(prefix='myos-eval-') as wd:
+            wd = Path(wd)
+            if arm == 'bare':
+                system += ' You have no tools in this session; do not write tool calls.'
+                cmd += ['--setting-sources', '', '--tools', '', '--disable-slash-commands']
+            else:
+                system += ' Your only tools are the ones listed in this session.'
+                shutil.copy(setup / 'CLAUDE.md', wd / 'CLAUDE.md')
+                shutil.copytree(setup / 'skill', wd / '.claude' / 'skills' / 'myos')
+                server = {'type': 'stdio', 'command': sys.executable, 'args': ['-m', 'myos.personal.mcp'],
+                          'env': {'MYOS_DATA_DIR': str(setup / 'store')}}
+                (wd / 'mcp.json').write_text(json.dumps({'mcpServers': {'myos': server}}))
+                cmd += ['--setting-sources', 'project', '--mcp-config', str(wd / 'mcp.json'), '--tools', 'Skill',
+                        '--allowedTools', f'Skill,{READ_TOOLS}',
+                        '--disallowedTools', 'mcp__myos__myos_put,mcp__myos__myos_references']
+            out = call(cmd + ['--append-system-prompt', system], case['prompt'], wd, 12000)
+    record = {'case': case['id'], 'arm': arm, 'model': model, 'effort': effort, 'fingerprint': key, 'host_kind': host_kind, **{k: out.get(k) for k in ('result', 'num_turns', 'total_cost_usd', 'duration_ms')}}
     write_atomic(path, json.dumps(record, ensure_ascii=False, indent=1))
 
 
@@ -225,12 +322,13 @@ def flag_errors(flags, raw):
     return None
 
 
-def review_meta(reviewer, effort):
-    return {'reviewer': reviewer, 'effort': effort, 'instructions': fingerprint(REVIEW_INSTRUCTIONS)[:16]}
+def review_meta(reviewer, effort, host_kind='claude'):
+    return {'reviewer': reviewer, 'effort': effort, 'instructions': fingerprint(REVIEW_INSTRUCTIONS)[:16],
+            **({'host_kind': host_kind} if host_kind != 'claude' else {})}
 
 
-def review(host, reviewer, raw, mapping, folder, effort):
-    meta = review_meta(reviewer, effort)
+def review(host, reviewer, raw, mapping, folder, effort, host_kind='claude'):
+    meta = review_meta(reviewer, effort, host_kind)
     if review_is_current(folder, raw, mapping, meta):
         return
     folder.mkdir(parents=True, exist_ok=True)
@@ -240,11 +338,15 @@ def review(host, reviewer, raw, mapping, folder, effort):
     write_atomic(folder / 'mapping.json', json.dumps(mapping))
     feedback = ''
     for attempt in range(3):
-        cmd = [host, '-p', '--model', reviewer, '--effort', effort, '--no-session-persistence', '--output-format', 'json', '--strict-mcp-config',
-               '--setting-sources', '', '--tools', '', '--disable-slash-commands',
-               '--append-system-prompt', 'You have no tools. Output only the requested JSON object.']
-        with tempfile.TemporaryDirectory(prefix='myos-review-') as wd:
-            out = call(cmd, REVIEW_INSTRUCTIONS + raw.decode() + feedback, wd, 48000)
+        if host_kind == 'codex':
+            out = codex_call(host, reviewer, effort, REVIEW_INSTRUCTIONS + raw.decode() + feedback,
+                             'You have no tools. Output only the requested JSON object.')
+        else:
+            cmd = [host, '-p', '--model', reviewer, '--effort', effort, '--no-session-persistence', '--output-format', 'json', '--strict-mcp-config',
+                   '--setting-sources', '', '--tools', '', '--disable-slash-commands',
+                   '--append-system-prompt', 'You have no tools. Output only the requested JSON object.']
+            with tempfile.TemporaryDirectory(prefix='myos-review-') as wd:
+                out = call(cmd, REVIEW_INSTRUCTIONS + raw.decode() + feedback, wd, 48000)
         try:
             text = (out.get('result') or '').strip()
             found = json.loads(text[text.index('{'):text.rindex('}') + 1])
@@ -286,7 +388,10 @@ def run_all(jobs, tasks, stop, errors):
 
 
 def evaluate(store, suite, name, *, models, reviewer=DEFAULT_REVIEWER, effort='medium', review_effort='high', repeat=1, jobs=3, only=None, assets=None,
-             skill=SKILL, host='claude'):
+             skill=SKILL, host=None, host_kind='claude'):
+    if host_kind not in ('claude', 'codex'):
+        raise ValueError('Host kind must be claude or codex')
+    host = host or host_kind
     if not SAFE_ID.match(name):
         raise ValueError('Run name must be letters, digits, _ or -')
     if effort not in EFFORTS or review_effort not in EFFORTS:
@@ -301,22 +406,22 @@ def evaluate(store, suite, name, *, models, reviewer=DEFAULT_REVIEWER, effort='m
     def answer_path(c, arm, m, n):
         return run_dir / 'answers' / f'{c}__{arm}__{m}__{n}.json'
 
-    run_all(jobs, [lambda c=c, arm=arm, m=m, n=n: answer(host, cases[c], arm, m, setup, answer_path(c, arm, m, n), effort)
+    run_all(jobs, [lambda c=c, arm=arm, m=m, n=n: answer(host, cases[c], arm, m, setup, answer_path(c, arm, m, n), effort, host_kind)
                    for c, m, n in keys for arm in ARMS], stop, errors)
 
     def answers_for(c, m, n):
-        found = {arm: current_answer(answer_path(c, arm, m, n), answer_key(cases[c], arm, m, effort)) for arm in ARMS}
+        found = {arm: current_answer(answer_path(c, arm, m, n), answer_key(cases[c], arm, m, effort, host_kind)) for arm in ARMS}
         return found if all(found.values()) else None
 
     def review_task(c, m, n, answers):
         if not all((a.get('result') or '').strip() for a in answers.values()):
             raise RuntimeError(f'empty answer: {c} {m} #{n}')
         raw, mapping = packet(cases[c], m, n, answers)
-        review(host, reviewer, raw, mapping, run_dir / 'reviews' / f'{c}__{m}__{n}', review_effort)
+        review(host, reviewer, raw, mapping, run_dir / 'reviews' / f'{c}__{m}__{n}', review_effort, host_kind)
 
     ready = {k: a for k in keys if (a := answers_for(*k))}
     run_all(min(jobs, 2), [lambda k=k, a=a: review_task(*k, a) for k, a in ready.items()], stop, errors)
-    meta = review_meta(reviewer, review_effort)
+    meta = review_meta(reviewer, review_effort, host_kind)
     current = {k for k, a in ready.items() if review_is_current(run_dir / 'reviews' / '{}__{}__{}'.format(*k), *packet(cases[k[0]], k[1], k[2], a), meta)}
     if exported.get('errors') or exported.get('missing'):
         errors.append(f"saved cases not exported, so not in this run: {', '.join(exported.get('missing') or [])} "
@@ -346,7 +451,7 @@ def cell(text):
 
 def report(store, cases, run_dir, keys, models, current, problems=()):
     """Per-setup totals per model and a proposed verdict per entry; proposals only, the store is not changed."""
-    totals = {(m, arm): dict(covered=0, total=0, unsupported=0, boundary=0, over=0, leak=0, control_misses=0, cost=0.0, turns=0, answers=0)
+    totals = {(m, arm): dict(covered=0, total=0, unsupported=0, boundary=0, over=0, leak=0, control_misses=0, cost=0.0, cost_missing=False, turns=0, answers=0)
               for m in models for arm in ARMS}
     pairs, flagged = {}, []
     for c, m, n in keys:
@@ -363,6 +468,7 @@ def report(store, cases, run_dir, keys, models, current, problems=()):
             t = totals[(m, arm)]
             run = json.loads((run_dir / 'answers' / f'{c}__{arm}__{m}__{n}.json').read_text())
             t['cost'] += run.get('total_cost_usd') or 0
+            t['cost_missing'] |= run.get('total_cost_usd') is None
             t['turns'] += run.get('num_turns') or 0
             t['answers'] += 1
             t['unsupported'] += unsupported[iid]
@@ -392,8 +498,9 @@ def report(store, cases, run_dir, keys, models, current, problems=()):
              '| Model | Setup | Needs covered | Unsupported claims | Boundary flags | Over-application | Mechanics leaks | Control misses | Turns | Cost (USD) |',
              '| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |']
     for (m, arm), t in totals.items():
+        cost = "unavailable" if t['cost_missing'] else f"{t['cost']:.2f}"
         lines.append(f"| {m} | {arm} | {t['covered']}/{t['total']} | {t['unsupported']} | {t['boundary']} | {t['over']} | {t['leak']} | {t['control_misses']} "
-                     f"| {t['turns']} | {t['cost']:.2f} |")
+                     f"| {t['turns']} | {cost} |")
     lines += ['', '## Entries', '',
               'Counts are needs linked to the entry: daily covered and bare missed (gain), the reverse (loss), both covered, neither. '
               'Verdicts look at coverage only: more needs covered is not a better answer when it comes with unsupported claims '

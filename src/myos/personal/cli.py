@@ -52,7 +52,8 @@ def main(argv=None):
     evaluation.add_argument('--case', action='append', help='Only this case id (repeatable)')
     evaluation.add_argument('--asset', action='append', help='Only cases testing this entry, plus negative controls (repeatable)')
     evaluation.add_argument('--skill', type=Path, default=SKILL, help='Skill directory for the daily setup')
-    evaluation.add_argument('--host', default='claude', help='Claude Code executable')
+    evaluation.add_argument('--host-kind', choices=('claude', 'codex'), default='claude', help='Evaluation host (default claude)')
+    evaluation.add_argument('--host', help='Host executable (default: host kind); Codex requires explicit --model and --reviewer')
     trace_parser = commands.add_parser('trace', help='Inspect saved snapshots without querying the store or a model')
     trace_commands = trace_parser.add_subparsers(dest='trace_command', required=True)
     trace_show = trace_commands.add_parser('show')
@@ -112,9 +113,11 @@ def main(argv=None):
             else:
                 result = store.compile()
         elif args.command == 'eval':
+            if args.host_kind == 'codex' and (not args.model or args.reviewer == DEFAULT_REVIEWER):
+                raise ValueError('Codex requires explicit --model and --reviewer')
             result = evaluate(store, (args.suite or store.root / CASES_DIR.parent).expanduser().resolve(), args.name,
                               models=args.model or [DEFAULT_MODEL], reviewer=args.reviewer, effort=args.effort, review_effort=args.review_effort, repeat=max(1, args.repeat),
-                              jobs=args.jobs, only=args.case, assets=args.asset, skill=args.skill.expanduser(), host=args.host)
+                              jobs=args.jobs, only=args.case, assets=args.asset, skill=args.skill.expanduser(), host=args.host, host_kind=args.host_kind)
         elif args.command == 'view':
             written = write_private(args.out or store.root / MAP_NAME, render_map(store), kind='map', private_root=store.root, default_name=MAP_NAME)
             result = {'written': str(written)}

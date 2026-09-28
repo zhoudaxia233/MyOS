@@ -7,7 +7,7 @@ way you would. It keeps your limits, applies your principles and methods, and
 tells you when one of your known habits is working against you. You decide what
 goes in. Your store stays in a private folder on your computer. Entries your
 assistant reads are subject to its model provider's data handling; optional
-`myos eval` also sends evaluation content through Claude Code.
+`myos eval` also sends evaluation content through the selected host (Claude Code or Codex).
 
 For example, you might ask your assistant to answer a landlord who is keeping
 your deposit. An adopted entry can tell it to argue from your side, show you

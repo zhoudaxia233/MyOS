@@ -189,7 +189,7 @@ Your store and local outputs live in a private folder on your computer
 storage operations do not call a model; entries your assistant reads reach its
 configured model provider like the rest of your conversation.
 
-Optional `myos eval` launches Claude Code to generate and review answers. Case
+Optional `myos eval` launches Claude Code or Codex to generate and review answers. Case
 prompts, source excerpts, answers and self-model context can reach the configured
 model service. Review the selected case content before running it.
 
