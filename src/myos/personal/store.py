@@ -135,7 +135,8 @@ class Store:
         """Markdown block for a host's always-loaded instructions: core assets in full, one line per other adopted asset.
 
         Hosts keep always-loaded files short, so only the owner's core set is in full; the index line tells the host
-        when to read the rest. No revisions, basis, sources or timestamps. Candidates are indexed only for
+        when to read the rest. No revisions, basis, sources, timestamps or examples: examples are often the owner's
+        verbatim corrections, kept as evidence for the catalog and reads, not as rules. Candidates are indexed only for
         correction matching, never for answers; uncertain and reference assets stay behind the catalog as material.
         """
         if not self.path.exists():
@@ -150,7 +151,6 @@ class Store:
         for a in core:
             lines += [f"### {marker_safe(a['title'])} ({asset_type(a)})", '', marker_safe(a['content']), '', f"- Applies: {marker_safe(a['applicability'])}"]
             lines += [f'- Limits: {marker_safe(b)}' for b in a['boundaries']]
-            lines += [f"- Example: {marker_safe(e['text'])}" for e in a.get('examples', []) if isinstance(e, dict)]
             lines.append('')
         if other:
             lines += ['## Other entries (read in full when the situation fits)', '']
