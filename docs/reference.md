@@ -80,9 +80,10 @@ unrelated coding question should not call MyOS.
 ## The MyOS block
 
 `myos compile` prints the block: the core assets in full (content, Applies,
-Limits, examples) and one line per other adopted asset with its id and when it
-applies. Revisions, basis and sources stay out, and so do candidate, uncertain
-and reference assets. The block runs from the `<!-- BEGIN MYOS BRIEF` line to
+Limits) and one line per other adopted asset with its id and when it applies.
+Examples, revisions, basis and sources stay out, and so do candidate, uncertain
+and reference assets. Examples are often the owner's verbatim corrections: they
+stay in the store as evidence, and `catalog` and `read` still return them. The block runs from the `<!-- BEGIN MYOS BRIEF` line to
 `<!-- END MYOS BRIEF -->`; an older `MYOS CORE` block is replaced the same way.
 
 | Command | Effect |

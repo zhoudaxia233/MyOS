@@ -129,7 +129,9 @@ def test_compile_shows_core_in_full_and_lists_other_adopted_assets(tmp_path):
     # Core assets of every type in full, in catalog type order.
     headings = [line for line in block.splitlines() if line.startswith('### ')]
     assert headings == ['### Final click is mine (boundary)', '### Who I am (context)', '### Take my side (principle)']
-    assert '- Limits: Not a universal rule' in block and '- Example: Stop before Send' in block
+    assert '- Limits: Not a universal rule' in block
+    # Examples are evidence (often verbatim corrections), returned by catalog and read, never loaded every session.
+    assert 'Stop before Send' not in block and '- Example:' not in block
     # Every other adopted asset says when to read it; unadopted statuses stay out of the block.
     others = block.split('## Other entries')[1]
     assert '- Bound the risk (method, id `step`): Before a risky step' in others
