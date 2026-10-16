@@ -13,6 +13,7 @@ Send one complete asset through `myos_put` (or `poetry run myos put payload.json
 - `authorization` records the owner's exact request and its source; the host verifies actual permission. A plain correction authorizes a candidate write, not adoption. "Remember this" / "from now on" directly authorizes adoption; after a repeat, the owner's adoption reply (including any supplied edits) is `authorization.request`. A refusal authorizes `inactive`. Do not request a second approval.
 - Store interpretation with sources, never secrets or whole chats. Change the store only through `put`. `inactive` hides an asset from the catalog and keeps its history.
 - Keep each correction's exact quote in `examples[].text`, the message reference in `source`, and its known date in the matching `sources[].timestamp`. Add the later quote without losing the first. No new fields are needed.
+- Copy existing quotes from the asset you read and write them as plain UTF-8 text; never retype them or turn them into `\u` escapes, which can silently swap a character. After the write, check `quote_changes` in the result: every listed change must be one you intended.
 - The catalog keeps candidates discoverable for correction matching; they are never used in answers.
 
 ## Test case from a correction

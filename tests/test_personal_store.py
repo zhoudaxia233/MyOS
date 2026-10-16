@@ -346,3 +346,20 @@ def test_current_read_keeps_what_a_revision_needs_and_history_keeps_the_write_re
     assert current['sources'] == [{'ref': 'owner-message:1'}] and current['revision'] == 1  # enough to write the next revision
     assert 'authorization' not in current and 'recorded_at' not in current
     assert s.read('model', history=True)[0]['authorization'] == AUTH
+
+
+def test_write_reports_altered_or_removed_quotes(tmp_path):
+    s = Store(tmp_path)
+    quote = {'text': 'You are nitpicking me again', 'source': 'owner-message:1'}
+    other = {'text': 'Keep it short', 'source': 'owner-message:3'}
+    assert 'quote_changes' not in s.put(asset(examples=[quote, other]), expected_revision=0, authorization=AUTH)
+    unchanged = s.put(asset(examples=[quote, other, {'text': 'A new quote', 'source': 'owner-message:4'}]), expected_revision=1, authorization=AUTH)
+    assert 'quote_changes' not in unchanged
+    retyped = dict(quote, text='You are nitpicking me agian')
+    result = s.put(asset(examples=[retyped]), expected_revision=2, authorization=AUTH)
+    assert result['quote_changes'] == [
+        {'source': 'owner-message:1', 'before': quote['text'], 'after': retyped['text']},
+        {'source': 'owner-message:3', 'before': other['text'], 'after': None},
+        {'source': 'owner-message:4', 'before': 'A new quote', 'after': None},
+    ]
+    assert s.read('model')['examples'] == [retyped]  # reported, not refused: the host decides

@@ -1,6 +1,7 @@
 """Append-only revisions with optimistic concurrency, not a reasoning runtime."""
 from __future__ import annotations
 
+import difflib
 import json
 import os
 import re
@@ -96,6 +97,26 @@ def field_errors(asset):
                                              or not isinstance(e.get('source'), str) or not e['source'].strip() for e in examples):
         errors.append('Examples must be a list of {text, source} with nonempty strings')
     return errors
+
+
+def quote_changes(previous, asset):
+    """Examples of the previous revision that the new one no longer contains verbatim.
+
+    Examples are often the owner's exact words, kept as evidence. A host that retypes a quote instead of copying it can
+    silently alter it, so each write reports every earlier example missing from the new revision: with the closest new
+    example from the same source as `after` when one resembles it (an edited quote), otherwise `after` is null (removed).
+    """
+    old = [e for e in (previous or {}).get('examples', []) if isinstance(e, dict)]
+    new = [e for e in asset.get('examples', []) if isinstance(e, dict)]
+    kept, added = {e['text'] for e in new}, [e for e in new if e['text'] not in {o['text'] for o in old}]
+    changes = []
+    for o in old:
+        if o['text'] in kept:
+            continue
+        candidates = [(difflib.SequenceMatcher(None, o['text'], e['text']).ratio(), e['text']) for e in added if e.get('source') == o.get('source')]
+        ratio, after = max(candidates, default=(0, None))
+        changes.append({'source': o.get('source'), 'before': o['text'], 'after': after if ratio >= 0.6 else None})
+    return changes
 
 
 class Store:
@@ -202,6 +223,8 @@ class Store:
             current = db.execute('SELECT COALESCE(MAX(revision), 0) FROM revisions WHERE id=?', (asset['id'],)).fetchone()[0]
             if current != expected_revision:
                 raise ValueError(f'Revision conflict: expected {expected_revision}, actual {current}')
+            row = db.execute('SELECT body FROM revisions WHERE id=? AND revision=?', (asset['id'], current)).fetchone()
+            changed_quotes = quote_changes(json.loads(row[0]) if row else None, asset)
             if is_core(asset):
                 latest = db.execute('SELECT body FROM revisions r WHERE id<>? AND revision=(SELECT MAX(revision) FROM revisions WHERE id=r.id)', (asset['id'],)).fetchall()
                 if sum(is_core(json.loads(b)) for (b,) in latest) >= CORE_LIMIT:
@@ -215,6 +238,8 @@ class Store:
         result = dict(json.loads(body), revision=current + 1, recorded_at=recorded_at, authorization=dict(authorization))
         if case is not None:
             result['case'] = case['id']
+        if changed_quotes:
+            result['quote_changes'] = changed_quotes  # the write is committed; the host confirms each change was intended
         try:
             exported = self.export_cases()  # also completes any earlier export that was cut short
         except Exception as exc:  # the write is committed; an export problem is reported, never raised
