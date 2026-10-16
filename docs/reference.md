@@ -109,7 +109,7 @@ Put `--data PATH` before the command. Output is JSON unless noted.
 | `myos catalog [--purpose TEXT]` | Core assets in full and an index (id, title, type, status, applicability) of the other non-inactive assets. Candidates remain indexed for correction matching only; skip them when answering. `--purpose` is recorded only in traces. |
 | `myos read ID [--history]` | The current asset with sources; `--history` returns every revision with its write record. |
 | `myos references [REF]` | The migrated source list, or one source such as `originals/0/path.jsonl#L2`. |
-| `myos put payload.json` | Append a complete revision; the payload format is in [the Skill's write reference](../.agents/skills/myos/reference/write.md). |
+| `myos put payload.json` | Append a complete revision; the payload format is in [the Skill's write reference](../.agents/skills/myos/reference/write.md). The result lists `quote_changes` when earlier examples are missing from the new revision verbatim (`after` is the edited text, or null when removed). |
 | `myos compile [...]` | Print or sync the MyOS block (Markdown; see above). |
 | `myos view [--out PATH]` | Write a read-only HTML map of the store (default `myos-view.html` in the data directory). |
 | `myos eval [...]` | Compare answers without and with MyOS on private test cases and write a report; see below. |
