@@ -109,11 +109,11 @@ Put `--data PATH` before the command. Output is JSON unless noted.
 | `myos catalog [--purpose TEXT]` | Core assets in full and an index (id, title, type, status, applicability) of the other non-inactive assets. Candidates remain indexed for correction matching only; skip them when answering. `--purpose` is recorded only in traces. |
 | `myos read ID [--history]` | The current asset with sources; `--history` returns every revision with its write record. |
 | `myos references [REF]` | The migrated source list, or one source such as `originals/0/path.jsonl#L2`. |
-| `myos put payload.json` | Append a complete revision; the payload format is in [the Skill's write reference](../.agents/skills/myos/reference/write.md). The result lists `quote_changes` when earlier examples are missing from the new revision verbatim (`after` is the edited text, or null when removed). |
+| `myos put payload.json` | Append a complete revision; the payload format and the transitions the store refuses are in [the Skill's write reference](../.agents/skills/myos/reference/write.md). The result lists `quote_changes` when earlier examples are missing from the new revision verbatim (`after` is the edited text, or null when removed). |
 | `myos compile [...]` | Print or sync the MyOS block (Markdown; see above). |
 | `myos view [--out PATH]` | Write a read-only HTML map of the store (default `myos-view.html` in the data directory). |
 | `myos eval [...]` | Compare answers without and with MyOS on private test cases and write a report; see below. |
-| `myos check [--strict]` | Check the database, revision sequences and migration integrity, with size warnings. |
+| `myos check [--strict]` | Check the database, revision sequences, status transitions the store refuses (see the write reference), cases on non-adopted entries and migration integrity, with size warnings. |
 | `myos migrate --source ROOT` | Import legacy sources into a new data directory. |
 | `myos trace show [...]` | Inspect saved execution traces; see [tracing](tracing.md). |
 
@@ -141,9 +141,9 @@ repository:
 ```
 
 `assets` names the entries a need tests; the reviewer never sees it. Cases are
-loaded and scored without checking whether those entries are adopted. Attach a
-correction's case only in the adoption write, never while the entry is a
-candidate. A write can add a case in the same call (`case` in `myos put` or `myos_put`, format in
+loaded and scored without checking whether those entries are adopted, so a
+write accepts a case only with an adopted entry (negative controls aside). A
+write can add a case in the same call (`case` in `myos put` or `myos_put`, format in
 the [write reference](../.agents/skills/myos/reference/write.md)); it is
 validated first, committed in the same transaction as the revision, and
 exported to `cases/` without overwriting an existing file; an export cut short

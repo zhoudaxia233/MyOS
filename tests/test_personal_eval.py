@@ -183,11 +183,11 @@ def test_an_invalid_or_duplicate_case_writes_nothing(tmp_path):
     store = Store(tmp_path / 'data')
     bad = dict(CASE, needs=[dict(CASE['needs'][0], source_quote='not in the source')])
     with pytest.raises(ValueError, match='copied exactly'):
-        store.put(dict(asset(), id='send'), expected_revision=0, authorization=AUTH, case=bad)
+        store.put(dict(asset(), id='send', status='adopted'), expected_revision=0, authorization=AUTH, case=bad)
     assert store.current() == []
-    store.put(dict(asset(), id='send'), expected_revision=0, authorization=AUTH, case=CASE)
+    store.put(dict(asset(), id='send', status='adopted'), expected_revision=0, authorization=AUTH, case=CASE)
     with pytest.raises(ValueError, match='exists'):
-        store.put(dict(asset(), id='send'), expected_revision=1, authorization=AUTH, case=CASE)
+        store.put(dict(asset(), id='send', status='adopted'), expected_revision=1, authorization=AUTH, case=CASE)
     assert store.read('send')['revision'] == 1
 
 
@@ -195,21 +195,21 @@ def test_a_case_commits_with_its_revision_and_an_interrupted_export_is_completed
     store = Store(tmp_path / 'data')
     case_file = tmp_path / 'data' / 'evals' / 'cases' / 'confirm-appointment.json'
     with pytest.raises(ValueError, match='Revision conflict'):
-        store.put(dict(asset(), id='send'), expected_revision=4, authorization=AUTH, case=CASE)
+        store.put(dict(asset(), id='send', status='adopted'), expected_revision=4, authorization=AUTH, case=CASE)
     assert not case_file.exists() and store.export_cases()['written'] == []
     def killed(self):
         raise KeyboardInterrupt  # the process dies after commit, before the file is written
     monkeypatch.setattr(Store, 'export_cases', killed)
     with pytest.raises(KeyboardInterrupt):
-        store.put(dict(asset(), id='send'), expected_revision=0, authorization=AUTH, case=CASE)
+        store.put(dict(asset(), id='send', status='adopted'), expected_revision=0, authorization=AUTH, case=CASE)
     monkeypatch.undo()
     assert store.read('send')['revision'] == 1 and not case_file.exists()
     assert store.export_cases()['written'] == [str(case_file)] and json.loads(case_file.read_text())['id'] == 'confirm-appointment'
     with pytest.raises(ValueError, match='exists'):
-        store.put(dict(asset(), id='send'), expected_revision=1, authorization=AUTH, case=CASE)
+        store.put(dict(asset(), id='send', status='adopted'), expected_revision=1, authorization=AUTH, case=CASE)
     case_file.unlink()
     with pytest.raises(ValueError, match='exists'):
-        store.put(dict(asset(), id='send'), expected_revision=1, authorization=AUTH, case=CASE)
+        store.put(dict(asset(), id='send', status='adopted'), expected_revision=1, authorization=AUTH, case=CASE)
     assert store.read('send')['revision'] == 1
 
 
@@ -218,7 +218,7 @@ def test_a_failed_export_keeps_the_write_and_says_so(tmp_path, monkeypatch):
     def full(*args):
         raise OSError('disk full')
     monkeypatch.setattr('myos.personal.store.os.link', full)
-    result = store.put(dict(asset(), id='send'), expected_revision=0, authorization=AUTH, case=CASE)
+    result = store.put(dict(asset(), id='send', status='adopted'), expected_revision=0, authorization=AUTH, case=CASE)
     assert result['revision'] == 1 and 'disk full' in result['case_export']['errors'][0]
     assert not list((tmp_path / 'data' / 'evals' / 'cases').iterdir())
 
@@ -242,12 +242,12 @@ def test_a_damaged_answer_or_a_changed_date_is_redone(tmp_path, monkeypatch):
 
 def test_cli_and_mcp_writes_pass_the_case_through(tmp_path, monkeypatch):
     payload = tmp_path / 'payload.json'
-    payload.write_text(json.dumps({'asset': dict(asset(), id='send'), 'expected_revision': 0, 'authorization': AUTH, 'case': CASE}))
+    payload.write_text(json.dumps({'asset': dict(asset(), id='send', status='adopted'), 'expected_revision': 0, 'authorization': AUTH, 'case': CASE}))
     p = subprocess.run([sys.executable, '-m', 'myos', '--data', str(tmp_path / 'cli'), 'put', str(payload)], capture_output=True, text=True)
     assert p.returncode == 0, p.stderr
     assert (tmp_path / 'cli' / 'evals' / 'cases' / 'confirm-appointment.json').exists()
     monkeypatch.setenv('MYOS_DATA_DIR', str(tmp_path / 'mcp'))
-    asyncio.run(mcp.call_tool('myos_put', dict(asset=dict(asset(), id='send'), expected_revision=0, authorization=AUTH, case=CASE)))
+    asyncio.run(mcp.call_tool('myos_put', dict(asset=dict(asset(), id='send', status='adopted'), expected_revision=0, authorization=AUTH, case=CASE)))
     assert (tmp_path / 'mcp' / 'evals' / 'cases' / 'confirm-appointment.json').exists()
 
 
@@ -259,7 +259,7 @@ def test_export_problems_are_reported_and_the_next_write_completes_the_export(tm
             raise sqlite3.OperationalError('database is locked')
         return original(self, write=write)
     monkeypatch.setattr(Store, 'connect', locked)
-    result = store.put(dict(asset(), id='send'), expected_revision=0, authorization=AUTH, case=CASE)
+    result = store.put(dict(asset(), id='send', status='adopted'), expected_revision=0, authorization=AUTH, case=CASE)
     assert result['revision'] == 1 and 'cannot read saved cases' in result['case_export']['errors'][0]
     monkeypatch.undo()
     case_file = tmp_path / 'data' / 'evals' / 'cases' / 'confirm-appointment.json'
