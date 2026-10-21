@@ -46,9 +46,9 @@ The host must establish actual scoped owner authorization before `put`. Explicit
 learning/correction/remember requests can provide it without redundant approval.
 A plain correction that passes the four admission checks authorizes only a
 candidate write, with the owner's words, source and date; give a one-line note
-without asking. Never demote an adopted entry: follow a plain refinement for the
-current task, leaving the entry unchanged and saving a separate candidate whose
-content names its id and title. On a later matching correction, add a second example and ask
+without asking. Follow a plain refinement for the current task, leaving the
+adopted entry unchanged and saving a separate candidate whose content names its
+id and title. On a later matching correction, add a second example and ask
 once at the end of the answer, showing both dated quotes and proposed wording:
 adopt / adopt with edits / one-off. Adoption (with supplied edits if any) uses
 the owner's reply as `authorization.request`; for a refinement, propose and write
@@ -67,13 +67,17 @@ approval controls. Do not expose the adapter to untrusted callers.
 Marking an asset `core`, changing an existing core entry, writing or changing a `boundary`, and placing the
 exported block in a host instruction file all change what every future session
 sees. Do them only on the owner's explicit request; host instruction files are
-the owner's configuration. Candidate promotion never creates or changes a
-boundary or core entry.
+the owner's configuration.
 
 Every revision stores source references and the authorizing request/source.
 Optimistic revision checks prevent lost updates; history is append-only.
 Inactivation differs from physical deletion. No deletion or autonomous promotion
-operation is provided. Never edit the SQLite database directly.
+operation is provided. Outside migration the store refuses moving an adopted
+entry to any status but adopted or inactive, any status change of an inactive
+one, a write that adopts an entry and also sets core or the boundary type, and a
+case on an entry that is not adopted; `myos check` reports such transitions in
+older histories. Never edit the SQLite
+database directly.
 
 This contract does not authorize writes to historical governance ledgers. Those
 are preserved sources. Migration copies their evidence and status conservatively;

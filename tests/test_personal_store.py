@@ -363,3 +363,101 @@ def test_write_reports_altered_or_removed_quotes(tmp_path):
         {'source': 'owner-message:4', 'before': 'A new quote', 'after': None},
     ]
     assert s.read('model')['examples'] == [retyped]  # reported, not refused: the host decides
+
+
+def entry(**updates):
+    return dict(asset(), **updates)
+
+
+CASE = {'id': 'c1', 'date': '2026-03-01', 'prompt': 'Confirm the appointment', 'source': "Owner's correction: one answer.",
+        'needs': [{'id': 'N1', 'description': 'One answer', 'rationale': 'Owner said so', 'source_quote': 'one answer'}]}
+
+
+@pytest.mark.parametrize('status', ['candidate', 'uncertain', 'reference'])
+def test_adopted_is_never_demoted(tmp_path, status):
+    s = Store(tmp_path)
+    s.put(entry(status='adopted'), expected_revision=0, authorization=AUTH)
+    with pytest.raises(ValueError, match=f'never demoted to {status}'):
+        s.put(entry(status=status), expected_revision=1, authorization=AUTH)  # every one of these leaves the compiled block
+    assert s.read('model')['revision'] == 1 and s.read('model')['status'] == 'adopted'
+    s.put(entry(status='adopted', content='Revised'), expected_revision=1, authorization=AUTH)  # revising stays open ...
+    s.put(entry(status='inactive'), expected_revision=2, authorization=AUTH)  # ... and retirement stays the way out
+    assert s.check(strict=True)['errors'] == []
+
+
+def test_inactive_stays_inactive_and_a_returning_idea_needs_a_new_id(tmp_path):
+    s = Store(tmp_path)
+    s.put(entry(), expected_revision=0, authorization=AUTH)
+    s.put(entry(status='inactive'), expected_revision=1, authorization=AUTH)
+    for status in ('candidate', 'adopted', 'uncertain', 'reference'):
+        with pytest.raises(ValueError, match='stays inactive'):
+            s.put(entry(status=status), expected_revision=2, authorization=AUTH)
+    s.put(entry(status='inactive', content='Retired, with a note'), expected_revision=2, authorization=AUTH)
+    s.put(entry(id='model-again'), expected_revision=0, authorization=AUTH)
+    assert [a['id'] for a in s.catalog()['index']] == ['model-again']
+
+
+@pytest.mark.parametrize('status', ['candidate', 'uncertain', 'reference'])
+@pytest.mark.parametrize('promotion, message', [({'core': True}, 'never sets core'), ({'type': 'boundary'}, 'never turns an entry into a boundary')])
+def test_promotion_never_adds_core_or_the_boundary_type_in_the_same_write(tmp_path, status, promotion, message):
+    s = Store(tmp_path)
+    s.put(entry(status=status), expected_revision=0, authorization=AUTH)  # migrated material adopts through the same gate
+    with pytest.raises(ValueError, match=message):
+        s.put(entry(status='adopted', **promotion), expected_revision=1, authorization=AUTH)
+    assert s.read('model')['status'] == status
+    s.put(entry(status='adopted'), expected_revision=1, authorization=AUTH)  # adopt first ...
+    s.put(entry(status='adopted', **promotion), expected_revision=2, authorization=AUTH)  # ... then the owner's explicit step
+    assert s.check(strict=True)['errors'] == []
+
+
+def test_a_candidate_proposed_as_a_boundary_adopts_as_one(tmp_path):
+    s = Store(tmp_path)
+    s.put(entry(type='boundary'), expected_revision=0, authorization=AUTH)  # the type was visible in the proposed wording
+    s.put(entry(type='boundary', status='adopted'), expected_revision=1, authorization=AUTH)
+    assert s.read('model')['type'] == 'boundary' and s.check(strict=True)['errors'] == []
+
+
+def test_migration_may_replay_retirements_and_reactivations(tmp_path):
+    s = Store(tmp_path)
+    migration = dict(AUTH, mode='migration')
+    s.put(entry(status='inactive'), expected_revision=0, authorization=migration)
+    s.put(entry(status='adopted', legacy_adoption_evidence='dated ratification'), expected_revision=1, authorization=migration)
+    s.put(entry(status='candidate'), expected_revision=2, authorization=migration)
+    assert s.read('model')['revision'] == 3 and s.check(strict=True)['errors'] == []
+
+
+def test_a_case_attaches_only_to_an_adopted_entry(tmp_path):
+    s = Store(tmp_path)
+    for status in ('candidate', 'uncertain', 'reference'):
+        with pytest.raises(ValueError, match='only to an adopted entry'):
+            s.put(entry(status=status), expected_revision=0, authorization=AUTH, case=CASE)
+    assert s.current() == [] and not (tmp_path / 'evals').exists()
+    for when in ('yesterday', '20260301', '2026-W09-1', '2026-3-1', '2026-02-30', '2026-03-01T00:00'):  # not only the ones `date.fromisoformat` rejects
+        with pytest.raises(ValueError, match='YYYY-MM-DD'):
+            s.put(entry(status='adopted'), expected_revision=0, authorization=AUTH, case=dict(CASE, date=when))
+    control = dict(CASE, id='control', negative_control=True)
+    s.put(entry(), expected_revision=0, authorization=AUTH, case=control)  # a control asks what MyOS should not change
+    s.put(entry(status='adopted'), expected_revision=1, authorization=AUTH, case=CASE)
+    assert s.check(strict=True)['errors'] == []
+
+
+def test_check_reports_forbidden_transitions_and_cases_in_old_histories(tmp_path):
+    s = Store(tmp_path)
+    s.put(entry(status='adopted'), expected_revision=0, authorization=AUTH)
+    when, auth = '2026-01-01T00:00:00+00:00', json.dumps(AUTH)
+    rows = [('model', 2, when, json.dumps(entry(status='candidate')), auth),
+            ('model', 3, when, json.dumps(entry(status='inactive')), auth),
+            ('model', 4, when, json.dumps(entry(status='adopted')), json.dumps(dict(AUTH, mode='migration'))),  # replayed history is exempt
+            ('model', 5, when, json.dumps(entry(status='candidate')), auth),
+            ('other', 1, when, json.dumps(entry(id='other')), auth),
+            ('third', 1, when, json.dumps(entry(id='third', status='adopted')), auth),
+            ('third', 2, when, json.dumps(entry(id='third', status='uncertain')), auth),
+            ('third', 3, when, json.dumps(entry(id='third', status='adopted', core=True)), auth)]
+    with s.connect(write=True) as db:
+        db.executemany('INSERT INTO revisions VALUES (?, ?, ?, ?, ?)', rows)
+        db.execute('INSERT INTO cases VALUES (?, ?, ?, ?, ?)', ('c1', 'other', 1, when, json.dumps(CASE)))
+    errors = s.check()['errors']
+    assert [e.split(':')[1:3] for e in errors if e.startswith('Invalid transition')] == [[' model', '2'], [' model', '5'], [' third', '2'], [' third', '3']]
+    assert any(e.startswith('Invalid case: c1:') for e in errors)
+    with pytest.raises(ValueError, match='Invalid transition'):
+        s.check(strict=True)

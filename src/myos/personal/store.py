@@ -8,7 +8,7 @@ import re
 import sqlite3
 import tempfile
 import time
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 STATUSES = {'reference', 'candidate', 'adopted', 'inactive', 'uncertain'}
@@ -51,7 +51,18 @@ def marker_safe(value):
 
 
 CASE_ID = re.compile(r'^[A-Za-z0-9_-]+$')
+CASE_DATE = re.compile(r'^\d{4}-\d{2}-\d{2}$')  # `date.fromisoformat` alone also accepts 20260301 and 2026-W09-1
 CASES_DIR = Path('evals') / 'cases'
+
+
+def case_date_valid(value):
+    if not CASE_DATE.match(value):
+        return False
+    try:
+        date.fromisoformat(value)
+    except ValueError:
+        return False
+    return True
 
 
 def case_errors(case):
@@ -63,6 +74,8 @@ def case_errors(case):
         errors.append('Case id must be letters, digits, _ or -')
     if not isinstance(case.get('negative_control', False), bool) or not isinstance(case.get('retired', False), bool):
         errors.append('negative_control and retired must be true or false')
+    if isinstance(case.get('date'), str) and not case_date_valid(case['date']):
+        errors.append('Case date must be YYYY-MM-DD; the reviewer judges time-sensitive claims as of that day')
     needs = case.get('needs')
     if not (isinstance(needs, list) and needs and all(isinstance(n, dict) for n in needs)):
         return errors + ['Case needs a nonempty list of needs']
@@ -97,6 +110,37 @@ def field_errors(asset):
                                              or not isinstance(e.get('source'), str) or not e['source'].strip() for e in examples):
         errors.append('Examples must be a list of {text, source} with nonempty strings')
     return errors
+
+
+def transition_error(previous, asset):
+    """Status changes the store refuses outside migration, because each one silently changes every future session.
+
+    Only adopted entries are compiled, so any status but adopted or inactive drops the entry from the block on the
+    next sync; a revived inactive entry returns without a fresh repeat; a write that adopts an entry and also sets
+    core or turns it into a boundary activates something the owner never saw proposed, whatever status it came from.
+    The escape is explicit: inactivate and start a new id, or adopt first and set core or the boundary type in a
+    separate revision on the owner's instruction.
+    """
+    if previous is None:
+        return None
+    before, after = previous.get('status'), asset['status']
+    if before == 'adopted' and after not in ('adopted', 'inactive'):
+        return f'An adopted entry is never demoted to {after}; inactivate it or write a separate candidate under a new id'
+    if before == 'inactive' and after != 'inactive':
+        return 'An inactive entry stays inactive; a returning idea starts as a new candidate under a new id'
+    if before != 'adopted' and after == 'adopted':
+        if asset.get('core') is True:  # only adopted entries carry core, so this write would be the first to set it
+            return "Promotion never sets core; adopt first, then set core in a separate revision on the owner's explicit instruction"
+        if asset.get('type') == 'boundary' and previous.get('type') != 'boundary':
+            return "Promotion never turns an entry into a boundary; adopt first, then change the type in a separate revision on the owner's explicit instruction"
+    return None
+
+
+def case_status_error(case, status):
+    """A case is scored by `myos eval` regardless of status, so it attaches only to an adopted entry (negative controls aside)."""
+    if status != 'adopted' and not case.get('negative_control'):
+        return 'A case attaches only to an adopted entry; keep the correction examples and add the case at adoption'
+    return None
 
 
 def quote_changes(previous, asset):
@@ -213,6 +257,8 @@ class Store:
         if case is not None:
             if errors := case_errors(case):
                 raise ValueError('; '.join(errors))
+            if error := case_status_error(case, asset['status']):
+                raise ValueError(error)
             case = dict(case, needs=[dict(n, assets=n.get('assets') or [asset['id']]) for n in case['needs']])
             if self.case_file(case['id']).exists():
                 raise ValueError(f"Case {case['id']} exists; choose another id")
@@ -224,7 +270,12 @@ class Store:
             if current != expected_revision:
                 raise ValueError(f'Revision conflict: expected {expected_revision}, actual {current}')
             row = db.execute('SELECT body FROM revisions WHERE id=? AND revision=?', (asset['id'], current)).fetchone()
-            changed_quotes = quote_changes(json.loads(row[0]) if row else None, asset)
+            previous = json.loads(row[0]) if row else None
+            # Migration replays recorded history, including dated retirements and reactivations; every other write
+            # is a host acting now, and these transitions would change future sessions without the owner seeing it.
+            if authorization.get('mode') != 'migration' and (error := transition_error(previous, asset)):
+                raise ValueError(error)
+            changed_quotes = quote_changes(previous, asset)
             if is_core(asset):
                 latest = db.execute('SELECT body FROM revisions r WHERE id<>? AND revision=(SELECT MAX(revision) FROM revisions WHERE id=r.id)', (asset['id'],)).fetchall()
                 if sum(is_core(json.loads(b)) for (b,) in latest) >= CORE_LIMIT:
@@ -308,11 +359,17 @@ class Store:
             rows = db.execute('SELECT id, revision, body, authorization FROM revisions ORDER BY id, revision').fetchall()
         errors = []
         expected = {}
+        previous = {}
         for key, revision, body, auth in rows:
             expected[key] = expected.get(key, 0) + 1
             a, authorization = json.loads(body), json.loads(auth)
             if revision != expected[key] or a.get('id') != key or a.get('status') not in STATUSES or not a.get('sources') or not authorization.get('source') or not authorization.get('request'):
                 errors.append(f'Invalid revision: {key}:{revision}')
+            # Stores written before the store refused these transitions are diagnosed here; migration rows are exempt as at write time.
+            if a.get('status') in STATUSES and authorization.get('mode') != 'migration' and (error := transition_error(previous.get(key), a)):
+                errors.append(f'Invalid transition: {key}:{revision}: {error}')
+            previous[key] = a
+        errors += self.case_status_errors(rows)
         # History cannot be amended, so the use fields are checked on each asset's latest revision.
         latest = {}
         for key, revision, body, _ in rows:
@@ -345,6 +402,19 @@ class Store:
         if rows and (lines := self.compile().count('\n')) > BRIEF_LINE_BUDGET:
             warnings.append(f'The compiled block has {lines} lines; the budget is {BRIEF_LINE_BUDGET}')
         return {'integrity': integrity, 'revisions': len(rows), 'errors': errors, 'warnings': warnings, 'semantic_truth_verified': False}
+
+    def case_status_errors(self, rows):
+        """Cases saved against a revision that was not adopted, negative controls aside; stores without cases have none."""
+        try:
+            with self.connect() as db:
+                cases = db.execute('SELECT id, asset_id, revision, body FROM cases ORDER BY id').fetchall()
+        except sqlite3.OperationalError as exc:
+            if 'no such table: cases' in str(exc):
+                return []
+            raise
+        status = {(key, revision): json.loads(body).get('status') for key, revision, body, _ in rows}
+        return [f'Invalid case: {case_id}: {error}' for case_id, key, revision, body in cases
+                if (error := case_status_error(json.loads(body), status.get((key, revision))))]
 
     def references(self, path=None):
         if path is None:
