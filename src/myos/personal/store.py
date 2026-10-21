@@ -51,7 +51,18 @@ def marker_safe(value):
 
 
 CASE_ID = re.compile(r'^[A-Za-z0-9_-]+$')
+CASE_DATE = re.compile(r'^\d{4}-\d{2}-\d{2}$')  # `date.fromisoformat` alone also accepts 20260301 and 2026-W09-1
 CASES_DIR = Path('evals') / 'cases'
+
+
+def case_date_valid(value):
+    if not CASE_DATE.match(value):
+        return False
+    try:
+        date.fromisoformat(value)
+    except ValueError:
+        return False
+    return True
 
 
 def case_errors(case):
@@ -63,11 +74,8 @@ def case_errors(case):
         errors.append('Case id must be letters, digits, _ or -')
     if not isinstance(case.get('negative_control', False), bool) or not isinstance(case.get('retired', False), bool):
         errors.append('negative_control and retired must be true or false')
-    if isinstance(case.get('date'), str):
-        try:
-            date.fromisoformat(case['date'])
-        except ValueError:
-            errors.append('Case date must be YYYY-MM-DD; the reviewer judges time-sensitive claims as of that day')
+    if isinstance(case.get('date'), str) and not case_date_valid(case['date']):
+        errors.append('Case date must be YYYY-MM-DD; the reviewer judges time-sensitive claims as of that day')
     needs = case.get('needs')
     if not (isinstance(needs, list) and needs and all(isinstance(n, dict) for n in needs)):
         return errors + ['Case needs a nonempty list of needs']
@@ -107,20 +115,21 @@ def field_errors(asset):
 def transition_error(previous, asset):
     """Status changes the store refuses outside migration, because each one silently changes every future session.
 
-    A demoted entry drops out of the compiled block on the next sync; a revived inactive entry returns without a
-    fresh repeat; a promotion that also sets core or turns the entry into a boundary activates something the owner
-    never saw proposed. The escape is explicit: inactivate and start a new id, or adopt first and set core or the
-    boundary type in a separate revision on the owner's instruction.
+    Only adopted entries are compiled, so any status but adopted or inactive drops the entry from the block on the
+    next sync; a revived inactive entry returns without a fresh repeat; a write that adopts an entry and also sets
+    core or turns it into a boundary activates something the owner never saw proposed, whatever status it came from.
+    The escape is explicit: inactivate and start a new id, or adopt first and set core or the boundary type in a
+    separate revision on the owner's instruction.
     """
     if previous is None:
         return None
     before, after = previous.get('status'), asset['status']
-    if before == 'adopted' and after == 'candidate':
-        return 'An adopted entry is never demoted to candidate; inactivate it or write a separate candidate under a new id'
+    if before == 'adopted' and after not in ('adopted', 'inactive'):
+        return f'An adopted entry is never demoted to {after}; inactivate it or write a separate candidate under a new id'
     if before == 'inactive' and after != 'inactive':
         return 'An inactive entry stays inactive; a returning idea starts as a new candidate under a new id'
-    if before == 'candidate' and after == 'adopted':
-        if asset.get('core') is True:  # a candidate can never carry core, so this write would be the first to set it
+    if before != 'adopted' and after == 'adopted':
+        if asset.get('core') is True:  # only adopted entries carry core, so this write would be the first to set it
             return "Promotion never sets core; adopt first, then set core in a separate revision on the owner's explicit instruction"
         if asset.get('type') == 'boundary' and previous.get('type') != 'boundary':
             return "Promotion never turns an entry into a boundary; adopt first, then change the type in a separate revision on the owner's explicit instruction"

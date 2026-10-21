@@ -72,10 +72,11 @@ the owner's configuration.
 Every revision stores source references and the authorizing request/source.
 Optimistic revision checks prevent lost updates; history is append-only.
 Inactivation differs from physical deletion. No deletion or autonomous promotion
-operation is provided. Outside migration the store refuses a demotion of an
-adopted entry, any status change of an inactive one, a promotion that also sets
-core or the boundary type, and a case on an entry that is not adopted; `myos
-check` reports such transitions in older histories. Never edit the SQLite
+operation is provided. Outside migration the store refuses moving an adopted
+entry to any status but adopted or inactive, any status change of an inactive
+one, a write that adopts an entry and also sets core or the boundary type, and a
+case on an entry that is not adopted; `myos check` reports such transitions in
+older histories. Never edit the SQLite
 database directly.
 
 This contract does not authorize writes to historical governance ledgers. Those
