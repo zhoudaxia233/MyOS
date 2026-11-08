@@ -73,7 +73,9 @@ poetry run myos --data /path/to/data compile >> ~/.codex/AGENTS.md
 
 **Check.** In a new session outside the checkout, a request that fits a listed
 entry should read it with `myos_read`; a plain correction should save a candidate
-without a question; a later matching correction should ask once after the answer;
+without a question, with a note saying how many candidates wait; a later matching
+correction should ask once after the answer; "go through my candidates" should
+list them by number;
 and "remember this" should save an adopted entry without asking again. An
 unrelated coding question should not call MyOS.
 
@@ -106,10 +108,10 @@ Put `--data PATH` before the command. Output is JSON unless noted.
 
 | Command | Effect |
 | --- | --- |
-| `myos catalog [--purpose TEXT]` | Core assets in full and an index (id, title, type, status, applicability) of the other non-inactive assets. Candidates remain indexed for correction matching only; skip them when answering. `--purpose` is recorded only in traces. |
+| `myos catalog [--purpose TEXT]` | Core assets in full and an index (id, title, type, status, applicability) of the other non-inactive assets. Candidates remain indexed for correction matching and owner-requested reviews; skip them when answering. `--purpose` is recorded only in traces. |
 | `myos read ID [--history]` | The current asset with sources; `--history` returns every revision with its write record. |
 | `myos references [REF]` | The migrated source list, or one source such as `originals/0/path.jsonl#L2`. |
-| `myos put payload.json` | Append a complete revision; the payload format and the transitions the store refuses are in [the Skill's write reference](../.agents/skills/myos/reference/write.md). The result lists `quote_changes` when earlier examples are missing from the new revision verbatim (`after` is the edited text, or null when removed). |
+| `myos put payload.json` | Append a complete revision; the payload format and the transitions the store refuses are in [the Skill's write reference](../.agents/skills/myos/reference/write.md). The result reports `candidates_waiting`, the number of current candidates, and lists `quote_changes` when earlier examples are missing from the new revision verbatim (`after` is the edited text, or null when removed). |
 | `myos compile [...]` | Print or sync the MyOS block (Markdown; see above). |
 | `myos view [--out PATH]` | Write a read-only HTML map of the store (default `myos-view.html` in the data directory). |
 | `myos eval [...]` | Compare answers without and with MyOS on private test cases and write a report; see below. |

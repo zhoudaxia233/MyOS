@@ -1,5 +1,7 @@
 """Safety invariants retained by the personal Skill architecture."""
 import json
+import subprocess
+import sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -461,3 +463,29 @@ def test_check_reports_forbidden_transitions_and_cases_in_old_histories(tmp_path
     assert any(e.startswith('Invalid case: c1:') for e in errors)
     with pytest.raises(ValueError, match='Invalid transition'):
         s.check(strict=True)
+
+
+def test_every_write_reports_how_many_candidates_wait(tmp_path):
+    # Candidates stay out of the always-loaded block, so the write result is what lets the host remind the owner.
+    s = Store(tmp_path)
+    assert s.put(dict(asset(), id='a'), expected_revision=0, authorization=AUTH)['candidates_waiting'] == 1
+    assert s.put(dict(asset(), id='b'), expected_revision=0, authorization=AUTH)['candidates_waiting'] == 2
+    assert s.put(dict(asset(), id='a', status='adopted'), expected_revision=1, authorization=AUTH)['candidates_waiting'] == 1
+    assert s.put(dict(asset(), id='b', status='inactive'), expected_revision=1, authorization=AUTH)['candidates_waiting'] == 0
+    assert s.put(dict(asset(), id='c'), expected_revision=0, authorization=AUTH)['candidates_waiting'] == 1
+    assert s.put(dict(asset(), id='c', title='Revised'), expected_revision=1, authorization=AUTH)['candidates_waiting'] == 1
+    for status in ('uncertain', 'reference'):
+        assert s.put(dict(asset(), id=status, status=status), expected_revision=0, authorization=AUTH)['candidates_waiting'] == 1
+    assert 'candidates_waiting' not in s.put(dict(asset(), id='old'), expected_revision=0, authorization=dict(AUTH, mode='migration'))
+    payload = tmp_path / 'payload.json'
+    payload.write_text(json.dumps({'asset': dict(asset(), id='d'), 'expected_revision': 0, 'authorization': AUTH}))
+    result = subprocess.run([sys.executable, '-m', 'myos', '--data', str(tmp_path), 'put', str(payload)], capture_output=True, text=True)
+    assert json.loads(result.stdout)['candidates_waiting'] == 3  # c, the migrated old and d; the CLI passes it through
+
+
+def test_a_damaged_row_never_fails_a_write_after_it_is_saved(tmp_path):
+    s = Store(tmp_path)
+    s.put(dict(asset(), id='a'), expected_revision=0, authorization=AUTH)
+    with s.connect(write=True) as db:
+        db.execute("INSERT INTO revisions VALUES ('junk', 1, 't', '[]', '{}')")
+    assert s.put(dict(asset(), id='b'), expected_revision=0, authorization=AUTH)['candidates_waiting'] == 2

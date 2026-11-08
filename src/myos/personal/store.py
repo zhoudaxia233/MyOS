@@ -188,7 +188,7 @@ class Store:
         return sorted((dict(json.loads(body), revision=n) for body, n in rows), key=type_order)
 
     def catalog(self):
-        """Keep candidates indexed for correction matching; hosts skip them when answering."""
+        """Keep candidates indexed for correction matching and owner-requested reviews; hosts skip them when answering."""
         active = [a for a in self.current() if a['status'] != 'inactive']
         core = [dict({k: a[k] for k in ('id', 'title', 'content', 'applicability', 'boundaries', 'basis', 'examples', 'status', 'revision') if k in a},
                      type=asset_type(a)) for a in active if is_core(a)]
@@ -201,8 +201,10 @@ class Store:
 
         Hosts keep always-loaded files short, so only the owner's core set is in full; the index line tells the host
         when to read the rest. No revisions, basis, sources, timestamps or examples: examples are often the owner's
-        verbatim corrections, kept as evidence for the catalog and reads, not as rules. Candidates are indexed only for
-        correction matching, never for answers; uncertain and reference assets stay behind the catalog as material.
+        verbatim corrections, kept as evidence for the catalog and reads, not as rules. Candidates stay out: listed in
+        always-loaded instructions, their ideas leaked into answers in a small real-answer test even when marked as not rules.
+        They are indexed in the catalog for correction matching and owner-requested reviews; uncertain and reference
+        assets stay behind the catalog as material.
         """
         if not self.path.exists():
             raise ValueError('No cognition store; initialize through an authorized write or migration')
@@ -286,7 +288,15 @@ class Store:
                 if db.execute('SELECT 1 FROM cases WHERE id=?', (case['id'],)).fetchone():
                     raise ValueError(f"Case {case['id']} exists; choose another id")
                 db.execute('INSERT INTO cases VALUES (?, ?, ?, ?, ?)', (case['id'], asset['id'], current + 1, recorded_at, json.dumps(case, ensure_ascii=False)))
+            # Candidates never reach the always-loaded block, so nothing else reminds the owner they wait; the host's
+            # one-line write note carries this count and how to go through them. Counted before commit, so a problem
+            # rolls the write back; a migration replays history and needs no note.
+            waiting = None if authorization.get('mode') == 'migration' else sum(
+                isinstance(latest := json.loads(b), dict) and latest.get('status') == 'candidate'
+                for (b,) in db.execute('SELECT body FROM revisions r WHERE revision=(SELECT MAX(revision) FROM revisions WHERE id=r.id)'))
         result = dict(json.loads(body), revision=current + 1, recorded_at=recorded_at, authorization=dict(authorization))
+        if waiting is not None:
+            result['candidates_waiting'] = waiting
         if case is not None:
             result['case'] = case['id']
         if changed_quotes:

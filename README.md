@@ -17,8 +17,10 @@ behavior; it is not a measured comparison with an assistant without MyOS.
 MyOS is not a memory of your chats. It makes your judgment explicit rather
 than relying only on what an assistant infers from past conversations.
 MyOS holds a small set of rules, methods and habits that you
-approved, each with its source. A plain correction waits as an unused candidate;
-after a repeat, the assistant asks whether you want to adopt it. "Remember this"
+approved, each with its source. A plain correction, or an idea you want to decide on
+later, waits as an unused candidate; the assistant asks whether to adopt it
+when you make the same correction again, or when you say "go through my
+candidates". "Remember this"
 approves it directly. The goal is to keep this judgment useful as models
 improve. Small evaluations have not established a consistent advantage for
 the Skill and selective reads over the same content in flat notes; lasting
