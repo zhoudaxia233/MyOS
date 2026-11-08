@@ -97,6 +97,10 @@ def main(argv=None):
             trace.emit('payload_file', text=payload_text)
             stage = 'payload_json_decode'
             payload = json.loads(payload_text)
+            # Only these keys reach `put`: any other would become a keyword argument the payload must not control.
+            if not isinstance(payload, dict) or (unknown := set(payload) - {'asset', 'expected_revision', 'authorization', 'case'}):
+                raise ValueError(f'Unknown payload fields: {sorted(unknown) if isinstance(payload, dict) else type(payload).__name__}; '
+                                 'a payload holds asset, expected_revision, authorization and an optional case')
             stage = 'handler'
             result = trace.invoke(store.put, payload)
             if (host_sync := sync.after_put(store)) is not None:

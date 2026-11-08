@@ -111,11 +111,11 @@ Put `--data PATH` before the command. Output is JSON unless noted.
 | `myos catalog [--purpose TEXT]` | Core assets in full and an index (id, title, type, status, applicability) of the other non-inactive assets. Candidates remain indexed for correction matching and owner-requested reviews; skip them when answering. `--purpose` is recorded only in traces. |
 | `myos read ID [--history]` | The current asset with sources; `--history` returns every revision with its write record. |
 | `myos references [REF]` | The migrated source list, or one source such as `originals/0/path.jsonl#L2`. |
-| `myos put payload.json` | Append a complete revision; the payload format and the transitions the store refuses are in [the Skill's write reference](../.agents/skills/myos/reference/write.md). The result reports `candidates_waiting`, the number of current candidates, and lists `quote_changes` when earlier examples are missing from the new revision verbatim (`after` is the edited text, or null when removed). |
+| `myos put payload.json` | Append a complete revision; the payload format and the transitions and fields the store refuses are in [the Skill's write reference](../.agents/skills/myos/reference/write.md). The result reports `candidates_waiting`, the number of current candidates, and lists `quote_changes` when earlier examples are missing from the new revision verbatim (`after` is the edited text, or null when removed). |
 | `myos compile [...]` | Print or sync the MyOS block (Markdown; see above). |
 | `myos view [--out PATH]` | Write a read-only HTML map of the store (default `myos-view.html` in the data directory). |
 | `myos eval [...]` | Compare answers without and with MyOS on private test cases and write a report; see below. |
-| `myos check [--strict]` | Check the database, revision sequences, status transitions the store refuses (see the write reference), cases on non-adopted entries and migration integrity, with size warnings. |
+| `myos check [--strict]` | Check the database, revision sequences, status transitions and fields the store refuses (see the write reference), cases on non-adopted entries, migration-mode revisions that `migration.json` does not list, and migration integrity, with size warnings. |
 | `myos migrate --source ROOT` | Import legacy sources into a new data directory. |
 | `myos trace show [...]` | Inspect saved execution traces; see [tracing](tracing.md). |
 
