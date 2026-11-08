@@ -105,6 +105,22 @@ for establishing authorization. Candidate entries remain unused in answers;
 repeated corrections prompt a choice rather than automatic adoption.
 **Recorded decisions + current implementation and Skill contract.**
 
+In November 2026 a private review of one store found that a repeated correction
+reaches most waiting candidates only by chance: many came from material,
+syntheses or ideas the owner chose to decide on later, related corrections had
+been split into separate candidates, and nothing told the owner how a waiting
+candidate could be adopted. Listing candidates in the always-loaded block, marked as not
+rules, so that a host could propose one when a later task fit, was tried and
+not kept. In a small real-answer test (one model, two runs per condition, a
+synthetic store, imperfect isolation), a listed candidate's idea showed up in
+the answer even with the warning, and the host then did not propose it; with
+a reworded note, the idea still leaked in one of two runs. Candidates now stay out of the
+block. Each write reports how many candidates wait; the host's write note passes the
+count on with how to review them, and on the owner's request the host goes
+through them by number. Related corrections join one candidate. **Historical report (one
+store; small, unreplicated test) + implementation and current Skill contract;
+whether the write note and review get candidates decided is not yet measured.**
+
 **Carry forward.** Retain the distinctions, not every historical object type:
 recorded is not approved; approved is not factually true; approved personal
 judgment is not permission to act. A caller's authorization field records a
@@ -113,7 +129,9 @@ silently overwrite or demote an adopted entry.
 
 **Revisit when.** A reproducible authorization or competing-write problem cannot
 be handled by the existing host boundary and revision model. Name that problem
-before introducing another approval lifecycle.
+before introducing another approval lifecycle. Before putting candidates in the
+always-loaded block, or anywhere else a host sees them while answering, measure
+with real answers against a control that their ideas do not reach answers.
 
 ## E04 — Making internal structure into the user interface
 

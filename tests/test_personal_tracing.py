@@ -293,7 +293,7 @@ def test_mcp_real_stdio_contract_results_and_validation(tmp_path, traced):
     for response in (on[1][-1], off[1][-1]):
         written = json.loads(response['content'][0]['text'])
         assert not response['isError'] and written['revision'] == 3
-        assert {k: v for k, v in written.items() if k != 'recorded_at'} == dict(a, revision=3, authorization=AUTH)
+        assert {k: v for k, v in written.items() if k != 'recorded_at'} == dict(a, revision=3, authorization=AUTH, candidates_waiting=1)  # the fixture is a candidate
     calls = tracing.show(traced)['calls']
     assert len(calls) == len(cases) and len({c['run_id'] for c in calls}) == 1
     for call, (name, parameters), response in zip(calls, cases, on[1], strict=True):

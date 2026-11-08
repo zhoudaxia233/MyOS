@@ -56,9 +56,9 @@ MyOS learns only from you, in three ways:
 
 | You say | What happens |
 | --- | --- |
-| A correction: *"For weekend plans, show me the quiet option first."* | If it passes the checks below, saved as a **candidate**, with your words and their source. Just a one-line note; no question. If you later make the same kind of correction, it asks at the end of its answer whether to adopt it. |
+| A correction: *"For weekend plans, show me the quiet option first."* | If it passes the checks below, saved as a **candidate**, with your words and their source. Just a one-line note, saying how many candidates now wait; no question. If you later make the same kind of correction, it asks at the end of its answer whether to adopt it. |
 | *"Remember this"* or *"From now on…"* | Saved as **adopted**: followed from then on. Your words are the approval; it does not ask again. |
-| Something to learn from, such as an article, your notes or a past decision, plus what you agree with: *"Read this; points 2 and 3 are how I think."* | It keeps only what changes how you judge, one idea per entry, with the source. Saved as a **candidate** unless you endorse it. |
+| Something to learn from, such as an article, your notes or a past decision, plus what you agree with: *"Read this; points 2 and 3 are how I think."* | It keeps only what changes how you judge, one idea per entry, with the source. Saved as a **candidate** unless you endorse it; say *"go through my candidates"* when you want to decide. |
 
 ### What gets in
 
@@ -91,21 +91,35 @@ So *"remember that my flight leaves at 9"* goes to the assistant's memory,
 while *"remember: I'd rather take a later flight than a tight connection"*
 goes into MyOS.
 
-A candidate never influences answers. It keeps the first correction so a later
-session can spot a repeat; one-off corrections may stay in the store, visible
-in `myos view`, without doing anything. On a repeat, the assistant shows your
-two quotes with dates and the proposed wording, then offers **adopt / adopt
-with edits / one-off**. Your reply is the whole approval step: adopt makes it
-a rule (with your edits if supplied); one-off retires the candidate.
-A retired idea that comes up again starts as a new candidate and needs a fresh
-repeat before it is proposed. No answer leaves it a candidate, with no second
-question that session. A later session asks only after a fresh matching correction.
-You can also say *"drop the entry about X"*; its history stays.
+### Candidates and adoption
+
+A candidate never influences answers: it stays out of your assistant's
+instructions until you adopt it. It keeps your words so a later session can
+spot a repeat. To keep an idea for later on purpose, say *"save this as a
+candidate"*. Each time a candidate is saved or decided, the one-line note says
+how many still wait, if any.
+
+A candidate comes up for a decision in two ways:
+
+- **You correct the same thing again.** The assistant shows your quotes with
+  dates and the proposed wording, then offers **adopt / adopt with edits /
+  one-off**.
+- **You say *"go through my candidates"*.** It lists them by number, each with
+  your words, the proposed wording, and whether an existing entry already
+  covers it. Answer by number: adopt, adopt with edits, one-off, or keep waiting.
+
+Your reply is the whole approval step: adopt makes it a rule (with your edits
+if supplied); one-off retires the candidate. No answer leaves it a candidate,
+with no second question that session. A retired idea that comes up again
+starts as a new candidate. You can also say *"drop the entry about X"*; its
+history stays.
+
+### Boundaries and core
 
 Two kinds of change need your explicit word, because every future session
 sees them: **boundaries**, the limits the assistant must keep, and **core**
 entries, the ten or fewer shown in full everywhere. Say *"make this a
-boundary"* or *"make this core"*. A candidate promotion never creates or
+boundary"* or *"make this core"*. Adopting a candidate never creates or
 changes either.
 
 When an adopted entry changes, your assistant's instructions refresh by
@@ -154,7 +168,8 @@ boundaries, then principles and methods (the more specific one wins), then
 patterns.
 
 Only **adopted** entries act as rules. **Candidate** entries are read only when
-handling a correction to spot a repeat, never to answer a request. **Uncertain**
+handling a correction to spot a repeat, or when you ask to go through them,
+never to answer a request. **Uncertain**
 entries are weighed as suggestions, and **reference** entries count as evidence.
 **Inactive** entries are kept in the view and history, outside the catalog.
 
@@ -175,8 +190,8 @@ and other unadopted entries stay out of the block.
 
 A plain correction becomes a candidate; an adopted entry stays unchanged while
 its proposed refinement is saved separately, naming the entry it would revise.
-The assistant follows the correction for this task; on a repeat, it proposes
-the adopted entry's revised wording. Your approval updates that entry and retires
+The assistant follows the correction for this task; when the candidate comes
+up for a decision, it proposes the adopted entry's revised wording. Your approval updates that entry and retires
 the separate candidate. "Remember this" still adopts directly. The block contains
 only adopted entries and refreshes when they change. Nothing is overwritten:
 every earlier version is kept together with the request that changed it, so you

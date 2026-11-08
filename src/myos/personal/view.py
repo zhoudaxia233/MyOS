@@ -133,9 +133,9 @@ def render_map(store):
             '<p class="note">How a host uses this store: one catalog call returns every core asset in full and an index of the rest. '
             "Core assets are always visible to the host; any asset, core or not, applies only when its applicability fits the request, and when unsure whether a boundary covers an action, it applies. Conflicts resolve in this order: "
             "the owner's current explicit instruction, then boundary, then principle and method, then pattern to anticipate the owner. "
-            'Only adopted assets act as rules. Candidates are never used in answers: a first correction is saved quietly, '
-            'a later matching correction prompts one question after the answer, and only the owner can adopt it. '
-            'One-off means inactive; a retired idea that returns starts as a new candidate and needs a fresh repeat before a proposal. '
+            'Only adopted assets act as rules. Candidates are never used in answers: a first correction is saved without a question, '
+            'a later matching correction prompts one question after the answer, the owner can ask to go through candidates, and only the owner can adopt one. '
+            'One-off means inactive; a retired idea that returns starts as a new candidate, proposed again only after a fresh repeat or in a review the owner asks for. '
             'No answer leaves it a candidate without another question that session. '
             'Uncertain assets are material to weigh; reference assets are evidence.</p>',
             '<h2>Core</h2><p class="meaning">Adopted assets the owner marked core, returned in full on every catalog call so that they are never missed; they apply only where they fit.</p>']
