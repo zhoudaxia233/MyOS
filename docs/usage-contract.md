@@ -82,9 +82,13 @@ Optimistic revision checks prevent lost updates; history is append-only.
 Inactivation differs from physical deletion. No deletion or autonomous promotion
 operation is provided. Outside migration the store refuses moving an adopted
 entry to any status but adopted or inactive, any status change of an inactive
-one, a write that adopts an entry and also sets core or the boundary type, and a
-case on an entry that is not adopted; `myos check` reports such transitions in
-older histories. Never edit the SQLite
+one, a write that adopts an entry and also sets core or the boundary type, a
+case on an entry that is not adopted, line breaks or control characters in the
+fields that become single lines of host instructions, and whitespace or
+backticks in ids. Only `myos migrate` may write in migration mode; a host
+payload that claims it is refused. `myos check` reports such transitions and
+fields in existing stores, and migration-mode revisions that `migration.json`
+does not list. Never edit the SQLite
 database directly.
 
 This contract does not authorize writes to historical governance ledgers. Those

@@ -7,9 +7,10 @@ import os
 from pathlib import Path
 import shutil
 import tempfile
+import unicodedata
 from datetime import datetime, timezone
 
-from .store import Store
+from .store import REPLAY, Store
 
 
 def digest(path):
@@ -90,7 +91,10 @@ def migrate(roots, destination):
             seen.add(original)
             key = row.get('principle_id') or row.get('subject_id') or row.get('schema_id') or row.get('id')
             family = {'profile_event': 'profile', 'owner_principle_event': 'principle', 'schema_version': 'model'}.get(row.get('object_type'), str(rel))
-            key = f'legacy:{family}:{key or line}'
+            # Ids are printed in code spans and typed back to `read`: whitespace becomes '-', backticks and invisible
+            # characters go. Ordinary legacy ids pass through unchanged.
+            key = ''.join("'" if c == '`' else c for c in '-'.join(f'legacy:{family}:{key or line}'.split())
+                          if unicodedata.category(c) not in ('Cc', 'Cf'))
             try:
                 prior = store.read(key)
             except (ValueError, __import__('sqlite3').OperationalError):
@@ -115,9 +119,11 @@ def migrate(roots, destination):
             content = row.get('statement') or row.get('summary') or row.get('content') or row.get('insight') or row.get('event') or row.get('observation') or row.get('decision') or row.get('change_summary') or original
             if not isinstance(content, str):
                 content = json.dumps(content, ensure_ascii=False)
-            asset = dict(id=key, title=str(title), content=content,
-                applicability=str(row.get('topic') or row.get('domain') or row.get('subject_id') or 'Legacy record; applicability requires source inspection'),
-                boundaries=row.get('boundaries') if isinstance(row.get('boundaries'), list) else [],
+            # Single-line fields stay single lines (the store refuses breaks there); the legacy record keeps the original.
+            flat = lambda value: ' '.join(part for part in str(value).splitlines() if part)
+            asset = dict(id=key, title=flat(title), content=content,
+                applicability=flat(row.get('topic') or row.get('domain') or row.get('subject_id') or 'Legacy record; applicability requires source inspection'),
+                boundaries=[flat(b) if isinstance(b, str) else b for b in row['boundaries']] if isinstance(row.get('boundaries'), list) else [],
                 status='inactive' if inactive else 'adopted' if adopted else 'candidate' if 'candidate' in str(rel) else 'uncertain',
                 basis='Historical ratification record; personal statement, not independently verified fact' if adopted else 'Legacy record; endorsement and factual truth not inferred',
                 sources=[{'ref': str(Path('originals') / str(i) / rel) + f'#L{line}', 'original': str(roots[i] / rel), 'timestamp': row.get('created_at'), 'sha256': manifest[f'{i}/{rel}']['sha256']}],
@@ -150,7 +156,8 @@ def migrate(roots, destination):
             if adopted:
                 asset['legacy_adoption_evidence'] = rat
             written = store.put(asset, expected_revision=prior['revision'] if prior else 0,
-                      authorization={'request': 'Lossless migration under architectural refactor authorization; no new adoption', 'source': 'migration.json', 'mode': 'migration'})
+                      authorization={'request': 'Lossless migration under architectural refactor authorization; no new adoption', 'source': 'migration.json', 'mode': 'migration'},
+                      migration=REPLAY)
             imported.append({'id': asset['id'], 'revision': written['revision'], 'sha256': hashlib.sha256(json.dumps(asset, ensure_ascii=False, sort_keys=True).encode()).hexdigest()})
             count += 1
         # Non-ledger material is a source reference; projections are not imported twice.

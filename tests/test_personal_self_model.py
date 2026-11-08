@@ -9,9 +9,9 @@ import sys
 import pytest
 
 from myos.personal import tracing
-from myos.personal.store import CORE_LIMIT, EXPORT_BEGIN, EXPORT_END, Store
+from myos.personal.store import CORE_LIMIT, EXPORT_BEGIN, EXPORT_END, REPLAY, Store
 from myos.personal.view import render_map, render_pipeline
-from tests.test_personal_store import AUTH, asset
+from tests.test_personal_store import AUTH, asset, record_migration
 
 
 def typed(**updates):
@@ -36,7 +36,7 @@ def test_judgment_entries_require_a_type_even_before_adoption(tmp_path):
     assert not s.path.exists()
     s.put(dict(untyped, id='kept', status='reference'), expected_revision=0, authorization=AUTH)
     s.put(dict(untyped, id='retired', status='inactive'), expected_revision=0, authorization=AUTH)
-    s.put(dict(untyped, id='legacy', status='uncertain'), expected_revision=0, authorization=dict(AUTH, mode='migration'))
+    s.put(dict(untyped, id='legacy', status='uncertain'), expected_revision=0, authorization=dict(AUTH, mode='migration'), migration=REPLAY)
     assert {a['id']: a['type'] for a in s.catalog()['index']} == {'kept': 'unclassified', 'legacy': 'unclassified'}
 
 
@@ -90,7 +90,8 @@ def test_check_accepts_legacy_revisions_and_reports_invalid_new_fields(tmp_path)
     s = Store(tmp_path)
     legacy = typed(id='legacy', status='uncertain')
     legacy.pop('type')
-    s.put(legacy, expected_revision=0, authorization=dict(AUTH, mode='migration'))
+    s.put(legacy, expected_revision=0, authorization=dict(AUTH, mode='migration'), migration=REPLAY)
+    record_migration(s, ('legacy', 1))
     assert s.check(strict=True)['errors'] == []
     rows = [(f'raw-{n}', 1, '2026-01-01T00:00:00+00:00', json.dumps(dict(adopted_core(n), id=f'raw-{n}')), json.dumps(AUTH)) for n in range(CORE_LIMIT + 1)]
     rows.append(('bad', 1, '2026-01-01T00:00:00+00:00', json.dumps(typed(id='bad', type='rule', core=True)), json.dumps(AUTH)))
@@ -222,7 +223,7 @@ def test_core_needs_a_type_even_in_migration_mode(tmp_path):
     untyped = typed(status='adopted', core=True, legacy_adoption_evidence='ratified')
     untyped.pop('type')
     with pytest.raises(ValueError, match='Core assets need a type'):
-        Store(tmp_path).put(untyped, expected_revision=0, authorization=dict(AUTH, mode='migration'))
+        Store(tmp_path).put(untyped, expected_revision=0, authorization=dict(AUTH, mode='migration'), migration=REPLAY)
 
 
 def test_export_markers_cannot_be_forged_by_asset_text(tmp_path):

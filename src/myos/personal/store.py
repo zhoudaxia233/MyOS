@@ -8,6 +8,7 @@ import re
 import sqlite3
 import tempfile
 import time
+import unicodedata
 from datetime import date, datetime, timezone
 from pathlib import Path
 
@@ -48,6 +49,34 @@ def type_order(asset):
 def marker_safe(value):
     """Asset text must not be able to open or close the exported block."""
     return str(value).replace('<!--', '&lt;!--')
+
+
+def one_line(value):
+    """A title, id, applicability or limit printed into host files stays on its own line.
+
+    The store refuses line breaks in these fields, but rows written earlier may hold them; joining every kind of break
+    that `str.splitlines` knows (\\r, U+2028 and the rest) keeps such a row from starting a heading or entry of its own.
+    """
+    return marker_safe(' '.join(part for part in str(value).splitlines() if part))
+
+
+# Invisible characters that reorder or hide text, so a printed line reads differently from what is stored.
+HIDDEN = set('\u200b\u200e\u200f\u202a\u202b\u202c\u202d\u202e\u2060\u2066\u2067\u2068\u2069\ufeff')
+
+
+def line_text_error(value):
+    """A line break, control character or hidden direction mark in a field printed as one line of host instructions."""
+    return isinstance(value, str) and (''.join(value.splitlines()) != value
+                                       or any(unicodedata.category(c) == 'Cc' or c in HIDDEN for c in value))
+
+
+def id_error(value):
+    """Ids are printed in code spans and typed back to `read`, so they hold no whitespace, backticks or invisible characters."""
+    return isinstance(value, str) and any(c.isspace() or c == '`' or unicodedata.category(c) in ('Cc', 'Cf') for c in value)
+
+
+# Passed only by `myos migrate`: an object, so no JSON payload or tool argument can produce it.
+REPLAY = object()
 
 
 CASE_ID = re.compile(r'^[A-Za-z0-9_-]+$')
@@ -94,8 +123,12 @@ def case_errors(case):
     return errors
 
 
-def field_errors(asset):
-    """Value checks for the fields that tell hosts how to use an asset."""
+def field_errors(asset, *, replayed=False):
+    """Value checks for the fields that tell hosts how to use an asset.
+
+    `replayed` marks a revision `myos migrate` recorded: its id came from legacy data and no later revision can change
+    it, so only the id rule is waived there.
+    """
     errors = []
     if 'type' in asset and asset['type'] not in TYPES:
         errors.append(f"Type must be one of {', '.join(TYPES)}")
@@ -105,6 +138,13 @@ def field_errors(asset):
         errors.append('Only adopted assets can be core')
     if asset.get('core') is True and asset.get('type') not in TYPES:
         errors.append('Core assets need a type')
+    # These fields become single lines of the always-loaded host instructions; a line break there could start a
+    # heading or an entry of its own. Content may span lines: only adopted core content is printed in full.
+    if any(line_text_error(asset.get(k)) for k in ('title', 'applicability')) or any(line_text_error(b) for b in asset.get('boundaries') or []):
+        errors.append('Title, applicability and each item of boundaries must be one line of visible text (no line breaks, '
+                      'control or direction characters); put details in content')
+    if not replayed and id_error(asset.get('id')):
+        errors.append('Ids cannot contain whitespace, backticks, control or invisible characters; use letters, digits and - _ : / .')
     examples = asset.get('examples', [])
     if not isinstance(examples, list) or any(not isinstance(e, dict) or not isinstance(e.get('text'), str) or not e['text'].strip()
                                              or not isinstance(e.get('source'), str) or not e['source'].strip() for e in examples):
@@ -216,12 +256,12 @@ class Store:
         if core:
             lines += ['## Core (always applies where it fits)', '']
         for a in core:
-            lines += [f"### {marker_safe(a['title'])} ({asset_type(a)})", '', marker_safe(a['content']), '', f"- Applies: {marker_safe(a['applicability'])}"]
-            lines += [f'- Limits: {marker_safe(b)}' for b in a['boundaries']]
+            lines += [f"### {one_line(a['title'])} ({asset_type(a)})", '', marker_safe(a['content']), '', f"- Applies: {one_line(a['applicability'])}"]
+            lines += [f'- Limits: {one_line(b)}' for b in a['boundaries']]
             lines.append('')
         if other:
             lines += ['## Other entries (read in full when the situation fits)', '']
-            lines += [f"- {marker_safe(a['title'])} ({asset_type(a)}, id `{marker_safe(a['id'])}`): {marker_safe(a['applicability'])}" for a in other]
+            lines += [f"- {one_line(a['title'])} ({asset_type(a)}, id `{one_line(a['id'])}`): {one_line(a['applicability'])}" for a in other]
             lines.append('')
         lines.append(EXPORT_END)
         return '\n'.join(lines) + '\n'
@@ -235,7 +275,8 @@ class Store:
         # The current asset keeps what a host applies or revises (sources included); history adds each write record.
         return result if history else {k: v for k, v in result[-1].items() if k not in ('recorded_at', 'authorization')}
 
-    def put(self, asset, *, expected_revision, authorization, case=None):
+    def put(self, asset, *, expected_revision, authorization, case=None, migration=False):
+        """Append one revision. Only `myos migrate` passes `migration=REPLAY`, to replay recorded history."""
         required = {'id', 'title', 'content', 'applicability', 'boundaries', 'status', 'basis', 'sources'}
         if not required <= asset.keys():
             raise ValueError(f'Missing fields: {sorted(required - asset.keys())}')
@@ -247,6 +288,12 @@ class Store:
             raise ValueError('Sources require provenance references')
         if not isinstance(authorization, dict) or not authorization.get('request') or not authorization.get('source'):
             raise ValueError('A host-verified owner request and its source are required for writes')
+        # Migration mode skips the transition refusals and the type requirement, so a host cannot claim it in a payload.
+        replay = migration is REPLAY
+        if authorization.get('mode') == 'migration' and not replay:
+            raise ValueError('Migration mode is reserved for `myos migrate`; leave authorization.mode out and write a normal revision')
+        if replay and authorization.get('mode') != 'migration':
+            raise ValueError('A replayed migration write must record authorization.mode "migration"')
         if authorization.get('mode') == 'migration' and asset['status'] == 'adopted' and not asset.get('legacy_adoption_evidence'):
             raise ValueError('Migration cannot infer adoption')
         # Candidates retain their intended type for possible adoption; reference and inactive may omit it.
@@ -370,13 +417,20 @@ class Store:
         errors = []
         expected = {}
         previous = {}
+        manifest = self.root / 'migration.json'
+        manifest_data = json.loads(manifest.read_text()) if manifest.exists() else {}
+        # Only revisions `myos migrate` recorded may carry migration mode; any other claimed it to skip the refusals.
+        migrated = {(e.get('id'), e.get('revision')) for e in manifest_data.get('imported_revisions', [])}
         for key, revision, body, auth in rows:
             expected[key] = expected.get(key, 0) + 1
             a, authorization = json.loads(body), json.loads(auth)
             if revision != expected[key] or a.get('id') != key or a.get('status') not in STATUSES or not a.get('sources') or not authorization.get('source') or not authorization.get('request'):
                 errors.append(f'Invalid revision: {key}:{revision}')
+            replayed = authorization.get('mode') == 'migration' and (key, revision) in migrated
+            if authorization.get('mode') == 'migration' and not replayed:
+                errors.append(f'Invalid revision: {key}:{revision}: migration mode, but migration.json does not list it')
             # Stores written before the store refused these transitions are diagnosed here; migration rows are exempt as at write time.
-            if a.get('status') in STATUSES and authorization.get('mode') != 'migration' and (error := transition_error(previous.get(key), a)):
+            if a.get('status') in STATUSES and not replayed and (error := transition_error(previous.get(key), a)):
                 errors.append(f'Invalid transition: {key}:{revision}: {error}')
             previous[key] = a
         errors += self.case_status_errors(rows)
@@ -385,14 +439,12 @@ class Store:
         for key, revision, body, _ in rows:
             latest[key] = (revision, json.loads(body))
         for key, (revision, a) in latest.items():
-            errors += [f'Invalid revision: {key}:{revision}: {e}' for e in field_errors(a)]
+            errors += [f'Invalid revision: {key}:{revision}: {e}' for e in field_errors(a, replayed=(key, revision) in migrated)]
         if (core := sum(is_core(a) for _, a in latest.values())) > CORE_LIMIT:
             errors.append(f'Core has {core} assets; the limit is {CORE_LIMIT}')
-        manifest = self.root / 'migration.json'
         if manifest.exists():
             from .migrate import digest
             import hashlib
-            manifest_data = json.loads(manifest.read_text())
             saved = {(key, revision): body for key, revision, body, _ in rows}
             for entry in manifest_data.get('imported_revisions', []):
                 body = saved.get((entry['id'], entry['revision']))
