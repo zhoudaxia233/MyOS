@@ -35,13 +35,15 @@ myos setup --yes    # makes the changes
 Restart your assistant and say: *"Set up MyOS with me."* It goes through the
 rules you already keep for it, proposes entries, and saves the ones you approve.
 
-## What is not shown yet
+## What is shown, and what is not
 
-That answers get better. Small private comparisons have not established a
-consistent advantage over the same rules kept in one plain file, and the effort
-of keeping rules current is not measured. What MyOS gives you for certain is
-control: approval, one source for every assistant, and history. See the
-[exploration map](docs/exploration-map.md#e08--proving-usefulness-rather-than-successful-machinery).
+Not shown: that answers get better for you. In one private run (55 questions,
+one model, graded by another model), MyOS covered more of what its owner
+wanted than the same rules in one plain file, and made more unsupported
+claims. Earlier, smaller comparisons found no consistent advantage, and the
+effort of keeping rules current is not measured. What MyOS gives you for
+certain is control: approval, one source for every assistant, and history. See
+the [exploration map](docs/exploration-map.md#e08--proving-usefulness-rather-than-successful-machinery).
 
 ## Read more
 

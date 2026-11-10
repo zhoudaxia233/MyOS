@@ -215,5 +215,6 @@ model service. Review the selected case content before running it.
 MyOS does not record your chats, act on your behalf, or run a model of its
 own. Your assistant does the understanding and reasoning; MyOS supplies the
 judgment it should apply. The goal is for that judgment to remain useful as
-models improve. Whether this delivery method adds value over the same content
-in flat notes, after maintenance effort, remains to be established in real use.
+models improve. Whether this adds value over the same content in one
+plain file, after the effort of keeping it current, is not settled: one
+model-graded run favored MyOS, earlier ones did not.
