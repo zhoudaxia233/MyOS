@@ -2,12 +2,14 @@
 import argparse
 import json
 import os
+import shutil
 import sqlite3
 from datetime import date
 from pathlib import Path
 
 from .evaluate import DEFAULT_MODEL, DEFAULT_REVIEWER, EFFORTS, SKILL, evaluate
 from .store import CASES_DIR, Store
+from . import setup as connect
 from . import sync
 from .tracing import Trace, show, trace_dir
 from .view import MAP_NAME, PIPELINE_NAME, render_map, render_pipeline, write_private
@@ -38,6 +40,9 @@ def main(argv=None):
     action.add_argument('--dry-run', action='store_true', help='Show the diff for every target without writing')
     action.add_argument('--list-targets', action='store_true', help='List targets and whether each holds exactly one MyOS block')
     action.add_argument('--revert', action='store_true', help='Restore every target from its latest backup')
+    setup_parser = commands.add_parser('setup', help='Connect MyOS to Claude Code and Codex on this computer: the Skill, the tools and the MyOS block')
+    setup_parser.add_argument('--host', action='append', choices=sorted(connect.HOSTS), help='Only this assistant (repeatable; default: every one found)')
+    setup_parser.add_argument('--yes', action='store_true', help='Make the listed changes; without it, setup only shows them')
     view = commands.add_parser('view', help='Write a read-only HTML map of the store')
     view.add_argument('--out', type=Path, help='HTML path outside the data directory (default: myos-view.html in it); replaces only an earlier MyOS page')
     evaluation = commands.add_parser('eval', help='Compare answers without and with MyOS on private test cases; never changes the store')
@@ -119,6 +124,8 @@ def main(argv=None):
             result = evaluate(store, (args.suite or store.root / CASES_DIR.parent).expanduser().resolve(), args.name,
                               models=args.model or [DEFAULT_MODEL], reviewer=args.reviewer, effort=args.effort, review_effort=args.review_effort, repeat=max(1, args.repeat),
                               jobs=args.jobs, only=args.case, assets=args.asset, skill=args.skill.expanduser(), host=args.host)
+        elif args.command == 'setup':
+            result = connect.render(connect.setup(store, Path.home(), hosts=args.host, claude=shutil.which('claude'), apply=args.yes), Path.home())
         elif args.command == 'view':
             written = write_private(args.out or store.root / MAP_NAME, render_map(store), kind='map', private_root=store.root, default_name=MAP_NAME)
             result = {'written': str(written)}

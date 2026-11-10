@@ -10,7 +10,9 @@ os.environ['PYTHONPATH'] = os.pathsep.join([SRC, *filter(None, [os.environ.get('
 
 
 @pytest.fixture(autouse=True)
-def isolated_tool_environment(monkeypatch):
+def isolated_tool_environment(monkeypatch, tmp_path_factory):
     # Tests opt into their own temporary stores, sync targets and trace settings.
     for name in ('MYOS_TRACE', 'MYOS_TRACE_DIR', 'MYOS_TRACE_GROUP', 'MYOS_DATA_DIR', 'MYOS_SYNC_TARGETS'):
         monkeypatch.delenv(name, raising=False)
+    # The default store and `myos setup` use the home directory; tests get an empty one of their own.
+    monkeypatch.setenv('HOME', str(tmp_path_factory.mktemp('home')))

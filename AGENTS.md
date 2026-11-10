@@ -10,7 +10,7 @@ source-linked revisions and thin deterministic tools.
 
 Read [README.md](README.md) for actual behavior and
 [docs/usage-contract.md](docs/usage-contract.md) for data and authorization boundaries.
-For personal learning or use, discover [.agents/skills/myos/SKILL.md](.agents/skills/myos/SKILL.md)
+For personal learning or use, discover [src/myos/skill/SKILL.md](src/myos/skill/SKILL.md) (linked at `.agents/skills/myos` for hosts)
 when relevant. Ordinary development and unrelated questions need no personal retrieval.
 
 Current owner instructions set task scope. Preserve unrelated work and private

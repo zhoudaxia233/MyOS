@@ -7,24 +7,26 @@
 
 ## 安装
 
-你需要 Codex 或 Claude Code、Python 3.13 和
-[Poetry](https://python-poetry.org/docs/#installation)。
+你需要 Claude Code 或 Codex，以及 [uv](https://docs.astral.sh/uv/)。
 
-1. 下载并安装 MyOS：
+1. 安装 MyOS 并接到助手上：
 
    ```sh
-   git clone https://github.com/zhoudaxia233/MyOS.git MyOS
-   cd MyOS
-   poetry install
+   uv tool install git+https://github.com/zhoudaxia233/MyOS
+   myos setup          # 先看它打算改什么
+   myos setup --yes    # 确认修改
    ```
 
-2. 在 `MyOS` 文件夹里打开你的助手，对它说：*"按 docs/reference.md 把 MyOS 接到这个助手上。"*
-   它会装好 MyOS 的 Skill 和工具，把你的自我模型加进助手每次会话开始都会读的指令里，
-   并打开自动刷新。完成后重启助手。想自己动手的话，按
+   它会给找到的每个助手装上 MyOS 的 Skill 和工具，并在助手每次会话开始都会读的指令文件里
+   加一个 MyOS 区块。指令文件的其余内容不动，并且会留一份备份。想自己动手的话，按
    [Connect an assistant](reference.md#connect-an-assistant) 操作。
 
-3. 检查一下：在 `MyOS` 文件夹以外开一个新会话，问 *"MyOS 里关于我希望怎么处理给别人的消息，是怎么说的？"*
-   回答应该来自你的条目。新装的 MyOS 里还没有条目，先教它一点东西。
+2. 重启助手，对它说：*“和我一起设置 MyOS。”* 它会先问你要看哪些现有的规则（比如你的
+   `CLAUDE.md`），从中提出条目；材料太少时会问你几个问题。每条提议由你回答：采纳、修改后采纳、
+   先留着，或跳过。你回答之前什么都不会保存。
+
+3. 检查一下：开一个新会话，问 *“MyOS 里关于我希望怎么处理给别人的消息，是怎么说的？”*
+   回答应该来自你的条目。
 
 ## 使用
 

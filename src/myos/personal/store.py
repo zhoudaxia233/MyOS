@@ -84,6 +84,24 @@ def id_error(value):
     return isinstance(value, str) and any(c.isspace() or c == '`' or unicodedata.category(c) in ('Cc', 'Cf') for c in value)
 
 
+def compile_block(adopted):
+    """The MyOS block for these adopted assets; `myos setup` prints an empty one before a store exists."""
+    core, other = [a for a in adopted if is_core(a)], [a for a in adopted if not is_core(a)]
+    lines = [EXPORT_BEGIN, "## MyOS: the owner's self-model", '', BRIEF_PREAMBLE, '']
+    if not adopted:
+        lines += ['No adopted assets yet.', '']
+    if core:
+        lines += ['## Core (always applies where it fits)', '']
+    for a in core:
+        lines += entry_lines(a)
+    if other:
+        lines += ['## Other entries (read in full when the situation fits)', '']
+        lines += [f"- {one_line(a['title'])} ({asset_type(a)}, id `{one_line(a['id'])}`): {one_line(a['applicability'])}" for a in other]
+        lines.append('')
+    lines.append(EXPORT_END)
+    return '\n'.join(lines) + '\n'
+
+
 # Passed only by `myos migrate`: an object, so no JSON payload or tool argument can produce it.
 REPLAY = object()
 
@@ -259,21 +277,7 @@ class Store:
         """
         if not self.path.exists():
             raise ValueError('No cognition store; initialize through an authorized write or migration')
-        adopted = [a for a in self.current() if a['status'] == 'adopted']
-        core, other = [a for a in adopted if is_core(a)], [a for a in adopted if not is_core(a)]
-        lines = [EXPORT_BEGIN, "## MyOS: the owner's self-model", '', BRIEF_PREAMBLE, '']
-        if not adopted:
-            lines += ['No adopted assets yet.', '']
-        if core:
-            lines += ['## Core (always applies where it fits)', '']
-        for a in core:
-            lines += entry_lines(a)
-        if other:
-            lines += ['## Other entries (read in full when the situation fits)', '']
-            lines += [f"- {one_line(a['title'])} ({asset_type(a)}, id `{one_line(a['id'])}`): {one_line(a['applicability'])}" for a in other]
-            lines.append('')
-        lines.append(EXPORT_END)
-        return '\n'.join(lines) + '\n'
+        return compile_block([a for a in self.current() if a['status'] == 'adopted'])
 
     def read(self, asset_id, *, history=False):
         with self.connect() as db:

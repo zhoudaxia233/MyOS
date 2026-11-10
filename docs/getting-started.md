@@ -7,28 +7,30 @@ and configuration details are in the [reference](reference.md).
 
 ## Set up
 
-You need Codex or Claude Code, Python 3.13 and
-[Poetry](https://python-poetry.org/docs/#installation).
+You need Claude Code or Codex, and [uv](https://docs.astral.sh/uv/).
 
-1. Get MyOS and install it:
+1. Install MyOS and connect it:
 
    ```sh
-   git clone https://github.com/zhoudaxia233/MyOS.git MyOS
-   cd MyOS
-   poetry install
+   uv tool install git+https://github.com/zhoudaxia233/MyOS
+   myos setup          # shows what it would change
+   myos setup --yes    # makes the changes
    ```
 
-2. Open your assistant in the `MyOS` folder and say: *"Connect MyOS to this
-   assistant as described in docs/reference.md."* It installs the MyOS Skill
-   and tools, adds your self-model to the instructions the assistant reads at
-   the start of every session, and turns on automatic refresh. Restart the
-   assistant afterwards. To do it by hand, follow
+   Setup adds the MyOS Skill and tools to each assistant it finds, and a MyOS
+   block to the instructions that assistant reads at the start of every
+   session. The rest of your instruction file stays as it is, and a backup is
+   kept. To do it by hand, follow
    [Connect an assistant](reference.md#connect-an-assistant).
 
-3. Check it: in a new session outside the `MyOS` folder, ask *"What does MyOS
-   say about how I want messages to other people handled?"* The answer should
-   come from your entries. A new installation has none yet, so teach it
-   something first.
+2. Restart your assistant and say: *"Set up MyOS with me."* It asks which of
+   your existing rules to look at, such as your `CLAUDE.md`, proposes entries
+   from them, and asks a few questions if there is little to go on. You answer
+   each proposal: adopt, adopt with edits, keep for later, or skip. Nothing is
+   saved before you answer.
+
+3. Check it: in a new session, ask *"What does MyOS say about how I want
+   messages to other people handled?"* The answer should come from your entries.
 
 ## Use it
 

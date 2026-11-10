@@ -10,7 +10,9 @@ poetry run pytest -q --strict-markers
 ```
 
 Tests use temporary stores. An autouse fixture clears `MYOS_DATA_DIR` and the
-trace settings, so no test reaches a live store; keep it that way. The suite
+trace settings and points `HOME` at an empty folder, so no test reaches a live
+store or a real assistant's configuration; keep it that way. Never run
+`myos setup --yes` from a test or a development session against your own home. The suite
 covers store and revision rules, the MCP stdio contract, the MyOS block and host
 sync, traces, migration and documentation links. It checks mechanics, not
 whether answers got better; that needs real answers and the
@@ -31,6 +33,14 @@ After pointing a host at another data directory, update its executable and
 `MYOS_DATA_DIR`, then restart its tool connection. Reading a known asset is a
 good smoke test; never write a fake entry into a live store to test a
 connection.
+
+## Packaging
+
+The Skill lives in `src/myos/skill` so that an installed MyOS carries it;
+`.agents/skills/myos` is a link to it for hosts that open the checkout. Link to
+the `src` path in docs, because GitHub does not follow the link. `mcp` is
+pinned below 2: version 2 renamed the server class, and an unpinned fresh
+install could not start the tools.
 
 ## Adding functionality
 
