@@ -140,13 +140,17 @@ Cases are JSON files in `<data>/evals/cases/` (or `--suite DIR`), outside the
 repository:
 
 ```json
-{"id": "reply-to-practice", "date": "2026-03-01", "prompt": "The question as asked",
+{"id": "reply-to-practice", "date": "2026-03-01", "prompt": "(Background the question needs.) The question as asked",
  "source": "Evidence available before the question and the owner's standards",
  "needs": [{"id": "O1", "description": "What a good answer does", "rationale": "Why",
             "source_quote": "exact text from source", "condition": "", "assets": ["ask-before-sending"]}],
  "negative_control": false}
 ```
 
+The answering model gets only `prompt`, in one turn without tools, so a question
+taken from the middle of a conversation needs its background at the start of
+`prompt`; `source` goes only to the reviewer. A need that only an action could
+meet (a commit, a search, a changed file) cannot be scored here.
 `assets` names the entries a need tests; the reviewer never sees it. Cases are
 loaded and scored without checking whether those entries are adopted, so a
 write accepts a case only with an adopted entry (negative controls aside). A
