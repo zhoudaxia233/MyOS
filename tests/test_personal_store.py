@@ -458,6 +458,13 @@ def test_promotion_never_adds_core_or_the_boundary_type_in_the_same_write(tmp_pa
     assert s.check(strict=True)['errors'] == []
 
 
+def test_a_new_entry_may_be_adopted_as_core_or_a_boundary_in_its_first_revision(tmp_path):
+    # Nothing was waiting to be activated; refusing this would also make `check` fail on every store that began this way.
+    s = Store(tmp_path)
+    s.put(entry(status='adopted', type='boundary', core=True), expected_revision=0, authorization=AUTH)
+    assert s.catalog()['core'][0]['type'] == 'boundary' and s.check(strict=True)['errors'] == []
+
+
 def test_a_candidate_proposed_as_a_boundary_adopts_as_one(tmp_path):
     s = Store(tmp_path)
     s.put(entry(type='boundary'), expected_revision=0, authorization=AUTH)  # the type was visible in the proposed wording

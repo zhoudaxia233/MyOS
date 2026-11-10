@@ -158,6 +158,8 @@ def transition_error(previous, asset):
     Only adopted entries are compiled, so any status but adopted or inactive drops the entry from the block on the
     next sync; a revived inactive entry returns without a fresh repeat; a write that adopts an entry and also sets
     core or turns it into a boundary activates something the owner never saw proposed, whatever status it came from.
+    This covers existing entries only: a new entry has nothing waiting to be activated, so its first revision may be
+    adopted with core or as a boundary when the owner asks for exactly that.
     The escape is explicit: inactivate and start a new id, or adopt first and set core or the boundary type in a
     separate revision on the owner's instruction.
     """
