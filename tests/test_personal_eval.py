@@ -38,10 +38,14 @@ FAKE_HOST = textwrap.dedent('''\
         print(json.dumps({'result': json.dumps({'reviews': reviews, 'flags': flags}), 'num_turns': 1}))
         sys.exit(0)
     daily = '--mcp-config' in args
-    block = pathlib.Path('CLAUDE.md').read_text() if daily else ''
+    loaded = pathlib.Path('CLAUDE.md')
+    block = loaded.read_text() if loaded.exists() else ''
+    arm = 'daily' if daily else 'notes' if block else 'bare'
+    # The notes file holds every adopted entry in full and nothing that points at tools.
+    seen = 'block' if 'BEGIN MYOS' in block else 'full' if 'Owner interpretation' in block and 'myos' not in block.lower() else '-'
     leaked = sorted(k for k in os.environ if k.startswith('MYOS_'))
-    log.open('a').write(f"{'daily' if daily else 'bare'} {'block' if 'BEGIN MYOS' in block else '-'} {leaked} {args[args.index('--effort') + 1]}\\n")
-    answer = 'GOOD answer' if daily or 'neg' in prompt else 'plain answer'
+    log.open('a').write(f"{arm} {seen} {leaked} {args[args.index('--effort') + 1]} {'tools' if daily else args[args.index('--tools') + 1] or 'none'}\\n")
+    answer = 'GOOD answer' if arm != 'bare' or 'neg' in prompt else 'plain answer'
     print(json.dumps({'result': answer, 'num_turns': 2 if daily else 1, 'total_cost_usd': 0.01}))
 ''')
 
@@ -80,16 +84,19 @@ def test_eval_answers_reviews_reports_and_resumes_without_writing_the_store(tmp_
     result = evaluate(store, suite, 'r1', models=['m1'], skill=skill, host=str(host))
     assert result['reviewed'] == '2/2' and not result['stopped'] and result['errors'] == []
     calls = log.read_text().splitlines()
-    assert sorted(calls) == sorted(['bare - [] medium', 'bare - [] medium', 'daily block [] medium', 'daily block [] medium', 'review high', 'review high'])
+    assert sorted(calls) == sorted(['bare - [] medium none'] * 2 + ['notes full [] medium none'] * 2 + ['daily block [] medium tools'] * 2 + ['review high'] * 2)
     report = (suite / 'runs' / 'r1' / 'report.md').read_text()
     assert '| m1 | daily | 1/1 | 0 | 0 | 2 | 0 | 0 | 4 | 0.02 |' in report
     assert '| m1 | bare | 0/1 | 1 | 0 | 1 | 0 | 0 | 2 | 0.02 |' in report
-    assert '| Final click is mine | still helps | 1 | 0 | 0 | 0 |' in report
-    assert '| Untested entry | untested | 0 | 0 | 0 | 0 |' in report
-    assert '| c1 #1 | m1 | daily | over_application | GOOD | Test. |' in report and report.count('over_application |') == 3
+    assert '| m1 | notes | 1/1 | 0 | 0 | 2 | 0 | 0 | 2 | 0.02 |' in report
+    assert 'm1, daily against notes, need by need: 0 only daily, 0 only notes, 1 both, 0 neither.' in report
+    assert '| Final click is mine | still helps | 1 | 0 | 0 | 0 | 0 | 0 |' in report
+    assert '| Untested entry | untested | 0 | 0 | 0 | 0 | 0 | 0 |' in report
+    assert '| c1 #1 | m1 | daily | over_application | GOOD | Test. |' in report and report.count('over_application |') == 5
     packet = json.loads((suite / 'runs' / 'r1' / 'reviews' / 'c1__m1__1' / 'packet.json').read_text())
     assert all('assets' not in need for item in packet['items'] for need in item['needs'])
-    assert {i['answer'] for i in packet['items']} == {'GOOD answer', 'plain answer'} and 'daily' not in json.dumps(packet)
+    assert sorted(i['answer'] for i in packet['items']) == ['GOOD answer', 'GOOD answer', 'plain answer']
+    assert 'daily' not in json.dumps(packet) and 'notes' not in json.dumps(packet)
 
     evaluate(store, suite, 'r1', models=['m1'], skill=skill, host=str(host))
     assert log.read_text().splitlines() == calls
@@ -121,9 +128,9 @@ def test_a_changed_case_or_effort_is_answered_and_reviewed_again(tmp_path, monke
     assert stopped['reviewed'] == '1/2' and 'Not reviewed yet (1): c1 m1 #1' in (suite / 'runs' / 'r1' / 'report.md').read_text()
     monkeypatch.delenv('FAKE_LIMIT')
     assert evaluate(store, suite, 'r1', models=['m1'], skill=skill, host=str(host))['reviewed'] == '2/2'
-    assert len(log.read_text().splitlines()) == calls + 3
+    assert len(log.read_text().splitlines()) == calls + 4
     evaluate(store, suite, 'r1', models=['m1'], effort='low', skill=skill, host=str(host))
-    assert len(log.read_text().splitlines()) == calls + 3 + 4  # same answer text, same packet: the review stands
+    assert len(log.read_text().splitlines()) == calls + 4 + 6  # same answer text, same packet: the review stands
 
 
 @pytest.mark.parametrize('bad', ['FAKE_BADFLAGS', 'FAKE_BADIDS'])
@@ -296,3 +303,24 @@ def test_damaged_cache_files_are_redone_and_retired_cases_are_skipped(tmp_path, 
     case = json.loads((suite / 'cases' / 'n1.json').read_text())
     (suite / 'cases' / 'n1.json').write_text(json.dumps(dict(case, retired=True)))
     assert evaluate(store, suite, 'r2', models=['m1'], skill=skill, host=str(host))['cases'] == 1
+
+
+def test_notes_outrank_daily_only_in_their_own_columns(tmp_path, monkeypatch):
+    # The verdict stays bare against daily; what notes covered and daily missed is counted beside it.
+    from myos.personal.evaluate import report
+    store, suite, host, skill = setup(tmp_path)
+    monkeypatch.setenv('FAKE_LOG', str(tmp_path / 'log'))
+    evaluate(store, suite, 'r1', models=['m1'], only=['c1'], skill=skill, host=str(host))
+    run = suite / 'runs' / 'r1'
+    folder = run / 'reviews' / 'c1__m1__1'
+    mapping = json.loads((folder / 'mapping.json').read_text())
+    review = json.loads((folder / 'review.json').read_text())
+    daily = next(i for i, arm in mapping.items() if arm == 'daily')
+    for row in review['reviews']:
+        if row['id'] == daily:
+            row['coverage'] = [dict(c, status='missing', answer_quote='') for c in row['coverage']]
+    (folder / 'review.json').write_text(json.dumps(review))
+    cases = load_cases(suite, only=['c1'])
+    text = report(store, cases, run, [('c1', 'm1', 1)], ['m1'], {('c1', 'm1', 1)})
+    assert 'm1, daily against notes, need by need: 0 only daily, 1 only notes, 0 both, 0 neither.' in text
+    assert '| Final click is mine | not followed | 0 | 0 | 0 | 1 | 0 | 1 |' in text

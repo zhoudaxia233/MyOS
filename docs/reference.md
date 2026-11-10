@@ -121,10 +121,15 @@ Put `--data PATH` before the command. Output is JSON unless noted.
 
 ## Evaluate entries
 
-`myos eval` answers each test case twice through Claude Code (`claude -p`):
-`bare`, the model with no personal context, and `daily`, the compiled block as
+`myos eval` answers each test case three times through Claude Code (`claude -p`):
+`bare`, the model with no personal context; `notes`, every adopted entry in
+full (content, Applies and Limits, without examples, basis or sources) as one
+instruction file, with no Skill and no tools; and `daily`, the compiled block as
 the project instructions plus the Skill and the read-only tools on a snapshot of
-the store. A reviewer model (default `claude-opus-5-5`) grades both answers
+the store. `bare` against `daily` shows whether an entry's content helps;
+`notes` against `daily` shows whether the block, the Skill and selective reads
+do better than the same content kept as a flat file. A reviewer model (default
+`claude-opus-5-5`) grades the answers
 blind in the [answer review](answer-review.md) format, and code validates every
 quotation. It never writes the store. Evaluation invokes the configured Claude
 Code model service: case prompts, review sources and answers, and self-model
@@ -156,7 +161,11 @@ result and under *Incomplete run* in the report. The run writes
 `evals/runs/NAME/report.md`: needs covered, unsupported claims, boundary,
 over-application and mechanics flags, turns and cost per model and setup, and per entry the linked
 needs where only `daily` covered them (gain), only `bare` did (loss), both or
-neither, and a list of flagged answers with the reviewer's quote. The proposed verdict is *still helps* (gain, and no more losses than
+neither, then the needs only `daily` covered and only `notes` covered, and a
+list of flagged answers with the reviewer's quote. One line per model sums
+`daily` against `notes` over all needs of judgment cases. Rerunning a run
+started before the `notes` setup existed answers that setup from the run's
+snapshot and reviews every case again. The proposed verdict is *still helps* (gain, and no more losses than
 gains), *hurts* (more losses), *model already does this* (only both),
 *not followed* (only neither) or *untested*. Verdicts count coverage only; an entry that
 adds coverage together with unsupported claims or flags is not simply helping.

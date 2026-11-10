@@ -1,9 +1,12 @@
 """Compare answers without and with the owner's self-model on private test cases; never writes the store.
 
-Two setups answer each case: `bare`, the model alone, and `daily`, the compiled MyOS block as the host's
-instructions plus the Skill and the read-only tools on a snapshot of the store. An independent reviewer grades
-both answers blind in the answer-review format, validated in code. Needs may name the entries they test, so the
-report can propose a verdict per entry. Runs resume by name and stop at the first usage-limit signal.
+Three setups answer each case: `bare`, the model alone; `notes`, every adopted entry in full as one instruction
+file, with no Skill and no tools; and `daily`, the compiled MyOS block as the host's instructions plus the Skill
+and the read-only tools on a snapshot of the store. `bare` against `daily` shows whether an entry's content
+helps; `notes` against `daily` shows whether selective reading does better than the same content as a flat
+file. An independent reviewer grades the answers blind in the answer-review format, validated in code. Needs may
+name the entries they test, so the report can propose a verdict per entry. Runs resume by name and stop at the
+first usage-limit signal.
 """
 import hashlib
 import json
@@ -20,9 +23,9 @@ from pathlib import Path
 import subprocess
 
 from .answer_review import check_review, parse_json
-from .store import Store, case_errors
+from .store import ENTRY_RULES, Store, case_errors, entry_lines
 
-ARMS = ('bare', 'daily')
+ARMS = ('bare', 'notes', 'daily')
 DEFAULT_MODEL = 'claude-sonnet-5'
 DEFAULT_REVIEWER = 'claude-opus-5-5'
 EFFORTS = ('low', 'medium', 'high', 'xhigh', 'max')
@@ -82,10 +85,21 @@ def load_cases(suite, *, only=None, assets=None):
     return cases
 
 
+def flat_notes(store):
+    """Every adopted entry in full as one instruction file: the same judgment as `daily`, with nothing to look up."""
+    lines = ['## Notes about the owner', '', "Every entry below is shown in full. " + ENTRY_RULES, '']
+    for a in store.current():
+        if a['status'] == 'adopted':
+            lines += entry_lines(a)
+    return '\n'.join(lines)
+
+
 def prepare(store, run_dir, skill):
-    """Freeze the daily setup once per run: a store snapshot, the Skill and the compiled block."""
+    """Freeze the setups once per run: a store snapshot, the Skill, the compiled block and the flat notes."""
     setup = run_dir / 'setup'
     if (setup / 'CLAUDE.md').exists():
+        if not (setup / 'NOTES.md').exists():  # a run started before the notes setup existed: same snapshot
+            write_atomic(setup / 'NOTES.md', flat_notes(Store(setup / 'store')))
         return setup
     if not store.path.exists():
         raise ValueError('No cognition store to evaluate')
@@ -95,7 +109,8 @@ def prepare(store, run_dir, skill):
     with store.connect() as src, sqlite3.connect(setup / 'store' / 'cognition.sqlite3') as dst:
         src.backup(dst)
     shutil.copytree(skill, setup / 'skill', dirs_exist_ok=True)
-    (setup / 'CLAUDE.md').write_text(Store(setup / 'store').compile())
+    (setup / 'NOTES.md').write_text(flat_notes(Store(setup / 'store')))
+    (setup / 'CLAUDE.md').write_text(Store(setup / 'store').compile())  # last: marks the setup complete
     return setup
 
 
@@ -165,6 +180,10 @@ def answer(host, case, arm, model, setup, path, effort):
         if arm == 'bare':
             system += ' You have no tools in this session; do not write tool calls.'
             cmd += ['--setting-sources', '', '--tools', '', '--disable-slash-commands']
+        elif arm == 'notes':
+            system += ' You have no tools in this session; do not write tool calls.'
+            shutil.copy(setup / 'NOTES.md', wd / 'CLAUDE.md')
+            cmd += ['--setting-sources', 'project', '--tools', '', '--disable-slash-commands']
         else:
             system += ' Your only tools are the ones listed in this session.'
             shutil.copy(setup / 'CLAUDE.md', wd / 'CLAUDE.md')
@@ -349,6 +368,7 @@ def report(store, cases, run_dir, keys, models, current, problems=()):
     totals = {(m, arm): dict(covered=0, total=0, unsupported=0, boundary=0, over=0, leak=0, control_misses=0, cost=0.0, turns=0, answers=0)
               for m in models for arm in ARMS}
     pairs, flagged = {}, []
+    against_notes = {m: dict(daily=0, notes=0, both=0, neither=0) for m in models}
     for c, m, n in keys:
         folder = run_dir / 'reviews' / f'{c}__{m}__{n}'
         if (c, m, n) not in current:
@@ -380,13 +400,21 @@ def report(store, cases, run_dir, keys, models, current, problems=()):
             status[arm] = found
         for need in cases[c]['needs']:
             bare, daily = status['bare'].get(need['id']), status['daily'].get(need['id'])
+            linked = [pairs.setdefault(asset_id, dict(gain=0, loss=0, both=0, neither=0, over_notes=0, under_notes=0)) for asset_id in need.get('assets', [])]
             if {bare, daily} <= {'covered', 'missing'}:
-                for asset_id in need.get('assets', []):
-                    tally = pairs.setdefault(asset_id, dict(gain=0, loss=0, both=0, neither=0))
+                for tally in linked:
                     tally['gain' if daily == 'covered' and bare == 'missing' else 'loss' if bare == 'covered' and daily == 'missing'
                           else 'both' if bare == 'covered' else 'neither'] += 1
+            notes = status['notes'].get(need['id'])
+            if {notes, daily} <= {'covered', 'missing'} and not cases[c].get('negative_control'):
+                against_notes[m]['daily' if daily == 'covered' and notes == 'missing' else 'notes' if notes == 'covered' and daily == 'missing'
+                                 else 'both' if daily == 'covered' else 'neither'] += 1
+                for tally in linked:
+                    tally['over_notes'] += daily == 'covered' and notes == 'missing'
+                    tally['under_notes'] += notes == 'covered' and daily == 'missing'
     lines = [f'# MyOS eval: {run_dir.name}', '',
-             '`bare` is the model alone; `daily` has the MyOS block, the Skill and read-only tools. Coverage counts the needs '
+             '`bare` is the model alone; `notes` has every adopted entry in full as one instruction file, without the Skill '
+             'or tools; `daily` has the MyOS block, the Skill and read-only tools. Coverage counts the needs '
              'of judgment cases; negative controls count separately. One reviewer model graded blind. With one repeat, a '
              'difference of one or two needs is noise. Verdicts are proposals; nothing in the store was changed.', '',
              '| Model | Setup | Needs covered | Unsupported claims | Boundary flags | Over-application | Mechanics leaks | Control misses | Turns | Cost (USD) |',
@@ -394,16 +422,21 @@ def report(store, cases, run_dir, keys, models, current, problems=()):
     for (m, arm), t in totals.items():
         lines.append(f"| {m} | {arm} | {t['covered']}/{t['total']} | {t['unsupported']} | {t['boundary']} | {t['over']} | {t['leak']} | {t['control_misses']} "
                      f"| {t['turns']} | {t['cost']:.2f} |")
+    lines += ['']
+    lines += [f"{m}, daily against notes, need by need: {t['daily']} only daily, {t['notes']} only notes, {t['both']} both, {t['neither']} neither."
+              for m, t in against_notes.items()]
     lines += ['', '## Entries', '',
               'Counts are needs linked to the entry: daily covered and bare missed (gain), the reverse (loss), both covered, neither. '
+              'The last two columns compare daily with notes: needs only daily covered, and needs only notes covered. '
               'Verdicts look at coverage only: more needs covered is not a better answer when it comes with unsupported claims '
               'or flags, so read those columns and the flagged answers before acting on a verdict.', '',
-              '| Entry | Verdict | Gain | Loss | Both | Neither |', '| --- | --- | --- | --- | --- | --- |']
+              '| Entry | Verdict | Gain | Loss | Both | Neither | Only daily, not notes | Only notes, not daily |', '| --- | --- | --- | --- | --- | --- | --- | --- |']
     adopted = {a['id']: a['title'] for a in store.current() if a['status'] == 'adopted'}
     for asset_id in list(adopted) + sorted(set(pairs) - set(adopted)):
-        tally = pairs.get(asset_id, dict(gain=0, loss=0, both=0, neither=0))
+        tally = pairs.get(asset_id, dict(gain=0, loss=0, both=0, neither=0, over_notes=0, under_notes=0))
         title = adopted.get(asset_id, f'{asset_id} (not adopted)')
-        lines.append(f"| {title} | {verdict(**tally)} | {tally['gain']} | {tally['loss']} | {tally['both']} | {tally['neither']} |")
+        lines.append(f"| {title} | {verdict(tally['gain'], tally['loss'], tally['both'], tally['neither'])} | {tally['gain']} | {tally['loss']} | {tally['both']} "
+                     f"| {tally['neither']} | {tally['over_notes']} | {tally['under_notes']} |")
     if flagged:
         lines += ['', '## Flagged answers', '',
                   'A flag is not linked to an entry; read the quote to see which entry was misapplied, if any.', '',
