@@ -137,9 +137,9 @@ themselves, and new sessions see the change.
 
 Models get better, and some of your entries become things a good assistant
 does anyway. Now and then, for example after a new model comes out, ask your
-assistant to *"run the MyOS eval"*. It answers your own test questions twice,
-once without MyOS and once with it, and has another model compare the two
-answers without knowing which is which. For each entry you get a verdict:
+assistant to *"run the MyOS eval"*. It answers your own test questions three
+times: without MyOS, with your entries as one plain notes file, and with MyOS.
+Another model compares the answers without knowing which is which. For each entry you get a verdict:
 still helps, the model already does this, hurts, or not tested. Nothing
 changes until you say so: retire what the model already does, fix what hurts.
 
