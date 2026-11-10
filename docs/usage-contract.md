@@ -82,7 +82,8 @@ Optimistic revision checks prevent lost updates; history is append-only.
 Inactivation differs from physical deletion. No deletion or autonomous promotion
 operation is provided. Outside migration the store refuses moving an adopted
 entry to any status but adopted or inactive, any status change of an inactive
-one, a write that adopts an entry and also sets core or the boundary type, a
+one, a write that adopts an existing entry and also sets core or the boundary
+type (a new entry may carry them in its first revision), a
 case on an entry that is not adopted, line breaks or control characters in the
 fields that become single lines of host instructions, and whitespace or
 backticks in ids. Only `myos migrate` may write in migration mode; a host
