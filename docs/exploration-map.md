@@ -298,8 +298,18 @@ flagged for over-application in about one answer in six, against none for the
 model alone. No control was missed. The flat file held each entry's content,
 applicability and limits but not its examples, which the daily configuration
 could read, so the lead cannot be credited to selective reading alone; the run
-does not record which entries were read. The owner's blind review of twelve
-sampled cases was still open when this was written. This result points the
+does not record which entries were read. The owner then reviewed twelve
+sampled cases blind, marking a best or a worst answer in eleven and a full
+order in three. The model alone was never best (daily five times, flat file
+four) and was worst in three of five; each setup with personal content beat it
+in seven of the eight cases where the marks allow a comparison. Between the
+daily configuration and the flat file the owner's marks split five to four,
+where the model reviewer's coverage counts on the same cases favoured daily
+seven to three, and in four cases the owner's best answer was the one the
+reviewer scored lowest or level-lowest. The answer of the model alone was
+shown in the same position in ten of the twelve cases. By the rule written before the run the
+owner's review decides: the entries improve answers on this store; that the
+daily configuration beats a flat file is not confirmed. This result points the
 other way from the September comparisons and does not replace them.
 **Historical report: one store, one model, one run, not reproduced.**
 
