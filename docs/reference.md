@@ -7,10 +7,11 @@ hand. Everyday use is in the [user guide](getting-started.md).
 
 ## Install
 
-MyOS needs **Python 3.13** and [Poetry](https://python-poetry.org/docs/#installation).
-In the checkout, run `poetry install` (add `--with dev` for the tests). The
-package provides `myos` and `myos-mcp`; `python -m myos` and
-`python -m myos.personal.mcp` work in the same environment.
+`uv tool install git+https://github.com/zhoudaxia233/MyOS` installs the `myos`
+and `myos-mcp` commands with the Skill inside the package; uv fetches the
+Python 3.13 they need. To work on MyOS, clone it and run `poetry install
+--with dev` with [Poetry](https://python-poetry.org/docs/#installation);
+`python -m myos` and `python -m myos.personal.mcp` work in that environment.
 
 The store is one private data directory: the CLI's `--data` option, else
 `MYOS_DATA_DIR`, else `~/.local/share/myos`. It is created on the first write.
@@ -19,7 +20,18 @@ The store is one private data directory: the CLI's `--data` option, else
 
 An assistant needs three things at user level, so that MyOS works in every
 project: the Skill, the MCP tools, and the MyOS block in its instruction file.
-Below, replace `/path/to/MyOS` with the checkout, `/path/to/python` with the
+
+`myos setup` lists what it would do for each assistant it finds (`~/.claude`,
+`~/.codex`), and `myos setup --yes` does it; `--host claude` or `--host codex`
+limits it to one. It copies the Skill, appends the MyOS block to the
+instruction file or creates the file, and registers the tools with the data
+directory and both instruction files as sync targets. It backs up each changed
+file in `<data>/sync-backups/`, leaves a linked Skill folder, a linked
+instruction file, a damaged block and an existing registration as they are,
+and prints the step for you where it cannot act. Running it again changes
+nothing that is in place; after an upgrade it updates the copied Skill.
+
+The same by hand, from a checkout: replace `/path/to/MyOS` with the checkout, `/path/to/python` with the
 output of `poetry env info --executable` there, and `/path/to/data` with the
 data directory.
 
@@ -111,8 +123,9 @@ Put `--data PATH` before the command. Output is JSON unless noted.
 | `myos catalog [--purpose TEXT]` | Core assets in full and an index (id, title, type, status, applicability) of the other non-inactive assets. Candidates remain indexed for correction matching and owner-requested reviews; skip them when answering. `--purpose` is recorded only in traces. |
 | `myos read ID [--history]` | The current asset with sources; `--history` returns every revision with its write record. |
 | `myos references [REF]` | The migrated source list, or one source such as `originals/0/path.jsonl#L2`. |
-| `myos put payload.json` | Append a complete revision; the payload format and the transitions and fields the store refuses are in [the Skill's write reference](../.agents/skills/myos/reference/write.md). The result reports `candidates_waiting`, the number of current candidates, and lists `quote_changes` when earlier examples are missing from the new revision verbatim (`after` is the edited text, or null when removed). |
+| `myos put payload.json` | Append a complete revision; the payload format and the transitions and fields the store refuses are in [the Skill's write reference](../src/myos/skill/reference/write.md). The result reports `candidates_waiting`, the number of current candidates, and lists `quote_changes` when earlier examples are missing from the new revision verbatim (`after` is the edited text, or null when removed). |
 | `myos compile [...]` | Print or sync the MyOS block (Markdown; see above). |
+| `myos setup [--yes] [--host NAME]` | Connect the assistants on this computer; see [Connect an assistant](#connect-an-assistant). |
 | `myos view [--out PATH]` | Write a read-only HTML map of the store (default `myos-view.html` in the data directory). |
 | `myos eval [...]` | Compare answers without and with MyOS on private test cases and write a report; see below. |
 | `myos check [--strict]` | Check the database, revision sequences, status transitions and fields the store refuses (see the write reference), cases on non-adopted entries, migration-mode revisions that `migration.json` does not list, and migration integrity, with size warnings. |
@@ -155,7 +168,7 @@ meet (a commit, a search, a changed file) cannot be scored here.
 loaded and scored without checking whether those entries are adopted, so a
 write accepts a case only with an adopted entry (negative controls aside). A
 write can add a case in the same call (`case` in `myos put` or `myos_put`, format in
-the [write reference](../.agents/skills/myos/reference/write.md)); it is
+the [write reference](../src/myos/skill/reference/write.md)); it is
 validated first, committed in the same transaction as the revision, and
 exported to `cases/` without overwriting an existing file; an export cut short
 is completed by the next write or run. A negative

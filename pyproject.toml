@@ -1,5 +1,5 @@
 [project]
-name = "personal-core-os"
+name = "myos"
 version = "0.1.0"
 description = "The owner's self-model for AI assistants: boundaries, principles, methods and patterns"
 authors = [
@@ -8,7 +8,7 @@ authors = [
 readme = "README.md"
 requires-python = ">=3.13,<3.14"
 dependencies = [
-    "mcp[cli]>=1.0.0",
+    "mcp[cli]>=1.0.0,<2",  # 2.x renamed FastMCP; a fresh install without this pin cannot start the tools
     "pyyaml (>=6.0.3,<7.0.0)",
 ]
 

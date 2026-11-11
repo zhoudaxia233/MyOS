@@ -1,6 +1,6 @@
 ---
 name: myos
-description: The owner's self-model (boundaries, principles, methods, patterns, context). Use when an entry listed in the MyOS block of your instructions fits the task and you need its full text; when the owner corrects how you handled something, says "remember this" or "from now on", or shares material to learn from; or when the owner asks what MyOS holds about them, wants an entry changed, or asks to go through candidates. Personal matters and project or coding work alike. Without a MyOS block in your instructions, also use it when acting or deciding for the owner (messages to other people, disputes, money, plans, their own learning).
+description: The owner's self-model (boundaries, principles, methods, patterns, context). Use when an entry listed in the MyOS block of your instructions fits the task and you need its full text; when the owner corrects how you handled something, says "remember this" or "from now on", or shares material to learn from; or when the owner asks what MyOS holds about them, wants an entry changed, asks to go through candidates, or asks to set MyOS up or fill it from the rules they already keep. Personal matters and project or coding work alike. Without a MyOS block in your instructions, also use it when acting or deciding for the owner (messages to other people, disputes, money, plans, their own learning).
 ---
 
 # MyOS
@@ -8,6 +8,10 @@ description: The owner's self-model (boundaries, principles, methods, patterns, 
 MyOS holds the owner's self-model; you do the understanding and reasoning. "The owner" is the owner of the configured store (`MYOS_DATA_DIR`, default `~/.local/share/myos`). The MyOS block in the host's instructions, printed by `myos compile`, carries the core entries in full and one line per other adopted entry with the situation it fits.
 
 Tools: MCP `myos_catalog`, `myos_read`, `myos_references`, `myos_put`. Inside the MyOS checkout, the CLI offers the same as `poetry run myos catalog|read|references` and `poetry run myos put payload.json`.
+
+## First setup
+
+When the owner asks to set MyOS up, to fill it, or to bring in rules from their existing instruction files, read [reference/first-setup.md](reference/first-setup.md) and follow it. Do not start it on your own because the store is empty.
 
 ## Use an entry
 

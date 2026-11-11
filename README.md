@@ -2,59 +2,54 @@
 
 **English** | [简体中文](README-zh.md)
 
-MyOS teaches your AI assistant how you judge and act, so it handles things the
-way you would. It keeps your limits, applies your principles and methods, and
-tells you when one of your known habits is working against you. You decide what
-goes in. Your store stays in a private folder on your computer. Entries your
-assistant reads are subject to its model provider's data handling; optional
-`myos eval` also sends evaluation content through Claude Code.
+**Correct your AI assistant once. After you approve, every assistant you use follows it.**
 
-For example, you might ask your assistant to answer a landlord who is keeping
-your deposit. An adopted entry can tell it to argue from your side, show you
-the draft first and leave the sending to you. This illustrates the intended
-behavior; it is not a measured comparison with an assistant without MyOS.
+![A correction becomes a candidate, the second time the assistant asks, and after "adopt" both Claude Code and Codex get the rule](docs/demo.svg)
 
-MyOS is not a memory of your chats. It makes your judgment explicit rather
-than relying only on what an assistant infers from past conversations.
-MyOS holds a small set of rules, methods and habits that you
-approved, each with its source. A plain correction, or an idea you want to decide on
-later, waits as an unused candidate; the assistant asks whether to adopt it
-when you make the same correction again, or when you say "go through my
-candidates". "Remember this"
-approves it directly. The goal is to keep this judgment useful as models
-improve. Small evaluations have not established a consistent advantage for
-the Skill and selective reads over the same content in flat notes; lasting
-benefit after maintenance effort remains to be measured. See the
-[exploration map](docs/exploration-map.md#e08--proving-usefulness-rather-than-successful-machinery)
-for the evidence and its limits.
+MyOS keeps the rules for how you want to be helped: your limits, how you
+judge, how you like work done, and the habits you want pointed out.
 
-## How it works
+- **You approve every rule.** A correction is saved with your own words and
+  waits. It becomes a rule when you say so, never because an assistant guessed.
+- **One place, every assistant.** Claude Code and Codex read the same rules,
+  and a change reaches both.
+- **It can push back.** A rule can describe a habit of yours, such as widening
+  a project when it goes well. The assistant points it out instead of going
+  along with it.
+- **Judgment, not a chat log.** No transcripts, dates or to-dos: only what
+  changes how an assistant should act for you.
+- **Yours.** One private folder on your computer, with the history of every
+  rule. Rules your assistant reads are handled by its model provider like the
+  rest of your conversation.
 
-```text
-  you correct it or teach it
-            │
-            ▼
-  your assistant updates an entry  ──►  MyOS store (a private folder)
-                                              │ refreshes automatically
-                                              ▼
-  every session starts with the MyOS block in the assistant's instructions:
-    • your most important entries in full
-    • one line for every other adopted entry, saying when it applies
-                                              │ a task fits a line
-                                              ▼
-  the assistant reads that entry in full and applies it
+## Install
+
+You need Claude Code or Codex, and [uv](https://docs.astral.sh/uv/).
+
+```sh
+uv tool install git+https://github.com/zhoudaxia233/MyOS
+myos setup          # shows what it would change
+myos setup --yes    # makes the changes
 ```
 
-Each entry is one idea of yours: a limit the assistant must keep, a principle,
-a method, a habit to watch for, or a fact about you. Old versions are never
-lost, so you can always see how an entry changed.
+Restart your assistant and say: *"Set up MyOS with me."* It goes through the
+rules you already keep for it, proposes entries, and saves the ones you approve.
+
+## What is shown, and what is not
+
+Not shown: that answers get better for you. In one private run (55 questions,
+one model, graded by another model), MyOS covered more of what its owner
+wanted than the same rules in one plain file, and made more unsupported
+claims. Earlier, smaller comparisons found no consistent advantage, and the
+effort of keeping rules current is not measured. What MyOS gives you for
+certain is control: approval, one source for every assistant, and history. See
+the [exploration map](docs/exploration-map.md#e08--proving-usefulness-rather-than-successful-machinery).
 
 ## Read more
 
-- [User guide](docs/getting-started.md): set up MyOS, use it, teach it, what
-  it refuses to store, and what happens behind the scenes.
-- [Reference](docs/reference.md): commands, tools and configuration, for
-  developers and manual setup.
+- [User guide](docs/getting-started.md): daily use, teaching it, what it
+  refuses to store, and how it works.
+- [Reference](docs/reference.md): commands, tools and manual setup.
 
 Contributors: start with [AGENTS.md](AGENTS.md) and run
 `poetry run pytest -q --strict-markers`.

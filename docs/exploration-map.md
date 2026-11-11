@@ -282,6 +282,37 @@ requirements partly derived from known owner standards limit generalization.
 These are reported results, not a fresh reproduction.
 Private case labels, personal circumstances and monetary amounts are omitted.
 
+On November 10, 2026 a private run compared three setups on one store: the
+model alone, every adopted entry in full as one instruction file, and the daily
+configuration. It used one answering model at medium effort, one answer per
+case and a blind model reviewer; the decision rules were written before the
+run. There were 55 judgment cases, 41 written in September and 14 generated
+from later corrections, and three negative controls. Counting only needs that
+exactly one of two setups covered, the daily configuration led the flat file
+19 to 3 and the model alone 24 to 5 (two-sided sign tests, p about 0.001);
+the flat file and the model alone were level at 11 to 10. The 41 older cases
+alone gave the same direction, 14 to 3 against the flat file. The daily
+configuration also wrote longer answers with more claims the reviewer marked
+unsupported (69, against 47 and 43), and both setups with personal content were
+flagged for over-application in about one answer in six, against none for the
+model alone. No control was missed. The flat file held each entry's content,
+applicability and limits but not its examples, which the daily configuration
+could read, so the lead cannot be credited to selective reading alone; the run
+does not record which entries were read. The owner then reviewed twelve
+sampled cases blind, marking a best or a worst answer in eleven and a full
+order in three. The model alone was never best (daily five times, flat file
+four) and was worst in three of five; each setup with personal content beat it
+in seven of the eight cases where the marks allow a comparison. Between the
+daily configuration and the flat file the owner's marks split five to four,
+where the model reviewer's coverage counts on the same cases favoured daily
+seven to three, and in four cases the owner's best answer was the one the
+reviewer scored lowest or level-lowest. The answer of the model alone was
+shown in the same position in ten of the twelve cases. By the rule written before the run the
+owner's review decides: the entries improve answers on this store; that the
+daily configuration beats a flat file is not confirmed. This result points the
+other way from the September comparisons and does not replace them.
+**Historical report: one store, one model, one run, not reproduced.**
+
 **Carry forward.** Distinguish four questions: did it run; did it retrieve and
 apply the right material; did the answer improve; did actual use justify the
 total effort? Support and request coverage are separate. A shorter answer,

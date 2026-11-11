@@ -21,6 +21,8 @@ def assert_no_tracked_retired_roots(root):
 def test_no_retired_framework_in_active_root():
     assert_no_tracked_retired_roots(ROOT)
     assert list((ROOT / '.agents/skills').glob('*/SKILL.md')) == [ROOT / '.agents/skills/myos/SKILL.md']
+    # Hosts discover the Skill at .agents/skills; the files live in the package so an installed MyOS carries them.
+    assert (ROOT / '.agents/skills/myos').resolve() == ROOT / 'src/myos/skill'
 
 
 def test_layout_allows_private_leftovers_but_rejects_tracked_entrypoints(tmp_path):
@@ -43,11 +45,12 @@ def test_layout_allows_private_leftovers_but_rejects_tracked_entrypoints(tmp_pat
 
 
 def test_current_document_links_resolve():
-    current = ['README.md', 'README-zh.md', 'AGENTS.md', 'docs/getting-started.md', 'docs/getting-started-zh.md', 'docs/reference.md', 'docs/storage.md', 'docs/storage-zh.md', 'docs/usage-contract.md', 'docs/tracing.md', 'docs/answer-review.md', 'docs/maintenance.md', '.agents/skills/myos/SKILL.md']
+    current = ['README.md', 'README-zh.md', 'AGENTS.md', 'docs/getting-started.md', 'docs/getting-started-zh.md', 'docs/reference.md', 'docs/storage.md', 'docs/storage-zh.md', 'docs/usage-contract.md', 'docs/tracing.md', 'docs/answer-review.md', 'docs/maintenance.md', 'src/myos/skill/SKILL.md']
     for name in current:
         path = ROOT / name
         for target in re.findall(r'\]\(([^)\s]+)\)', path.read_text()):
             if target.startswith(('https://', 'http://', '#', 'mailto:')):
                 continue
             assert (path.parent / target.split('#', 1)[0]).exists(), (name, target)
+            assert '.agents/skills' not in target, (name, target, 'GitHub cannot follow the link; point at src/myos/skill')
 

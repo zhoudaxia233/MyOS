@@ -1,6 +1,6 @@
 # MyOS usage and write boundaries
 
-The active entry is `.agents/skills/myos/SKILL.md`. MyOS no longer routes natural
+The active entry is `src/myos/skill/SKILL.md`, linked at `.agents/skills/myos`. MyOS no longer routes natural
 language, generates replies, schedules actions, manages conversations or requires
 context previews and receipts. Native hosts own those capabilities.
 
